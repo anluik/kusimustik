@@ -1,0 +1,133 @@
+:root {
+    --background: oklch(0.980 0.003 230);
+    --foreground: oklch(0.220 0.015 240);
+
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.220 0.015 240);
+
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.220 0.015 240);
+
+    --primary: oklch(0.450 0.090 235);
+    --primary-foreground: oklch(0.990 0.005 235);
+
+    --secondary: oklch(0.955 0.006 230);
+    --secondary-foreground: oklch(0.280 0.015 240);
+
+    --muted: oklch(0.955 0.006 230);
+    --muted-foreground: oklch(0.490 0.015 235);
+
+    --accent: oklch(0.935 0.018 235);
+    --accent-foreground: oklch(0.320 0.055 235);
+
+    --destructive: oklch(0.550 0.170 27);
+    --destructive-foreground: oklch(0.985 0.004 27);
+
+    --border: oklch(0.900 0.008 230);
+    --input: oklch(0.770 0.012 230);
+    --ring: oklch(0.450 0.090 235);
+
+    --radius: 0.25rem;
+
+    --sidebar: oklch(0.965 0.005 230);
+    --sidebar-foreground: oklch(0.300 0.015 240);
+    --sidebar-primary: oklch(0.450 0.090 235);
+    --sidebar-primary-foreground: oklch(0.990 0.005 235);   
+    --sidebar-accent: oklch(0.925 0.015 235);
+    --sidebar-accent-foreground: oklch(0.280 0.045 235);    
+    --sidebar-border: oklch(0.900 0.008 230);
+    --sidebar-ring: oklch(0.450 0.090 235);                 
+
+    --chart-1: oklch(0.450 0.090 235);
+    --chart-2: oklch(0.460 0.080 57);
+    --chart-3: oklch(0.574 0.097 276);
+    --chart-4: oklch(0.395 0.105 316);
+    --chart-5: oklch(0.663 0.037 154);
+    --chart-6: oklch(0.320 0.044 212);
+    --chart-7: oklch(0.320 0.105 38);
+    --chart-8: oklch(0.596 0.105 33);
+
+    --ramp-1: oklch(0.945 0.020 235);
+    --ramp-2: oklch(0.880 0.038 235);
+    --ramp-3: oklch(0.800 0.055 235);
+    --ramp-4: oklch(0.710 0.072 235);
+    --ramp-5: oklch(0.610 0.085 235);
+    --ramp-6: oklch(0.505 0.092 235);
+    --ramp-7: oklch(0.395 0.085 235);
+    --ramp-track: oklch(0.955 0.006 230);
+    --ramp-label-flip: 5;
+}
+
+.dark {
+    --background: oklch(0.160 0.010 240);
+    --foreground: oklch(0.940 0.005 230);
+
+    --card: oklch(0.195 0.012 240);
+    --card-foreground: oklch(0.940 0.005 230);
+
+    --popover: oklch(0.215 0.012 240);
+    --popover-foreground: oklch(0.940 0.005 230);
+
+    --primary: oklch(0.700 0.090 235);
+    --primary-foreground: oklch(0.150 0.030 235);
+
+    --secondary: oklch(0.235 0.012 240);
+    --secondary-foreground: oklch(0.940 0.005 230);
+
+    --muted: oklch(0.235 0.012 240);
+    --muted-foreground: oklch(0.650 0.014 233);
+
+    --accent: oklch(0.260 0.035 235);
+    --accent-foreground: oklch(0.900 0.040 235);
+
+    --destructive: oklch(0.660 0.160 27);
+    --destructive-foreground: oklch(0.150 0.030 27);
+
+    --border: oklch(0.270 0.012 240);
+    --input: oklch(0.400 0.014 240);
+    --ring: oklch(0.700 0.090 235);
+
+    --radius: 0.25rem;
+
+    --sidebar: oklch(0.180 0.011 240);
+    --sidebar-foreground: oklch(0.900 0.006 230);
+    --sidebar-primary: oklch(0.700 0.090 235);
+    --sidebar-primary-foreground: oklch(0.150 0.030 235);   
+    --sidebar-accent: oklch(0.250 0.030 235);
+    --sidebar-accent-foreground: oklch(0.910 0.030 235);    
+    --sidebar-border: oklch(0.260 0.012 240);
+    --sidebar-ring: oklch(0.700 0.090 235);                 
+
+    --chart-1: oklch(0.700 0.090 235);
+    --chart-2: oklch(0.534 0.105 137);
+    --chart-3: oklch(0.510 0.105 45);
+    --chart-4: oklch(0.900 0.046 9);
+    --chart-5: oklch(0.537 0.105 240);
+    --chart-6: oklch(0.775 0.105 319);
+    --chart-7: oklch(0.780 0.105 73);
+    --chart-8: oklch(0.654 0.064 19);
+
+    --ramp-1: oklch(0.300 0.022 235);
+    --ramp-2: oklch(0.375 0.040 235);
+    --ramp-3: oklch(0.455 0.058 235);
+    --ramp-4: oklch(0.545 0.075 235);
+    --ramp-5: oklch(0.640 0.088 235);
+    --ramp-6: oklch(0.740 0.088 235);
+    --ramp-7: oklch(0.850 0.070 235);
+    --ramp-track: oklch(0.235 0.012 240);
+    --ramp-label-flip: 4;
+}
+
+@theme inline {
+    --color-ramp-1: var(--ramp-1);
+    --color-ramp-2: var(--ramp-2);
+    --color-ramp-3: var(--ramp-3);
+    --color-ramp-4: var(--ramp-4);
+    --color-ramp-5: var(--ramp-5);
+    --color-ramp-6: var(--ramp-6);
+    --color-ramp-7: var(--ramp-7);
+    --color-ramp-track: var(--ramp-track);
+    --color-chart-6: var(--chart-6);
+    --color-chart-7: var(--chart-7);
+    --color-chart-8: var(--chart-8);
+}

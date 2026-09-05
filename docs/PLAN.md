@@ -12,11 +12,19 @@ A survey builder + collector + analyser for the Estonian market. Competitive tar
 
 Set up Next.js (App Router, TS, Tailwind), shadcn/ui, Vitest, Playwright, ESLint + Prettier, local Supabase via CLI. Wire `pnpm check` to run `tsc --noEmit && eslint . && vitest run`. Strict tsconfig including `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`.
 
-Drop in the design tokens exported from Claude Design as CSS variables in `globals.css` and map them in the Tailwind theme. Add `CLAUDE.md` and this file.
+Drop in the audited design tokens as CSS variables in `globals.css` and map them in the Tailwind theme. Add `CLAUDE.md`, `docs/DECISIONS.md`, `docs/DESIGN.md` and this file.
 
-> **Prompt:** Scaffold the project per Phase 0 of docs/PLAN.md. Set up the strict tsconfig, the `pnpm check` script, local Supabase, and shadcn with the design tokens already in globals.css. Add one trivial passing test so I can see the loop work. Do not create any application code, routes, or tables.
+> **Prompt:** Scaffold the project per Phase 0 of docs/PLAN.md, into the current directory, which already contains CLAUDE.md and docs/ — don't overwrite them. Set up the strict tsconfig, the `pnpm check` script, local Supabase, and shadcn.
+>
+> For styling: use @docs/design-tokens.css as the source for globals.css — the `:root` block, the `.dark` block and the `@theme inline` block go in exactly as written. Do not regenerate, round or substitute any value; they have been contrast-audited. Load IBM Plex Sans and IBM Plex Mono via `next/font`, not a CSS `@import`.
+>
+> @docs/DESIGN.md is the visual spec for this and every later phase. Don't invent spacing, type sizes or colours that aren't in it. Several of its sections are marked TODO — if you need something from one of those, ask rather than improvising.
+>
+> Add one trivial passing test so I can see the loop work. Do not create any application code, routes, or tables.
 
-**Done when:** `pnpm check` is green, `pnpm dev` renders a blank themed page, `supabase start` works.
+**Done when:** `pnpm check` is green, `pnpm dev` renders a blank themed page in both light and dark, and `supabase start` works.
+
+**After this phase:** `app/globals.css` is canonical for tokens. Replace `docs/design-tokens.css` with a one-line pointer to it so the two can't drift.
 
 ---
 
@@ -45,7 +53,7 @@ Deliverables in `src/domain/`:
 
 - `ids.ts` — branded `SurveyId`, `QuestionId`, `ResponseId` + constructors.
 - `question.ts` — `QuestionSchema` as `z.discriminatedUnion("type", [...])`. Each member has `id`, `key`, `type`, `title`, `description?`, `required`, plus its own config.
-    - **`id` vs `key`.** `id` is a branded UUID, unique within a survey, regenerated on duplication. `key` is a slug (`nps_overall`, `q_satisfaction`), unique within a survey, and **preserved across duplication**. Wave-over-wave comparison groups on `key`, so rewording a question doesn't sever its trend line. Auto-derive the key from the title on creation, let the owner override it, and warn loudly before allowing a rename on a published survey.
+  - **`id` vs `key`.** `id` is a branded UUID, unique within a survey, regenerated on duplication. `key` is a slug (`nps_overall`, `q_satisfaction`), unique within a survey, and **preserved across duplication**. Wave-over-wave comparison groups on `key`, so rewording a question doesn't sever its trend line. Auto-derive the key from the title on creation, let the owner override it, and warn loudly before allowing a rename on a published survey.
 - `answer.ts` — `buildAnswerSchema(question): ZodType`. This is the load-bearing function. Given a question, return the Zod schema its answer must satisfy, honouring `required`, min/max selections, scale bounds, matrix row coverage. Used identically on client and server.
 - `survey.ts` — `SurveySchema` (title, description, status: `draft | published | closed`, slug, locale, `waveGroupId`, `waveLabel?`, ordered elements). Duplicating a survey inherits the source's `waveGroupId`; a survey created from scratch gets a fresh one. `waveLabel` is free text ("2025", "Q1"), used as the axis label in comparisons.
 - `duplicate.ts` — `duplicateSurvey(survey, opts): Survey`. New survey id, new question ids, **same question keys**, same `waveGroupId`. Test this explicitly; getting it wrong is silent and only shows up a year later.
@@ -71,12 +79,12 @@ Tables: `profiles`, `surveys`, `survey_versions`, `survey_questions` (derived), 
 
 ```sql
 create table survey_questions (
-  question_id uuid primary key,
-  survey_id   uuid not null references surveys(id) on delete cascade,
-  key         text not null,
-  type        text not null,
-  title       text not null,
-  position    int  not null
+                                question_id uuid primary key,
+                                survey_id   uuid not null references surveys(id) on delete cascade,
+                                key         text not null,
+                                type        text not null,
+                                title       text not null,
+                                position    int  not null
 );
 create index on survey_questions (survey_id);
 create index on survey_questions (key);
@@ -88,13 +96,13 @@ It buys three things at once: an FK target for `answers.question_id` (the main i
 
 ```sql
 create table survey_events (
-  id          bigint generated always as identity primary key,
-  survey_id   uuid not null references surveys(id) on delete cascade,
-  session_id  uuid not null,            -- anonymous, per-visit, not a user id
-  question_id uuid,                     -- null for survey-level events
-  type        text not null,            -- view | start | question_view | question_answer | submit | abandon
-  at          timestamptz not null default now(),
-  meta        jsonb                     -- device, referrer/collector, dwell ms
+                             id          bigint generated always as identity primary key,
+                             survey_id   uuid not null references surveys(id) on delete cascade,
+                             session_id  uuid not null,            -- anonymous, per-visit, not a user id
+                             question_id uuid,                     -- null for survey-level events
+                             type        text not null,            -- view | start | question_view | question_answer | submit | abandon
+                             at          timestamptz not null default now(),
+                             meta        jsonb                     -- device, referrer/collector, dwell ms
 );
 create index on survey_events (survey_id, at);
 ```
