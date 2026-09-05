@@ -7,27 +7,30 @@ import "./globals.css";
 // metadata and labels. §2 restricts the interior to two weights (400/500);
 // 600 is reserved for panel heads and metrics.
 const sans = IBM_Plex_Sans({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "600"],
-  variable: "--font-sans",
-  display: "swap",
+    subsets: ["latin", "latin-ext"],
+    weight: ["400", "500", "600"],
+    variable: "--font-sans",
+    display: "swap"
 });
 
 const mono = IBM_Plex_Mono({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500"],
-  variable: "--font-mono",
-  display: "swap",
+    subsets: ["latin", "latin-ext"],
+    weight: ["400", "500"],
+    variable: "--font-mono",
+    display: "swap"
 });
 
 export const metadata: Metadata = {
-  title: "Küsimustik",
+    title: "Küsimustik"
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  return (
-    <html lang="et" className={cn("font-sans", sans.variable, mono.variable)}>
-      <body>{children}</body>
-    </html>
-  );
+    return (
+        <html
+            lang="et"
+            className={cn("font-sans", sans.variable, mono.variable)}
+        >
+            <body>{children}</body>
+        </html>
+    );
 }

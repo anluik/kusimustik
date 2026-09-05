@@ -110,3 +110,24 @@ Append-only. Newest at the bottom. If you deviate from one of these, add a new e
 - `params`/`searchParams`/`cookies()`/`headers()` are Promise-only.
 
 **Not adopted.** `cacheComponents` (the replacement for experimental PPR / `dynamicIO` / `useCache`) stays off. It is not a rename: enabling it surfaces build errors for uncached data outside `<Suspense>` and requires adopting the Cache Components model wholesale. Revisit when there is a page whose performance actually demands it.
+
+---
+
+## 007 — Phase 1 domain shapes: the answer envelope, `isAnswerable`, and NPS as its own summary kind
+
+**Status:** accepted
+
+**Context.** Phase 1 of `docs/PLAN.md` names the deliverables but leaves several shapes open. These are the calls made while implementing `domain/`, recorded because everything downstream inherits them.
+
+**Decisions.**
+
+- **Answers are a self-describing tagged envelope.** `AnswerValue` is a discriminated union on `type`, matching the question type it answers (`{ type: "nps", value: 9 }`, `{ type: "matrix_single", values: { speed: "high" } }`). It is what goes in `answers.value` as JSONB in Phase 2. The tag costs a few bytes per row and buys three things: the column is readable on its own without joining the definition, the aggregator and exporter narrow without consulting the question, and an answer stored against a question whose type was later changed fails to parse instead of being silently misread.
+- **A skipped question is `null`.** Never `""`, `[]` or `{}`. `buildAnswerSchema` accepts `null` only when the question is optional, and never accepts a *partial* answer — a half-filled matrix or a below-minimum multi-choice is invalid whether or not the question is required. Skipping is allowed; half-answering is not.
+- **`isAnswerable` is a defaulted literal field, not a derived predicate.** `z.literal(true).default(true)` on questions, `z.literal(false).default(false)` on statements. Stored JSON need not carry it, a document that contradicts its own type fails to parse, and TypeScript narrows the union on it, so `AnswerableQuestion` is `Extract<SurveyElement, { isAnswerable: true }>` rather than a hand-written type guard that could drift.
+- **`NpsSummary` is a fifth summary kind, not a flag on `NumericSummary`.** The plan lists four shapes and says "NPS gets promoters/passives/detractors and the score". Folding those into `NumericSummary` as optional fields would make every numeric chart branch on whether they are present. NPS renders differently enough (the three-band split, a score, not a mean) to deserve its own variant, and Phase 7's exhaustive switch over `QuestionSummary` then forces a deliberate choice of chart for it.
+- **`otherLabel` is required whenever `allowOther` is set.** The "Other" option's label is respondent-facing copy and a CSV header, so it cannot come from a literal in `domain/` — the non-negotiable in `CLAUDE.md` forbids it, and `domain/` has no access to the message files. Making the schema reject `allowOther: true` without a label pushes that string out to the builder, where the message catalogue is available. For the same reason `CategoricalSummary.other` is a separate bucket rather than a synthetic entry in `options`.
+- **Percentages are taken against `answeredCount`, not `responseCount`**, rounded to one decimal, with `skippedCount` reported alongside. `multi_choice` percentages therefore exceed 100 by design; `CategoricalSummary.multiSelect` flags that for the chart.
+- **CSV column identity is derived from `key`.** `key`, or `key__<option|row>` for a fanned-out column. Never from `id`, which changes on duplication — two waves of the same survey have to line up column for column. `multi_choice` fans out to one flag column per option (`"1"` / `""`) plus a free-text column when `allowOther`; `matrix_single` fans out to one column per row holding the chosen column's label. Cells carry labels rather than stored values, falling back to the raw value when an option has since been deleted so an old response never exports blank.
+- **`duplicateSurvey` returns a draft with `slug: null`.** A copy must not be able to take over the source's live public link. It keeps the source's title by default (a new wave is the same survey, run again), takes an optional new `waveLabel`, and has a `newWaveGroup` escape hatch for when the copy is the start of an unrelated survey rather than the next wave.
+
+**Not decided here.** Zod's validation messages are currently developer-facing English. Respondent-facing wording will be mapped from the issue `code` and `path` in Phase 6, where the message catalogue exists; `domain/` must not grow an i18n dependency to produce them.

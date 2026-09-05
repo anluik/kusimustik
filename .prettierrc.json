@@ -1,4 +1,7 @@
 {
-  "plugins": ["prettier-plugin-tailwindcss"],
-  "tailwindStylesheet": "./app/globals.css"
+    "arrowParens": "avoid",
+    "tabWidth": 4,
+    "trailingComma": "none",
+    "plugins": ["prettier-plugin-tailwindcss"],
+    "tailwindStylesheet": "./app/globals.css"
 }
