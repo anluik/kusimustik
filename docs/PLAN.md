@@ -49,7 +49,7 @@ MVP question types — eight, chosen to cover both competitors' common ground:
 
 Plus a non-question `statement` block (connect.ee's "väite tekst") — content shown but not answered. Model it in the same union with an `isAnswerable` discriminator so the runner and the aggregator both handle it explicitly.
 
-Deliverables in `src/domain/`:
+Deliverables in `domain/`:
 
 - `ids.ts` — branded `SurveyId`, `QuestionId`, `ResponseId` + constructors.
 - `question.ts` — `QuestionSchema` as `z.discriminatedUnion("type", [...])`. Each member has `id`, `key`, `type`, `title`, `description?`, `required`, plus its own config.
@@ -61,7 +61,7 @@ Deliverables in `src/domain/`:
 - `export.ts` — `toCsvColumns(question)` and `toCsvCells(question, answer)`. Multi-choice fans out to one column per option; matrix to one per row.
 - `assert-never.ts`.
 
-> **Prompt:** Implement Phase 1 of docs/PLAN.md — the whole of src/domain/, with no dependencies beyond zod. Write the vitest tests first, then the implementation. Cover: every question type round-trips through buildAnswerSchema for both a valid and an invalid answer; required vs optional; a multi_choice with min 2 max 3; an opinion_scale rejecting out-of-range values; matrix_single rejecting a partial row set; aggregate() over a hand-built fixture of 20 responses; CSV column fan-out for multi_choice and matrix; and duplicateSurvey producing fresh ids but identical keys and an unchanged waveGroupId. Then prove the exhaustiveness works: temporarily add a ninth question type to the union, run tsc, and show me the list of errors before removing it.
+> **Prompt:** Implement Phase 1 of docs/PLAN.md — the whole of domain/, with no dependencies beyond zod. Write the vitest tests first, then the implementation. Cover: every question type round-trips through buildAnswerSchema for both a valid and an invalid answer; required vs optional; a multi_choice with min 2 max 3; an opinion_scale rejecting out-of-range values; matrix_single rejecting a partial row set; aggregate() over a hand-built fixture of 20 responses; CSV column fan-out for multi_choice and matrix; and duplicateSurvey producing fresh ids but identical keys and an unchanged waveGroupId. Then prove the exhaustiveness works: temporarily add a ninth question type to the union, run tsc, and show me the list of errors before removing it.
 
 **Done when:** tests pass, and that exhaustiveness demonstration produced errors in every file that switches on type.
 
@@ -111,7 +111,7 @@ That's what powers drop-off funnels, time-per-question, and abandonment rate. Ke
 
 RLS: owners read/write their own surveys. Anonymous users may `INSERT` into `responses`, `answers` and `survey_events` only when the parent survey is `published`, and may `SELECT` nothing from them. Nobody but the owner reads responses. Write the anonymous-insert policies carefully — that's the one place where getting RLS wrong leaks other people's data.
 
-> **Prompt:** Phase 2 of docs/PLAN.md. Write the Supabase migrations including RLS on every table, the trigger that maintains survey_questions from the elements JSONB, a seed script creating one user and two waves of the same survey (same wave_group_id, same question keys, 30 fake responses each with differing distributions), and the repository layer in src/lib/db/ that parses everything through the Phase 1 schemas on read. Then write tests asserting: (a) a second user cannot read the first user's responses, (b) an anonymous client can insert a response to a published survey but not to a draft one, and (c) editing a survey's elements updates survey_questions correctly, including deletions.
+> **Prompt:** Phase 2 of docs/PLAN.md. Write the Supabase migrations including RLS on every table, the trigger that maintains survey_questions from the elements JSONB, a seed script creating one user and two waves of the same survey (same wave_group_id, same question keys, 30 fake responses each with differing distributions), and the repository layer in lib/db/ that parses everything through the Phase 1 schemas on read. Then write tests asserting: (a) a second user cannot read the first user's responses, (b) an anonymous client can insert a response to a published survey but not to a draft one, and (c) editing a survey's elements updates survey_questions correctly, including deletions.
 
 **Done when:** all three tests pass and `pnpm db:reset` gives you two comparable waves to look at.
 
@@ -171,7 +171,7 @@ Plus a **drop-off funnel** from `survey_events`: views → starts → per-questi
 
 Roughly in order of value for this market:
 
-1. **Skip logic / branching** — Surveer has it, connect.ee doesn't. Model as a `conditions` array on each element, evaluated by a pure function in `src/domain/`. Needs a cycle check.
+1. **Skip logic / branching** — Surveer has it, connect.ee doesn't. Model as a `conditions` array on each element, evaluated by a pure function in `domain/`. Needs a cycle check.
 2. **Wave comparison** — the year-over-year view. Pick a `wave_group_id`, join waves on question `key`, render each question's summaries side by side with the wave labels as the series. The schema work is already done in Phases 1–2; this is a query and a screen. Neither connect.ee nor Surveer offers it, and it's the feature that makes an annual customer stay for year two.
 3. **Multilingual surveys** — not just a translated UI but translated *survey content* with a respondent language picker. In Estonia this is table stakes, and it's the reason to have kept all copy in message files from day one.
 4. **Remaining question types** — ranking and image-choice first, since neither competitor's modern option has them; then slider, star rating, matrix_multi, number, date, email, phone, URL.
