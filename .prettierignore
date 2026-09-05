@@ -1,0 +1,17 @@
+.next/
+node_modules/
+pnpm-lock.yaml
+supabase/.temp/
+lib/db/database.types.ts
+components/ui/
+
+# The audited design tokens live here verbatim. Prettier normalises
+# `oklch(0.450 0.090 235)` to `oklch(0.45 0.09 235)` — numerically identical,
+# but it breaks a byte diff against the contrast audit. Hands off.
+app/globals.css
+
+# Prose and specs. Prettier rewrites markdown tables wholesale, which buries
+# real edits to DESIGN.md and PLAN.md in reflow noise. AGENTS.md is regenerated
+# by `next dev` and must not be touched at all.
+*.md
+docs/

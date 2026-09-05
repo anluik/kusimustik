@@ -11,6 +11,7 @@ pnpm dev            # dev server
 pnpm check          # typecheck + lint + unit tests — MUST be green before you say you're done
 pnpm test           # vitest
 pnpm test:e2e       # playwright
+pnpm format         # prettier --write .
 pnpm db:types       # regenerate lib/db/database.types.ts from local Supabase
 pnpm db:reset       # reset local DB and replay migrations + seed
 ```
@@ -31,31 +32,52 @@ pnpm db:reset       # reset local DB and replay migrations + seed
 
 ## Layout
 
+No `src/`. `app/` is the router directory and holds routes and nothing else;
+everything else sits beside it at the repo root. `@/*` resolves from the repo
+root, so `domain/` is `@/domain` and `lib/db/` is `@/lib/db`.
+
 ```
-app/
-  domain/          pure schemas + logic (question union, answer validation, aggregation)
-  lib/db/          supabase clients, generated types, repository fns
-  lib/i18n/        next-intl setup
-  app/(app)/       authed dashboard — builder, results
-  app/(public)/    respondent runner, no auth
-  app/api/
-  components/ui/   shadcn — do not hand-edit, re-run the CLI
-  components/      app components
+app/                 App Router — routes only
+  (app)/             authed dashboard — builder, results
+  (public)/          respondent runner, no auth
+  api/               route handlers (analytics beacons, CSV download)
+  globals.css        canonical design tokens — see docs/DESIGN.md §1
+domain/              pure schemas + logic (question union, answer validation, aggregation)
+lib/db/              supabase clients, generated types, repository fns
+lib/i18n/            next-intl setup
+components/ui/       shadcn — do not hand-edit, re-run the CLI
+components/          app components
+e2e/                 playwright specs
+messages/            et.json, en.json, ru.json
 supabase/migrations/
-messages/          et.json, en.json, ru.json
-docs/PLAN.md       the phased build plan — read the current phase before starting
-docs/DECISIONS.md  settled architecture decisions — read before proposing a schema change
+docs/PLAN.md         the phased build plan — read the current phase before starting
+docs/DECISIONS.md    settled architecture decisions — read before proposing a schema change
+docs/DESIGN.md       the visual spec — read before writing any UI
 ```
 
 ## Conventions
 
 - Server Components by default. `"use client"` only for interactivity, pushed as far down the tree as possible.
-- Mutations are Server Actions, wrapped so they return `{ ok: true, data } | { ok: false, error }` rather than throwing to the client.
+- Mutations are Server Actions, wrapped so they return `{ ok: true, data } | { ok: false, error }` rather than throwing to the client. **The wrapper's `catch` must start with `unstable_rethrow(err)`** from `next/navigation` — `redirect()`, `permanentRedirect()` and `notFound()` all work by throwing, and a catch-all wrapper swallows them silently.
+- A Server Action is a public POST endpoint, reachable without going through your UI. Every action re-checks auth and ownership itself; never rely on the calling page having checked.
 - TanStack Query for client cache only. Query keys come from the factory in `lib/query-keys.ts` — never inline an array literal.
 - Forms: react-hook-form + `zodResolver`, schema imported from `domain/`.
 - Charts: Recharts via the shadcn `chart` component. Theme colours only, no hex literals.
 - IDs are branded types (`SurveyId`, `QuestionId`, `ResponseId`). Construct via the helpers in `domain/ids.ts`.
 - Every new table gets RLS enabled in the same migration that creates it. A migration that adds a table without a policy is incomplete.
+
+## Next.js 16
+
+Read `AGENTS.md`. These are the version differences that have already caught us out — the rest is in `node_modules/next/dist/docs/`.
+
+- **There is no `middleware.ts`.** It is `proxy.ts` at the repo root, exporting `proxy()`. Node runtime only, not configurable. next-intl's own docs still say middleware — ignore them on that point.
+- **`revalidateTag` takes two arguments** (`revalidateTag(tag, 'max')`); the one-arg form is a type error. For owner-facing mutations you almost always want `updateTag(tag)` instead — it gives read-your-writes, so the owner sees their edit immediately rather than a stale render. `refresh()` refreshes the client router from an action.
+- **Server Actions dispatch one at a time per client.** `Promise.all` over actions serialises them. Batch into a single action instead. This constrains builder autosave.
+- **Analytics beacons go to a Route Handler in `app/api/`**, not a Server Action — `sendBeacon` needs a plain endpoint, and actions queue behind each other.
+- **`params`, `searchParams`, `cookies()`, `headers()` and `draftMode()` are Promise-only.** Sync access was removed in 16. Type pages with the generated `PageProps<'/s/[slug]'>` / `LayoutProps` / `RouteContext` helpers.
+- `next lint` no longer exists and `next build` does not lint — which is exactly why `pnpm check` runs `eslint` itself.
+- Turbopack is the default for `dev` and `build`. No `--turbopack` flag.
+- `cacheComponents` (the old PPR / `dynamicIO` / `useCache`) is **off** and stays off until someone deliberately adopts it. Turning it on errors on uncached data outside `<Suspense>`; it is not a rename.
 
 ## Working style
 
