@@ -28,6 +28,13 @@ export type BuilderAction =
     /** Appended at the end and selected, so the editor follows the owner. */
     | { readonly kind: "add"; readonly element: SurveyElement }
     | { readonly kind: "remove"; readonly id: QuestionId }
+    /** Inserted directly after its source and selected, so the copy is what
+     *  the owner is now editing rather than the original. */
+    | {
+          readonly kind: "duplicate";
+          readonly id: QuestionId;
+          readonly copy: SurveyElement;
+      }
     | { readonly kind: "move"; readonly id: QuestionId; readonly to: number }
     /** Replaces the element with the same `id`; the editor's every keystroke. */
     | { readonly kind: "replace"; readonly element: SurveyElement };
@@ -52,19 +59,26 @@ export function findElement(
     return elements.find(element => element.id === id) ?? null;
 }
 
-/** Moves `from` to `to`, both clamped into the array. Never mutates. */
-export function moveElement(
-    elements: readonly SurveyElement[],
+/**
+ * Moves `from` to `to`, both clamped into the array. Never mutates, and
+ * returns the array it was given when nothing moves, so a caller can tell a
+ * real reorder from a drag that ended where it started by identity.
+ *
+ * Generic because the option lists in the editor panel reorder the same way:
+ * one implementation, one set of tests, one set of edge cases.
+ */
+export function moveItem<T>(
+    items: readonly T[],
     from: number,
     to: number
-): readonly SurveyElement[] {
-    const moved = elements[from];
-    if (moved === undefined) return elements;
+): readonly T[] {
+    const moved = items[from];
+    if (moved === undefined) return items;
 
-    const target = Math.min(Math.max(to, 0), elements.length - 1);
-    if (target === from) return elements;
+    const target = Math.min(Math.max(to, 0), items.length - 1);
+    if (target === from) return items;
 
-    const rest = elements.filter((_, index) => index !== from);
+    const rest = items.filter((_, index) => index !== from);
     return [...rest.slice(0, target), moved, ...rest.slice(target)];
 }
 
@@ -116,13 +130,30 @@ export function documentReducer(
             };
         }
 
+        case "duplicate": {
+            const index = state.elements.findIndex(
+                element => element.id === action.id
+            );
+            if (index === -1) return state;
+
+            return {
+                elements: [
+                    ...state.elements.slice(0, index + 1),
+                    action.copy,
+                    ...state.elements.slice(index + 1)
+                ],
+                selectedId: action.copy.id,
+                revision: state.revision + 1
+            };
+        }
+
         case "move": {
             const from = state.elements.findIndex(
                 element => element.id === action.id
             );
             if (from === -1) return state;
 
-            const elements = moveElement(state.elements, from, action.to);
+            const elements = moveItem(state.elements, from, action.to);
             // A drag that ends where it started is not an edit, and saving it
             // would mark the survey as changed for nothing.
             if (elements === state.elements) return state;

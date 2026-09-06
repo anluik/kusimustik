@@ -185,7 +185,9 @@
             }
         },
         "preview": {
-            "unavailable": "Eelvaade valmib koos selle tüübi redaktoriga."
+            "dropdownPlaceholder": "Vali üks {count} valikust",
+            "npsMinLabel": "Üldse mitte tõenäoline",
+            "npsMaxLabel": "Väga tõenäoline"
         },
         "editor": {
             "title": "Seaded",
@@ -193,8 +195,8 @@
             "deleteLabel": "Kustuta element «{title}»",
             "keyLabel": "Võti",
             "keyHelp": {
-                "derive": "Tekib pealkirjast. Võti seob laineid ja annab CSV veergudele nime, seepärast lukustub see avaldamisel.",
-                "freeze": "Lukustatud: sellele võtmele viitavad juba vastused või teised lained."
+                "derive": "Tekib pealkirjast, kuni sa seda ise muudad. Võti seob laineid ja annab CSV veergudele nime, seepärast lukustub see avaldamisel.",
+                "freeze": "Lukustatud: sellele võtmele viitavad juba vastused või teised lained. Muuta saab, aga hoiatuse kaudu."
             },
             "titleLabel": "Küsimus",
             "titlePlaceholder": "Mida sa vastajalt küsida tahad?",
@@ -213,19 +215,64 @@
                 "title": "Ükski element pole valitud",
                 "body": "Vali element vasakult nimekirjast või eelvaatest."
             },
-            "unavailable": {
-                "title": "Redaktor pole veel valmis",
-                "body": "Tüüpi «{type}» saab praegu ümber tõsta ja kustutada. Redaktor lisandub järgmises etapis."
-            }
+            "duplicate": "Dubleeri",
+            "duplicateLabel": "Dubleeri element «{title}»",
+            "keyPlaceholder": "nt rahulolu_uldine",
+            "editKey": "Muuda võtit",
+            "keyWarning": {
+                "title": "Kas muuta võtit?",
+                "body": "Võti «{key}» seob seda küsimust juba antud vastuste ja teiste lainetega. Muutmine katkestab selle trendijoone ja annab CSV veerule uue nime.",
+                "cancel": "Jäta muutmata",
+                "confirm": "Muuda siiski"
+            },
+            "statementLabel": "Väide",
+            "statementPlaceholder": "Tekst, mida vastaja loeb",
+            "statementHelp": "Väidet ei vastata: seda ainult näidatakse. Tulemustesse ega CSV-sse see ei jõua.",
+            "reorderOption": "Tõsta ümber valik {index}",
+            "rowsLabel": "Read",
+            "rowLabel": "Rida {index}",
+            "rowPlaceholder": "Rea tekst",
+            "addRow": "Lisa rida",
+            "removeRow": "Eemalda rida {index}",
+            "reorderRow": "Tõsta ümber rida {index}",
+            "columnsLabel": "Veerud",
+            "columnLabel": "Veerg {index}",
+            "columnPlaceholder": "Veeru tekst",
+            "addColumn": "Lisa veerg",
+            "removeColumn": "Eemalda veerg {index}",
+            "reorderColumn": "Tõsta ümber veerg {index}",
+            "selectionsLabel": "Valikute arv",
+            "minSelectionsLabel": "Vähemalt",
+            "maxSelectionsLabel": "Kõige rohkem",
+            "selectionsPlaceholder": "piiranguta",
+            "selectionsHelp": "Valida on {count} võimalust. Tühi väli tähendab, et piirangut pole.",
+            "answerLabel": "Vastus",
+            "placeholderLabel": "Vihjetekst",
+            "placeholderPlaceholder": "Tekst tühjas vastusekastis",
+            "maxLengthLabel": "Tähemärkide ülempiir",
+            "maxLengthPlaceholder": "piiranguta",
+            "maxLengthHelp": "Kõige rohkem {max} tähemärki. Tühi väli tähendab, et piirangut pole.",
+            "scaleLabel": "Skaala",
+            "scaleStepsLabel": "Pikkus",
+            "scaleSteps": "{min}–{max}",
+            "scaleMinLabel": "Silt alguses ({step})",
+            "scaleMaxLabel": "Silt lõpus ({step})",
+            "scaleLabelPlaceholder": "nt Ei nõustu üldse",
+            "npsHelp": "NPS-i skaala on alati {min}–{max} ja soovitajad, passiivsed ning mittesoovitajad arvutatakse sellest. Muuta saad ainult sõnastust."
         },
         "defaults": {
             "questionTitle": "Uus küsimus",
-            "optionLabel": "Valik {index}"
+            "optionLabel": "Valik {index}",
+            "statementTitle": "Uus väide",
+            "rowLabel": "Rida {index}",
+            "columnLabel": "Veerg {index}"
         },
         "errors": {
             "titleRequired": "Küsimusel peab olema pealkiri.",
             "optionRequired": "Valik ei saa olla tühi.",
-            "otherLabelRequired": "Sildile tuleb tekst kirjutada."
+            "otherLabelRequired": "Sildile tuleb tekst kirjutada.",
+            "keyInvalid": "Võti peab algama tähega ning tohib sisaldada ainult väiketähti, numbreid ja alakriipse.",
+            "keyTaken": "See võti kuulub juba mõnele teisele küsimusele."
         },
         "save": {
             "label": "Salvestamise olek",
@@ -254,6 +301,19 @@
             "onDragOver": "Element «{title}» on positsioonil {position}.",
             "onDragEnd": "Element «{title}» asetati positsioonile {position}.",
             "onDragCancel": "Loobusid. Element «{title}» jäi positsioonile {position}."
+        },
+        "settings": {
+            "label": "Küsitluse seaded",
+            "title": "Küsitluse seaded",
+            "body": "Need kehtivad kogu küsitluse kohta, mitte ühe küsimuse kohta.",
+            "titleLabel": "Pealkiri",
+            "titlePlaceholder": "nt Töötajate rahulolu 2026",
+            "localeLabel": "Küsitluse keel",
+            "localeHelp": "Keel, milles vastaja küsitlust näeb. Rakenduse keelt see ei muuda.",
+            "waveLabel": "Laine",
+            "wavePlaceholder": "nt 2026",
+            "waveHelp": "Nimetab selle vooru lainete võrdluses. Tühi väli tähendab nimeta lainet.",
+            "submit": "Salvesta"
         }
     },
     "Settings": {

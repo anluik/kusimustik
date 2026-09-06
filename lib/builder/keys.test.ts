@@ -6,7 +6,10 @@ import { createElement } from "@/lib/builder/new-element";
 
 const defaults = {
     title: "Uus küsimus",
-    optionLabel: (index: number) => `Valik ${index}`
+    statementTitle: "Uus väide",
+    optionLabel: (index: number) => `Valik ${index}`,
+    rowLabel: (index: number) => `Rida ${index}`,
+    columnLabel: (index: number) => `Veerg ${index}`
 };
 
 const element = (title: string, siblings: readonly SurveyElement[] = []) =>

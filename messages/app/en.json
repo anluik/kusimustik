@@ -185,7 +185,9 @@
             }
         },
         "preview": {
-            "unavailable": "The preview arrives with this type's editor."
+            "dropdownPlaceholder": "Choose one of {count}",
+            "npsMinLabel": "Not at all likely",
+            "npsMaxLabel": "Extremely likely"
         },
         "editor": {
             "title": "Settings",
@@ -193,8 +195,8 @@
             "deleteLabel": "Delete element “{title}”",
             "keyLabel": "Key",
             "keyHelp": {
-                "derive": "Derived from the title. The key joins waves and names the CSV columns, so it locks when you publish.",
-                "freeze": "Locked: answers or other waves already point at this key."
+                "derive": "Derived from the title until you edit it. The key joins waves and names the CSV columns, so it locks when you publish.",
+                "freeze": "Locked: answers or other waves already point at this key. You can still change it, through the warning."
             },
             "titleLabel": "Question",
             "titlePlaceholder": "What do you want to ask?",
@@ -213,19 +215,64 @@
                 "title": "Nothing selected",
                 "body": "Pick an element from the list on the left, or from the preview."
             },
-            "unavailable": {
-                "title": "The editor is not ready yet",
-                "body": "“{type}” questions can be reordered and deleted for now. The editor arrives in the next step."
-            }
+            "duplicate": "Duplicate",
+            "duplicateLabel": "Duplicate element “{title}”",
+            "keyPlaceholder": "e.g. satisfaction_overall",
+            "editKey": "Edit the key",
+            "keyWarning": {
+                "title": "Change the key?",
+                "body": "The key “{key}” already ties this question to the answers given to it and to the other waves. Changing it severs that trend line and renames the CSV column.",
+                "cancel": "Leave it alone",
+                "confirm": "Change it anyway"
+            },
+            "statementLabel": "Statement",
+            "statementPlaceholder": "The text the respondent reads",
+            "statementHelp": "A statement is not answered: it is only shown. It appears in neither the results nor the CSV.",
+            "reorderOption": "Reorder option {index}",
+            "rowsLabel": "Rows",
+            "rowLabel": "Row {index}",
+            "rowPlaceholder": "Row text",
+            "addRow": "Add row",
+            "removeRow": "Remove row {index}",
+            "reorderRow": "Reorder row {index}",
+            "columnsLabel": "Columns",
+            "columnLabel": "Column {index}",
+            "columnPlaceholder": "Column text",
+            "addColumn": "Add column",
+            "removeColumn": "Remove column {index}",
+            "reorderColumn": "Reorder column {index}",
+            "selectionsLabel": "How many may be ticked",
+            "minSelectionsLabel": "At least",
+            "maxSelectionsLabel": "At most",
+            "selectionsPlaceholder": "no limit",
+            "selectionsHelp": "There are {count} selections on offer. An empty field means no limit.",
+            "answerLabel": "Answer",
+            "placeholderLabel": "Hint text",
+            "placeholderPlaceholder": "Text shown in the empty answer box",
+            "maxLengthLabel": "Character limit",
+            "maxLengthPlaceholder": "no limit",
+            "maxLengthHelp": "At most {max} characters. An empty field means no limit.",
+            "scaleLabel": "Scale",
+            "scaleStepsLabel": "Length",
+            "scaleSteps": "{min}–{max}",
+            "scaleMinLabel": "Label at the low end ({step})",
+            "scaleMaxLabel": "Label at the high end ({step})",
+            "scaleLabelPlaceholder": "e.g. Strongly disagree",
+            "npsHelp": "The NPS scale is always {min}–{max}, and promoters, passives and detractors follow from it. Only the wording is yours to set."
         },
         "defaults": {
             "questionTitle": "New question",
-            "optionLabel": "Option {index}"
+            "optionLabel": "Option {index}",
+            "statementTitle": "New statement",
+            "rowLabel": "Row {index}",
+            "columnLabel": "Column {index}"
         },
         "errors": {
             "titleRequired": "A question needs a title.",
             "optionRequired": "An option cannot be empty.",
-            "otherLabelRequired": "The label needs some text."
+            "otherLabelRequired": "The label needs some text.",
+            "keyInvalid": "A key starts with a letter and holds only lowercase letters, digits and underscores.",
+            "keyTaken": "Another question in this survey already has that key."
         },
         "save": {
             "label": "Save status",
@@ -254,6 +301,19 @@
             "onDragOver": "Element “{title}” is at position {position}.",
             "onDragEnd": "Element “{title}” was dropped at position {position}.",
             "onDragCancel": "Cancelled. Element “{title}” stayed at position {position}."
+        },
+        "settings": {
+            "label": "Survey settings",
+            "title": "Survey settings",
+            "body": "These apply to the whole survey rather than to one question.",
+            "titleLabel": "Title",
+            "titlePlaceholder": "e.g. Employee satisfaction 2026",
+            "localeLabel": "Survey language",
+            "localeHelp": "The language a respondent sees the survey in. It does not change the app's language.",
+            "waveLabel": "Wave",
+            "wavePlaceholder": "e.g. 2026",
+            "waveHelp": "Names this round in the comparison against other waves. Leave it empty for an unnamed wave.",
+            "submit": "Save"
         }
     },
     "Settings": {

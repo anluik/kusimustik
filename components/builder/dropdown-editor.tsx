@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 
 import {
     ElementFields,
-    OtherToggle,
     RequiredToggle,
     ToggleSection
 } from "@/components/builder/element-fields";
@@ -12,17 +11,21 @@ import {
     OptionListEditor,
     useChoiceListCopy
 } from "@/components/builder/option-list-editor";
-import type { SingleChoiceQuestion, SurveyElement } from "@/domain/question";
+import type { DropdownQuestion, SurveyElement } from "@/domain/question";
 import type { KeyPolicy } from "@/lib/builder/keys";
 
-/** One answer from a list of radio buttons, optionally plus a written one. */
-export function SingleChoiceEditor({
+/**
+ * The same single answer as `single_choice`, presented as a select because the
+ * list is long. It has no "other": a written answer belongs next to visible
+ * options, not hidden at the bottom of a scroll.
+ */
+export function DropdownEditor({
     question,
     siblings,
     keyPolicy,
     onChange
 }: {
-    readonly question: SingleChoiceQuestion;
+    readonly question: DropdownQuestion;
     readonly siblings: readonly SurveyElement[];
     readonly keyPolicy: KeyPolicy;
     readonly onChange: (element: SurveyElement) => void;
@@ -53,7 +56,6 @@ export function SingleChoiceEditor({
 
             <ToggleSection>
                 <RequiredToggle question={question} onChange={onChange} />
-                <OtherToggle question={question} onChange={onChange} />
             </ToggleSection>
         </>
     );

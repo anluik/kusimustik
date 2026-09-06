@@ -1,5 +1,6 @@
 "use client";
 
+import { Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -8,7 +9,12 @@ import { EditorPanel } from "@/components/builder/editor-panel";
 import { ElementCanvas } from "@/components/builder/element-canvas";
 import { ElementList } from "@/components/builder/element-list";
 import { SaveIndicator } from "@/components/builder/save-indicator";
+import {
+    SurveySettingsDialog,
+    type SurveySettings
+} from "@/components/builder/survey-settings-dialog";
 import { AppBar } from "@/components/shell/app-bar";
+import { Button } from "@/components/ui/button";
 import {
     Sheet,
     SheetContent,
@@ -22,6 +28,7 @@ import { useSurveyBuilder } from "@/hooks/use-survey-builder";
 import type { KeyPolicy } from "@/lib/builder/keys";
 import {
     createElement,
+    duplicateElement,
     type CreatableElementType
 } from "@/lib/builder/new-element";
 
@@ -33,6 +40,10 @@ import {
  * `Sheet` below 1280px, where three columns do not fit. The element list goes
  * away below `md` — the canvas is still selectable there, and reordering is a
  * pointer-and-keyboard job on a screen wide enough to see the order.
+ *
+ * The survey's own settings — title, language, wave — are a dialog rather than
+ * a fourth panel: they are read once and changed rarely, and unlike everything
+ * else here they are a submit rather than an autosave.
  */
 
 /** DESIGN §4: the editor is a static column from 1280px up, a sheet below. */
@@ -40,13 +51,13 @@ const EDITOR_AS_SHEET = "(max-width: 1279px)";
 
 export function BuilderScreen({
     surveyId,
-    title,
+    initialSettings,
     initialElements,
     initialVersion,
     keyPolicy
 }: {
     readonly surveyId: SurveyId;
-    readonly title: string;
+    readonly initialSettings: SurveySettings;
     readonly initialElements: readonly SurveyElement[];
     readonly initialVersion: number;
     readonly keyPolicy: KeyPolicy;
@@ -60,10 +71,17 @@ export function BuilderScreen({
 
     const asSheet = useMediaQuery(EDITOR_AS_SHEET);
     const [sheetOpen, setSheetOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    // Held locally so the app bar follows the save immediately; the action
+    // refreshes the router too, for the survey list and the runner.
+    const [settings, setSettings] = useState(initialSettings);
 
     const defaults = {
         title: t("defaults.questionTitle"),
-        optionLabel: (index: number) => t("defaults.optionLabel", { index })
+        statementTitle: t("defaults.statementTitle"),
+        optionLabel: (index: number) => t("defaults.optionLabel", { index }),
+        rowLabel: (index: number) => t("defaults.rowLabel", { index }),
+        columnLabel: (index: number) => t("defaults.columnLabel", { index })
     };
 
     function add(type: CreatableElementType) {
@@ -83,7 +101,16 @@ export function BuilderScreen({
             selected={builder.selected}
             elements={builder.elements}
             keyPolicy={keyPolicy}
+            insetHeader={asSheet}
             onChange={builder.replace}
+            onDuplicate={() => {
+                const source = builder.selected;
+                if (source === null) return;
+                builder.duplicate(
+                    source.id,
+                    duplicateElement(source, builder.elements)
+                );
+            }}
             onDelete={() => {
                 if (builder.selectedId === null) return;
                 builder.remove(builder.selectedId);
@@ -95,14 +122,28 @@ export function BuilderScreen({
     return (
         <>
             <AppBar
-                title={title}
+                title={settings.title}
                 meta={
                     <SaveIndicator
                         status={builder.status}
                         onRetry={builder.retry}
                     />
                 }
-                actions={<AddElementMenu onAdd={add} />}
+                actions={
+                    <>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            aria-label={t("settings.label")}
+                            onClick={() => setSettingsOpen(true)}
+                            className="h-[30px] rounded text-xs"
+                        >
+                            <Settings2 aria-hidden />
+                        </Button>
+                        <AddElementMenu onAdd={add} />
+                    </>
+                }
             />
 
             {/* The panels own their own scrolling, so the page itself does not
@@ -141,6 +182,18 @@ export function BuilderScreen({
                     </SheetContent>
                 </Sheet>
             )}
+
+            <SurveySettingsDialog
+                surveyId={surveyId}
+                settings={settings}
+                version={builder.version}
+                open={settingsOpen}
+                onOpenChange={setSettingsOpen}
+                onSaved={(saved, version) => {
+                    setSettings(saved);
+                    builder.syncVersion(version);
+                }}
+            />
         </>
     );
 }

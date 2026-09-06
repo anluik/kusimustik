@@ -4,31 +4,31 @@ import { useTranslations } from "next-intl";
 
 import {
     ElementFields,
-    OtherToggle,
     RequiredToggle,
     ToggleSection
 } from "@/components/builder/element-fields";
-import {
-    OptionListEditor,
-    useChoiceListCopy
-} from "@/components/builder/option-list-editor";
-import type { SingleChoiceQuestion, SurveyElement } from "@/domain/question";
+import { NPS_MAX, NPS_MIN } from "@/domain/question";
+import type { NpsQuestion, SurveyElement } from "@/domain/question";
 import type { KeyPolicy } from "@/lib/builder/keys";
 
-/** One answer from a list of radio buttons, optionally plus a written one. */
-export function SingleChoiceEditor({
+/**
+ * Net Promoter Score. The scale is fixed at 0–10 and the promoter, passive and
+ * detractor bands are fixed with it — that is the whole point of the type, and
+ * a configurable NPS is not an NPS. So there is nothing to configure here but
+ * the wording and whether an answer is required.
+ */
+export function NpsEditor({
     question,
     siblings,
     keyPolicy,
     onChange
 }: {
-    readonly question: SingleChoiceQuestion;
+    readonly question: NpsQuestion;
     readonly siblings: readonly SurveyElement[];
     readonly keyPolicy: KeyPolicy;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
-    const copy = useChoiceListCopy();
 
     return (
         <>
@@ -41,19 +41,12 @@ export function SingleChoiceEditor({
                 titlePlaceholder={t("titlePlaceholder")}
             />
 
-            <OptionListEditor
-                dndId={`options-${question.id}`}
-                options={question.options}
-                minimum={2}
-                copy={copy.options}
-                onChange={options =>
-                    onChange({ ...question, options: [...options] })
-                }
-            />
+            <p className="border-t pt-3 text-[11px] leading-[1.35] text-muted-foreground">
+                {t("npsHelp", { min: NPS_MIN, max: NPS_MAX })}
+            </p>
 
             <ToggleSection>
                 <RequiredToggle question={question} onChange={onChange} />
-                <OtherToggle question={question} onChange={onChange} />
             </ToggleSection>
         </>
     );

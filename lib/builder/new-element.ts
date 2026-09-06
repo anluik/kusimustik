@@ -9,21 +9,28 @@ import {
 } from "@/domain/question";
 
 /**
- * Creating elements and options.
+ * Creating, and copying, elements.
  *
- * The element types the builder can *create* are deliberately a subset of the
- * ones it can *render*: a survey may already contain any of the nine (it was
- * seeded, or duplicated from a wave built elsewhere), but the add menu only
- * offers what has a working editor. Widening `CREATABLE_ELEMENT_TYPES` is what
- * turns the next question type on, and the `assertNever` below then fails the
- * build until this factory knows how to build one. See docs/DECISIONS.md 014.
+ * Every one of the nine types can now be created, so `CREATABLE_ELEMENT_TYPES`
+ * is the whole union and the add menu no longer disables anything. It stays a
+ * separate list rather than becoming an alias of `ELEMENT_TYPES`: a tenth type
+ * has to be *taught* to this factory before the menu offers it, and the
+ * `assertNever` below is what enforces that. See docs/DECISIONS.md 015.
  *
  * Copy is passed in, never written here: every default title and option label
  * the owner sees comes from the message catalogue.
  */
 
 export const CREATABLE_ELEMENT_TYPES = [
-    "single_choice"
+    "statement",
+    "single_choice",
+    "multi_choice",
+    "dropdown",
+    "short_text",
+    "long_text",
+    "opinion_scale",
+    "nps",
+    "matrix_single"
 ] as const satisfies readonly ElementType[];
 
 export type CreatableElementType = (typeof CREATABLE_ELEMENT_TYPES)[number];
@@ -37,12 +44,25 @@ export function isCreatableType(
 /** The catalogue strings a freshly added element is filled with. */
 export type ElementDefaults = {
     readonly title: string;
+    /** A statement is shown, not asked, so its placeholder reads differently. */
+    readonly statementTitle: string;
     /** `index` is 1-based, so the copy reads "Option 1". */
     readonly optionLabel: (index: number) => string;
+    readonly rowLabel: (index: number) => string;
+    readonly columnLabel: (index: number) => string;
 };
 
 /** How many options a new choice question starts with; the schema's minimum. */
 const INITIAL_OPTION_COUNT = 2;
+const INITIAL_MATRIX_ROWS = 2;
+const INITIAL_MATRIX_COLUMNS = 3;
+
+/**
+ * The default length of a new opinion scale. Five steps is the shortest scale
+ * with a neutral midpoint and clear ends, and stays readable on a phone as a
+ * single row of targets — which is what the runner renders it as.
+ */
+const INITIAL_SCALE_MAX = 5;
 
 /**
  * A value for a new option.
@@ -72,6 +92,17 @@ export function newOption(
     };
 }
 
+/** A fresh run of options, values `option_1`… and labels from the catalogue. */
+function newOptions(
+    count: number,
+    label: (index: number) => string
+): ChoiceOption[] {
+    return Array.from({ length: count }, (_, index) => ({
+        value: `option_${index + 1}`,
+        label: label(index + 1)
+    }));
+}
+
 /** The keys already spoken for, so a new element cannot collide with one. */
 export function takenKeys(
     elements: readonly SurveyElement[],
@@ -87,30 +118,97 @@ export function createElement(
     defaults: ElementDefaults,
     siblings: readonly SurveyElement[]
 ): SurveyElement {
-    const base = {
+    const taken = takenKeys(siblings);
+    const question = {
         id: newQuestionId(),
-        key: deriveQuestionKey(defaults.title, takenKeys(siblings)),
-        title: defaults.title
-    };
+        key: deriveQuestionKey(defaults.title, taken),
+        title: defaults.title,
+        isAnswerable: true,
+        required: true
+    } as const;
 
     switch (type) {
+        case "statement":
+            return {
+                id: newQuestionId(),
+                key: deriveQuestionKey(defaults.statementTitle, taken),
+                title: defaults.statementTitle,
+                type: "statement",
+                isAnswerable: false
+            };
+
         case "single_choice":
             return {
-                ...base,
+                ...question,
                 type: "single_choice",
-                isAnswerable: true,
-                required: true,
                 allowOther: false,
-                options: Array.from(
-                    { length: INITIAL_OPTION_COUNT },
-                    (_, index) => ({
-                        value: `option_${index + 1}`,
-                        label: defaults.optionLabel(index + 1)
-                    })
+                options: newOptions(INITIAL_OPTION_COUNT, defaults.optionLabel)
+            };
+
+        case "multi_choice":
+            return {
+                ...question,
+                type: "multi_choice",
+                allowOther: false,
+                options: newOptions(INITIAL_OPTION_COUNT, defaults.optionLabel)
+            };
+
+        case "dropdown":
+            return {
+                ...question,
+                type: "dropdown",
+                options: newOptions(INITIAL_OPTION_COUNT, defaults.optionLabel)
+            };
+
+        case "short_text":
+            return { ...question, type: "short_text" };
+
+        case "long_text":
+            return { ...question, type: "long_text" };
+
+        case "opinion_scale":
+            return {
+                ...question,
+                type: "opinion_scale",
+                max: INITIAL_SCALE_MAX
+            };
+
+        case "nps":
+            return { ...question, type: "nps" };
+
+        case "matrix_single":
+            return {
+                ...question,
+                type: "matrix_single",
+                rows: newOptions(INITIAL_MATRIX_ROWS, defaults.rowLabel),
+                columns: newOptions(
+                    INITIAL_MATRIX_COLUMNS,
+                    defaults.columnLabel
                 )
             };
 
         default:
             return assertNever(type, "creatable element type");
     }
+}
+
+/**
+ * A copy of an element, ready to sit next to the original.
+ *
+ * The copy gets a fresh `id` and a fresh `key`. That is the opposite of
+ * `duplicateSurvey`, which preserves keys so that waves stay comparable
+ * (docs/DECISIONS.md 003) — here the two questions live in the *same* survey,
+ * where a shared key is a `SurveySchema` violation and would mean two CSV
+ * columns claiming one header. Everything the author wrote — options, bounds,
+ * labels — is carried over verbatim.
+ */
+export function duplicateElement(
+    element: SurveyElement,
+    siblings: readonly SurveyElement[]
+): SurveyElement {
+    return {
+        ...element,
+        id: newQuestionId(),
+        key: deriveQuestionKey(element.title, takenKeys(siblings))
+    };
 }

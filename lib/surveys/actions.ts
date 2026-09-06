@@ -186,6 +186,73 @@ export async function saveSurveyElementsAction(
     });
 }
 
+const SettingsInputSchema = IdInputSchema.extend({
+    /** The version the builder last read; see `updateSurveyDefinition`. */
+    expectedVersion: z.int().positive(),
+    title: SurveyTitleSchema,
+    locale: z.literal(LOCALES),
+    /** Empty means "no label"; the survey then simply has none. */
+    waveLabel: WaveLabelSchema.nullable()
+});
+export type SaveSurveySettingsInput = z.input<typeof SettingsInputSchema>;
+
+/**
+ * The survey-level settings the builder owns: its title, the language the
+ * runner renders it in, and which wave of its group it is.
+ *
+ * It carries `expectedVersion` and returns the new one for the same reason
+ * the autosave does — the title and the locale are part of the definition, so
+ * saving them bumps the version out from under the builder, which would then
+ * lose its next autosave to a conflict it did not cause.
+ *
+ * `waveLabel` is deliberately not part of the definition: it names a wave for
+ * comparison rather than changing what a respondent is asked, so editing it
+ * alone leaves the version — and therefore the published snapshot — alone.
+ */
+export async function saveSurveySettingsAction(
+    input: SaveSurveySettingsInput
+): Promise<SurveyActionResult<{ version: number }>> {
+    return runAction("failed", async () => {
+        const parsed = SettingsInputSchema.safeParse(input);
+        if (!parsed.success) return failed("invalidInput");
+
+        const found = await withSurvey(parsed.data.surveyId);
+        if (!found.ok) return failed(found.error);
+
+        const candidate = SurveySchema.safeParse({
+            ...found.record.survey,
+            title: parsed.data.title,
+            locale: parsed.data.locale,
+            ...(parsed.data.waveLabel !== null && {
+                waveLabel: parsed.data.waveLabel
+            })
+        });
+        if (!candidate.success) return failed("invalidInput");
+
+        try {
+            const saved = await updateSurveyDefinition(
+                found.db,
+                parsed.data.surveyId,
+                parsed.data.expectedVersion,
+                {
+                    title: candidate.data.title,
+                    locale: candidate.data.locale,
+                    waveLabel: parsed.data.waveLabel
+                }
+            );
+
+            // Unlike the autosave, this is a deliberate submit and not a
+            // keystroke: the app bar title, the survey list and the runner's
+            // language all follow from it.
+            refresh();
+            return ok({ version: saved.version });
+        } catch (error) {
+            if (error instanceof DbConflictError) return failed("conflict");
+            throw error;
+        }
+    });
+}
+
 /**
  * Duplicating is how a recurring survey gets its next wave: the copy keeps the
  * source's `waveGroupId` and every question `key`, and gets fresh ids, so a

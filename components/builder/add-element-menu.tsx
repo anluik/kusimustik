@@ -26,10 +26,13 @@ import {
  * The builder's primary action, in the app bar so that it is reachable at every
  * width — the element list it appends to is hidden on a narrow viewport.
  *
- * Every one of the nine types is listed. The ones without an editor yet are
- * disabled and carry the "coming soon" badge rather than being left out
- * (DESIGN.md §6): the shape of the menu will not shift as they arrive, and the
- * owner can see what the product is going to do.
+ * Every one of the nine types is listed, and as of the end of Phase 5 every
+ * one of them is creatable — so the disabled branch below draws nothing today.
+ * It stays because it is the state DESIGN.md §6 specifies for a type that will
+ * exist later: listed, disabled, carrying the "coming soon" badge rather than
+ * left out, so the shape of the menu does not shift as it arrives. A tenth
+ * type added to the union but not yet to `CREATABLE_ELEMENT_TYPES` lands here
+ * on its own.
  */
 export function AddElementMenu({
     onAdd

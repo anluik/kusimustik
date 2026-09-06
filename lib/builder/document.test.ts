@@ -7,7 +7,7 @@ import {
     documentReducer,
     findElement,
     initialDocument,
-    moveElement,
+    moveItem,
     type BuilderDocument
 } from "@/lib/builder/document";
 
@@ -47,9 +47,41 @@ describe("initialDocument", () => {
     });
 });
 
-describe("moveElement", () => {
+describe("duplicate", () => {
+    const start = initialDocument(three);
+    const copy: SurveyElement = { ...question(2), id: id(9), key: "q2_2" };
+
+    it("inserts the copy directly after its source", () => {
+        const next = documentReducer(start, {
+            kind: "duplicate",
+            id: id(2),
+            copy
+        });
+
+        expect(keys(next)).toEqual(["q1", "q2", "q2_2", "q3"]);
+    });
+
+    it("selects the copy, since that is what the owner now edits", () => {
+        const next = documentReducer(start, {
+            kind: "duplicate",
+            id: id(2),
+            copy
+        });
+
+        expect(next.selectedId).toBe(id(9));
+        expect(next.revision).toBe(start.revision + 1);
+    });
+
+    it("ignores an element that is not in the document", () => {
+        expect(
+            documentReducer(start, { kind: "duplicate", id: id(8), copy })
+        ).toBe(start);
+    });
+});
+
+describe("moveItem", () => {
     it("moves an element down", () => {
-        expect(moveElement(three, 0, 2).map(element => element.key)).toEqual([
+        expect(moveItem(three, 0, 2).map(element => element.key)).toEqual([
             "q2",
             "q3",
             "q1"
@@ -57,7 +89,7 @@ describe("moveElement", () => {
     });
 
     it("moves an element up", () => {
-        expect(moveElement(three, 2, 0).map(element => element.key)).toEqual([
+        expect(moveItem(three, 2, 0).map(element => element.key)).toEqual([
             "q3",
             "q1",
             "q2"
@@ -65,7 +97,7 @@ describe("moveElement", () => {
     });
 
     it("clamps a target past the end", () => {
-        expect(moveElement(three, 0, 99).map(element => element.key)).toEqual([
+        expect(moveItem(three, 0, 99).map(element => element.key)).toEqual([
             "q2",
             "q3",
             "q1"
@@ -73,8 +105,8 @@ describe("moveElement", () => {
     });
 
     it("returns the same array when nothing moves", () => {
-        expect(moveElement(three, 1, 1)).toBe(three);
-        expect(moveElement(three, 9, 0)).toBe(three);
+        expect(moveItem(three, 1, 1)).toBe(three);
+        expect(moveItem(three, 9, 0)).toBe(three);
     });
 });
 

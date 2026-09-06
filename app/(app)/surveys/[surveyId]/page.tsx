@@ -56,7 +56,11 @@ export default async function BuilderPage({
     return (
         <BuilderScreen
             surveyId={record.survey.id}
-            title={record.survey.title}
+            initialSettings={{
+                title: record.survey.title,
+                locale: record.survey.locale,
+                waveLabel: record.survey.waveLabel
+            }}
             initialElements={record.survey.elements}
             initialVersion={record.version}
             keyPolicy={keyPolicyFor({

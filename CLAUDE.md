@@ -60,7 +60,7 @@ lib/actions/         the Server Action result envelope + wrapper
 lib/i18n/            next-intl setup, locale cookie, runner translator
 lib/surveys/         survey actions, error codes, and the pure list shaping
 lib/builder/         the builder's pure parts — document reducer, element factory,
-                     key policy
+                     key policy, optional-field patches
 components/ui/       shadcn — do not hand-edit, re-run the CLI (one documented
                      exception: docs/DECISIONS.md 012)
 components/shell/    app shell — sidebar, app bar, empty state, providers

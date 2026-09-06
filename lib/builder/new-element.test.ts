@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    ELEMENT_TYPES,
     OTHER_OPTION_VALUE,
     SurveyElementSchema,
     type SurveyElement
@@ -8,6 +9,7 @@ import {
 import {
     CREATABLE_ELEMENT_TYPES,
     createElement,
+    duplicateElement,
     isCreatableType,
     newOption,
     nextOptionValue,
@@ -16,7 +18,10 @@ import {
 
 const defaults = {
     title: "Uus küsimus",
-    optionLabel: (index: number) => `Valik ${index}`
+    statementTitle: "Uus väide",
+    optionLabel: (index: number) => `Valik ${index}`,
+    rowLabel: (index: number) => `Rida ${index}`,
+    columnLabel: (index: number) => `Veerg ${index}`
 };
 
 describe("createElement", () => {
@@ -59,14 +64,82 @@ describe("createElement", () => {
 describe("CREATABLE_ELEMENT_TYPES", () => {
     it("is the set the add menu enables", () => {
         expect(isCreatableType("single_choice")).toBe(true);
-        expect(isCreatableType("matrix_single")).toBe(false);
-        expect(isCreatableType("statement")).toBe(false);
+        expect(isCreatableType("matrix_single")).toBe(true);
+        expect(isCreatableType("statement")).toBe(true);
+    });
+
+    it("covers the whole union, so nothing is offered without an editor", () => {
+        // Not an alias of ELEMENT_TYPES: a tenth type has to be taught to
+        // `createElement` before the menu offers it, and the assertNever there
+        // is what makes that a build error rather than a runtime one.
+        expect([...CREATABLE_ELEMENT_TYPES].sort()).toEqual(
+            [...ELEMENT_TYPES].sort()
+        );
     });
 
     it("has no duplicates", () => {
         expect(new Set(CREATABLE_ELEMENT_TYPES).size).toBe(
             CREATABLE_ELEMENT_TYPES.length
         );
+    });
+});
+
+describe.each(ELEMENT_TYPES)("a new %s", type => {
+    it("is a document the domain accepts", () => {
+        const parsed = SurveyElementSchema.safeParse(
+            createElement(type, defaults, [])
+        );
+        expect(parsed.error?.issues ?? []).toEqual([]);
+    });
+
+    it("is answerable unless it is a statement", () => {
+        const element = createElement(type, defaults, []);
+        expect(element.isAnswerable).toBe(type !== "statement");
+    });
+
+    it("can be duplicated into a document the domain accepts", () => {
+        const source = createElement(type, defaults, []);
+        const copy = duplicateElement(source, [source]);
+
+        expect(SurveyElementSchema.safeParse(copy).success).toBe(true);
+        expect(copy.type).toBe(type);
+    });
+});
+
+describe("duplicateElement", () => {
+    it("keeps everything the author wrote", () => {
+        const source = createElement("multi_choice", defaults, []);
+        if (source.type !== "multi_choice") throw new Error("wrong type");
+        const edited = {
+            ...source,
+            title: "Millised kanalid?",
+            options: [
+                { value: "option_1", label: "E-post" },
+                { value: "option_2", label: "Telefon" }
+            ],
+            minSelections: 1
+        };
+
+        const copy = duplicateElement(edited, [edited]);
+
+        expect(copy).toMatchObject({
+            type: "multi_choice",
+            title: "Millised kanalid?",
+            options: edited.options,
+            minSelections: 1
+        });
+    });
+
+    it("takes a fresh id and a fresh key, unlike duplicating a survey", () => {
+        // Two questions in one survey may not share a key: SurveySchema
+        // rejects it, and the CSV would grow two columns with one header.
+        // Preserving keys is a *cross-survey* rule (docs/DECISIONS.md 003).
+        const source = createElement("single_choice", defaults, []);
+        const copy = duplicateElement(source, [source]);
+
+        expect(copy.id).not.toBe(source.id);
+        expect(copy.key).not.toBe(source.key);
+        expect(copy.key).toBe(`${source.key}_2`);
     });
 });
 

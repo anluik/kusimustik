@@ -1,13 +1,6 @@
 "use client";
 
-import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useReducer,
-    useRef,
-    useState
-} from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import type { QuestionId, SurveyId } from "@/domain/ids";
 import { SurveyElementSchema, type SurveyElement } from "@/domain/question";
@@ -54,11 +47,21 @@ export type SurveyBuilder = {
     readonly selectedId: QuestionId | null;
     readonly selected: SurveyElement | null;
     readonly status: BuilderSaveStatus;
+    /**
+     * The optimistic-concurrency token the next save will carry. Exposed
+     * because the survey settings are saved outside this hook and bump it too,
+     * and a save that guessed would lose its next autosave to a conflict it
+     * did not cause.
+     */
+    readonly version: number;
     readonly select: (id: QuestionId | null) => void;
     readonly add: (element: SurveyElement) => void;
     readonly remove: (id: QuestionId) => void;
+    readonly duplicate: (id: QuestionId, copy: SurveyElement) => void;
     readonly move: (id: QuestionId, to: number) => void;
     readonly replace: (element: SurveyElement) => void;
+    /** Adopts the version another save of this survey just returned. */
+    readonly syncVersion: (version: number) => void;
     /** Clears a failed save so the effect below picks the document up again. */
     readonly retry: () => void;
 };
@@ -80,7 +83,7 @@ export function useSurveyBuilder({
 
     const [savedRevision, setSavedRevision] = useState(0);
     const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
-    const versionRef = useRef(initialVersion);
+    const [version, setVersion] = useState(initialVersion);
 
     const { elements, revision } = doc;
     const dirty = revision !== savedRevision;
@@ -97,13 +100,20 @@ export function useSurveyBuilder({
         [elements]
     );
 
+    // The version is a parameter rather than something this closes over, so a
+    // save can never go out carrying a token from a render that has since been
+    // replaced — by another save, or by the settings dialog.
     const save = useCallback(
-        async (at: number, saving: readonly SurveyElement[]) => {
+        async (
+            at: number,
+            saving: readonly SurveyElement[],
+            expectedVersion: number
+        ) => {
             setSaveState({ kind: "saving" });
 
             const result = await saveSurveyElementsAction({
                 surveyId,
-                expectedVersion: versionRef.current,
+                expectedVersion,
                 elements: [...saving]
             });
 
@@ -112,7 +122,7 @@ export function useSurveyBuilder({
                 return;
             }
 
-            versionRef.current = result.data.version;
+            setVersion(result.data.version);
             // `at`, not the current revision: edits made while this was in
             // flight are still unsaved, and the effect below will pick them up.
             setSavedRevision(at);
@@ -129,11 +139,11 @@ export function useSurveyBuilder({
         if (saveState.kind !== "idle") return;
 
         const timer = setTimeout(() => {
-            void save(revision, elements);
+            void save(revision, elements, version);
         }, SAVE_DEBOUNCE_MS);
 
         return () => clearTimeout(timer);
-    }, [dirty, valid, saveState, revision, elements, save]);
+    }, [dirty, valid, saveState, revision, elements, version, save]);
 
     useEffect(() => {
         if (!dirty) return;
@@ -160,6 +170,7 @@ export function useSurveyBuilder({
         selectedId: doc.selectedId,
         selected: findElement(elements, doc.selectedId),
         status,
+        version,
         select: useCallback(
             (id: QuestionId | null) => dispatch({ kind: "select", id }),
             []
@@ -172,6 +183,11 @@ export function useSurveyBuilder({
             (id: QuestionId) => dispatch({ kind: "remove", id }),
             []
         ),
+        duplicate: useCallback(
+            (id: QuestionId, copy: SurveyElement) =>
+                dispatch({ kind: "duplicate", id, copy }),
+            []
+        ),
         move: useCallback(
             (id: QuestionId, to: number) => dispatch({ kind: "move", id, to }),
             []
@@ -180,6 +196,7 @@ export function useSurveyBuilder({
             (element: SurveyElement) => dispatch({ kind: "replace", element }),
             []
         ),
+        syncVersion: useCallback((next: number) => setVersion(next), []),
         retry: useCallback(() => setSaveState({ kind: "idle" }), [])
     };
 }
