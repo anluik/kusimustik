@@ -127,6 +127,13 @@ export type Database = {
             foreignKeyName: "responses_survey_id_fkey"
             columns: ["survey_id"]
             isOneToOne: false
+            referencedRelation: "survey_stats"
+            referencedColumns: ["survey_id"]
+          },
+          {
+            foreignKeyName: "responses_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
             referencedRelation: "surveys"
             referencedColumns: ["id"]
           },
@@ -172,6 +179,13 @@ export type Database = {
             foreignKeyName: "survey_events_survey_id_fkey"
             columns: ["survey_id"]
             isOneToOne: false
+            referencedRelation: "survey_stats"
+            referencedColumns: ["survey_id"]
+          },
+          {
+            foreignKeyName: "survey_events_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
             referencedRelation: "surveys"
             referencedColumns: ["id"]
           },
@@ -210,6 +224,13 @@ export type Database = {
             foreignKeyName: "survey_questions_survey_id_fkey"
             columns: ["survey_id"]
             isOneToOne: false
+            referencedRelation: "survey_stats"
+            referencedColumns: ["survey_id"]
+          },
+          {
+            foreignKeyName: "survey_questions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
             referencedRelation: "surveys"
             referencedColumns: ["id"]
           },
@@ -244,6 +265,13 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "survey_versions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "survey_stats"
+            referencedColumns: ["survey_id"]
+          },
           {
             foreignKeyName: "survey_versions_survey_id_fkey"
             columns: ["survey_id"]
@@ -327,7 +355,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      survey_stats: {
+        Row: {
+          question_count: number | null
+          response_count: number | null
+          survey_id: string | null
+        }
+        Insert: {
+          question_count?: never
+          response_count?: never
+          survey_id?: string | null
+        }
+        Update: {
+          question_count?: never
+          response_count?: never
+          survey_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_published_survey: {

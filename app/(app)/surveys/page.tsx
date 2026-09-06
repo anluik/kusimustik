@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
-import { AppBar } from "@/components/shell/app-bar";
-import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { SurveysScreen } from "@/components/surveys/surveys-screen";
 import { requireSessionUser } from "@/lib/auth/session";
+import { listSurveyStats, listSurveys } from "@/lib/db/surveys";
+import { createServerDb } from "@/lib/supabase/server";
+import { toListItems } from "@/lib/surveys/list";
 
 export async function generateMetadata(): Promise<Metadata> {
     const t = await getTranslations("Surveys");
@@ -13,66 +13,34 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Phase 3 ships the shell around the list, not the list: creating, listing and
- * publishing are Phase 4, so this always renders the empty state and never
- * queries. The create action is present but disabled, carrying the same
- * "coming soon" badge as the Templates nav item (DESIGN §6) rather than
- * appearing later and changing the shape of the page.
+ * The survey list.
+ *
+ * `requireSessionUser()` is the access check that counts — the proxy already
+ * turned anonymous requests away, but a proxy is an optimistic filter. What
+ * scopes the query itself is RLS: the request-scoped client carries the
+ * owner's identity, so `listSurveys` needs no `where owner_id = …` and could
+ * not be made to leak by forgetting one.
+ *
+ * The summaries and their counts are two queries rather than an embed, joined
+ * in memory — the counts come from a view and the shape of the join is then
+ * something the type checker can see. Grouping, filtering and sorting happen
+ * in the client component, which is why the whole list is fetched at once.
  */
 export default async function SurveysPage() {
     await requireSessionUser();
-    const t = await getTranslations("Surveys");
-    const tCommon = await getTranslations("Common");
+    const db = await createServerDb();
+
+    const [summaries, stats] = await Promise.all([
+        listSurveys(db),
+        listSurveyStats(db)
+    ]);
 
     return (
-        <>
-            <AppBar
-                title={t("title")}
-                meta={t("count", { count: 0 })}
-                actions={
-                    <Button
-                        disabled
-                        size="sm"
-                        variant="outline"
-                        className="h-[30px] cursor-not-allowed rounded text-xs text-input opacity-100!"
-                    >
-                        {t("new")}
-                    </Button>
-                }
-            />
-            <main className="p-4">
-                <section className="rounded border bg-card">
-                    <EmptyState
-                        title={t("empty.title")}
-                        body={t("empty.body")}
-                        preview={
-                            <>
-                                <EmptyStateRow />
-                                <EmptyStateRow />
-                                <EmptyStateRow />
-                            </>
-                        }
-                        actions={
-                            <>
-                                <Button
-                                    disabled
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-[30px] cursor-not-allowed rounded text-xs text-input opacity-100!"
-                                >
-                                    {t("empty.action")}
-                                </Button>
-                                <Badge
-                                    variant="outline"
-                                    className="h-5 rounded px-1.5 font-mono text-[9px] tracking-[0.04em] text-muted-foreground uppercase"
-                                >
-                                    {tCommon("comingSoon")}
-                                </Badge>
-                            </>
-                        }
-                    />
-                </section>
-            </main>
-        </>
+        <SurveysScreen
+            items={toListItems(summaries, stats)}
+            // Read once here so the server render and the hydrated one cannot
+            // disagree about which day "today" is.
+            nowIso={new Date().toISOString()}
+        />
     );
 }

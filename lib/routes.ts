@@ -6,6 +6,8 @@
 export const ROUTES = {
     home: "/",
     surveys: "/surveys",
+    /** The builder for one survey; the survey's own page for now. */
+    builder: (surveyId: string) => `/surveys/${surveyId}`,
     settings: "/settings",
     login: "/login",
     authCallback: "/auth/callback",

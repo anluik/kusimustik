@@ -40,17 +40,220 @@
     "Surveys": {
         "title": "Surveys",
         "count": "{count, plural, one {# survey} other {# surveys}}",
+        "waveGroupCount": "{count, plural, one {# wave series} other {# wave series}}",
         "new": "New survey",
-        "empty": {
-            "title": "No surveys yet",
-            "body": "Start from an empty survey, add your questions and share the link. Responses and charts will appear here.",
-            "action": "New survey"
+        "search": {
+            "label": "Search surveys",
+            "placeholder": "Search surveys"
+        },
+        "filter": {
+            "label": "Status",
+            "all": "All statuses",
+            "draft": "Drafts",
+            "published": "Published",
+            "closed": "Closed"
         },
         "columns": {
             "survey": "Survey",
             "status": "Status",
             "responses": "Responses",
-            "updated": "Updated"
+            "updated": "Updated",
+            "actions": "Actions"
+        },
+        "status": {
+            "draft": "Draft",
+            "published": "Published",
+            "closed": "Closed"
+        },
+        "meta": {
+            "questions": "{count, plural, one {# question} other {# questions}}",
+            "waves": "{count, plural, one {# wave} other {# waves}}",
+            "series": "wave series",
+            "notShared": "not shared yet",
+            "linkClosed": "link closed",
+            "linkClosedOn": "link closed {date}",
+            "responsesArchived": "{count, plural, one {# response archived} other {# responses archived}}",
+            "open": "{count, plural, one {# open} other {# open}}",
+            "allClosed": "all closed",
+            "noResponses": "—",
+            "waveBadge": "Waves",
+            "unlabelledWave": "Unlabelled"
+        },
+        "share": {
+            "label": "Public survey link",
+            "copy": "Copy",
+            "copied": "Copied"
+        },
+        "time": {
+            "today": "today {time}",
+            "yesterday": "yesterday {time}"
+        },
+        "footer": {
+            "shown": "{shown} / {total} surveys",
+            "sorted": "sorted: updated ↓"
+        },
+        "rowActions": {
+            "label": "Survey actions",
+            "expand": "Show waves",
+            "collapse": "Hide waves",
+            "duplicate": "Duplicate",
+            "newWave": "New wave",
+            "rename": "Rename",
+            "publish": "Publish",
+            "publishBlocked": "0 questions",
+            "close": "Close survey",
+            "delete": "Delete"
+        },
+        "empty": {
+            "title": "No surveys yet",
+            "body": "Start from an empty survey, add questions and share the link. Responses and charts will appear here.",
+            "action": "New survey"
+        },
+        "noResults": {
+            "title": "No survey matches this search",
+            "body": "Try a different search term, or another status.",
+            "action": "Clear filters"
+        },
+        "create": {
+            "title": "New survey",
+            "body": "Give the survey a name. Questions come next; the name can be changed later.",
+            "titleLabel": "Title",
+            "titlePlaceholder": "e.g. Employee satisfaction 2026",
+            "localeLabel": "Survey language",
+            "localeHelp": "The language respondents see the survey in. It does not change the app's language.",
+            "submit": "Create survey"
+        },
+        "rename": {
+            "title": "Rename",
+            "body": "The new name is visible to respondents too.",
+            "titleLabel": "Title",
+            "submit": "Save"
+        },
+        "duplicate": {
+            "title": "Duplicate survey",
+            "titleWave": "New wave",
+            "body": "The copy gets the same questions and stays part of the same wave series, so results can be compared year over year later. It is a draft and only gets its own link when published.",
+            "waveLabelLabel": "Wave name",
+            "waveLabelPlaceholder": "e.g. 2026",
+            "waveLabelHelp": "Optional. Used as the series label in comparison charts.",
+            "submit": "Duplicate"
+        },
+        "publish": {
+            "title": "Publish survey",
+            "body": "The survey becomes public and starts collecting responses. Anyone with the link can answer.",
+            "bodyReopen": "The survey starts collecting responses again. The old link keeps working.",
+            "submit": "Publish"
+        },
+        "close": {
+            "title": "Close survey",
+            "body": "The survey stops collecting responses. Existing responses and the link are kept, and the survey can be reopened later.",
+            "submit": "Close survey"
+        },
+        "delete": {
+            "title": "Delete survey",
+            "body": "“{title}” and all of its responses will be permanently deleted. This cannot be undone.",
+            "bodyWithResponses": "“{title}” and its {count, plural, one {# response} other {# responses}} will be permanently deleted. This cannot be undone.",
+            "submit": "Delete"
+        },
+        "errors": {
+            "invalidInput": "Those details are not valid. Check them and try again.",
+            "notFound": "Survey not found. It may already have been deleted.",
+            "conflict": "The survey changed elsewhere in the meantime. Refresh the page and try again.",
+            "noQuestions": "An empty survey cannot be published. Add at least one question.",
+            "failed": "That did not work. Please try again."
+        }
+    },
+    "Builder": {
+        "elements": {
+            "title": "Elements",
+            "count": "{count, plural, one {# element} other {# elements}}",
+            "dragHandle": "Reorder: {title}",
+            "empty": {
+                "title": "No questions yet",
+                "body": "Add the first question. You can reorder them here later."
+            }
+        },
+        "add": {
+            "label": "Add question",
+            "menuLabel": "Question type"
+        },
+        "canvas": {
+            "required": "required",
+            "empty": {
+                "title": "Nothing to preview",
+                "body": "Add a question and you will see it here the way a respondent does."
+            }
+        },
+        "preview": {
+            "unavailable": "The preview arrives with this type's editor."
+        },
+        "editor": {
+            "title": "Settings",
+            "delete": "Delete",
+            "deleteLabel": "Delete element “{title}”",
+            "keyLabel": "Key",
+            "keyHelp": {
+                "derive": "Derived from the title. The key joins waves and names the CSV columns, so it locks when you publish.",
+                "freeze": "Locked: answers or other waves already point at this key."
+            },
+            "titleLabel": "Question",
+            "titlePlaceholder": "What do you want to ask?",
+            "descriptionLabel": "Help text",
+            "descriptionPlaceholder": "Optional explanation under the question",
+            "requiredLabel": "An answer is required",
+            "optionsLabel": "Options",
+            "optionLabel": "Option {index}",
+            "optionPlaceholder": "Option text",
+            "addOption": "Add option",
+            "removeOption": "Remove option {index}",
+            "allowOtherLabel": "Allow a written answer (“Other”)",
+            "otherLabelLabel": "“Other” label",
+            "otherLabelPlaceholder": "Other",
+            "empty": {
+                "title": "Nothing selected",
+                "body": "Pick an element from the list on the left, or from the preview."
+            },
+            "unavailable": {
+                "title": "The editor is not ready yet",
+                "body": "“{type}” questions can be reordered and deleted for now. The editor arrives in the next step."
+            }
+        },
+        "defaults": {
+            "questionTitle": "New question",
+            "optionLabel": "Option {index}"
+        },
+        "errors": {
+            "titleRequired": "A question needs a title.",
+            "optionRequired": "An option cannot be empty.",
+            "otherLabelRequired": "The label needs some text."
+        },
+        "save": {
+            "label": "Save status",
+            "saved": "saved",
+            "saving": "saving…",
+            "pending": "unsaved",
+            "invalid": "unsaved — fix the errors",
+            "failed": "saving failed",
+            "retry": "Try again",
+            "reload": "Reload the page"
+        },
+        "elementTypes": {
+            "statement": "Statement",
+            "single_choice": "Single choice",
+            "multi_choice": "Multiple choice",
+            "dropdown": "Dropdown",
+            "short_text": "Short text",
+            "long_text": "Long text",
+            "opinion_scale": "Opinion scale",
+            "nps": "NPS",
+            "matrix_single": "Matrix"
+        },
+        "dnd": {
+            "instructions": "Press space to pick an element up. Move it with the arrow keys, drop it with space, cancel with Escape.",
+            "onDragStart": "Picked up element “{title}”, position {position}.",
+            "onDragOver": "Element “{title}” is at position {position}.",
+            "onDragEnd": "Element “{title}” was dropped at position {position}.",
+            "onDragCancel": "Cancelled. Element “{title}” stayed at position {position}."
         }
     },
     "Settings": {

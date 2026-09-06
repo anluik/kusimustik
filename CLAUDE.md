@@ -58,11 +58,17 @@ lib/supabase/        request-scoped clients (server, proxy)
 lib/auth/            session helpers + sign-in/sign-out actions
 lib/actions/         the Server Action result envelope + wrapper
 lib/i18n/            next-intl setup, locale cookie, runner translator
+lib/surveys/         survey actions, error codes, and the pure list shaping
+lib/builder/         the builder's pure parts — document reducer, element factory,
+                     key policy
 components/ui/       shadcn — do not hand-edit, re-run the CLI (one documented
                      exception: docs/DECISIONS.md 012)
 components/shell/    app shell — sidebar, app bar, empty state, providers
+components/surveys/  the survey list, its row actions and its dialogs
+components/builder/  the three-panel builder — element list, canvas, editor panel
 components/          app components
-hooks/               use-mobile.ts is shadcn-generated (lint/format-ignored)
+hooks/               use-survey-builder.ts is the builder's document + autosave;
+                     use-mobile.ts is shadcn-generated (lint/format-ignored)
 e2e/                 playwright specs
 messages/app/        et.json, en.json, ru.json — owner app
 messages/runner/     et.json, en.json, ru.json — respondent runner
@@ -78,7 +84,7 @@ docs/DESIGN.md       the visual spec — read before writing any UI
 - Server Components by default. `"use client"` only for interactivity, pushed as far down the tree as possible.
 - Mutations are Server Actions, wrapped so they return `{ ok: true, data } | { ok: false, error }` rather than throwing to the client. **The wrapper's `catch` must start with `unstable_rethrow(err)`** from `next/navigation` — `redirect()`, `permanentRedirect()` and `notFound()` all work by throwing, and a catch-all wrapper swallows them silently.
 - A Server Action is a public POST endpoint, reachable without going through your UI. Every action re-checks auth and ownership itself; never rely on the calling page having checked.
-- TanStack Query for client cache only. Query keys come from the factory in `lib/query-keys.ts` — never inline an array literal.
+- TanStack Query for client cache only. Query keys come from the factory in `lib/query-keys.ts` — never inline an array literal. Neither exists yet: the builder's autosave is a debounced mutation over local state with no cache to reconcile, so it does not use them (docs/DECISIONS.md 014).
 - Forms: react-hook-form + `zodResolver`, schema imported from `domain/`.
 - Charts: Recharts via the shadcn `chart` component. Theme colours only, no hex literals.
 - IDs are branded types (`SurveyId`, `QuestionId`, `ResponseId`). Construct via the helpers in `domain/ids.ts`.

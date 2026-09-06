@@ -9,7 +9,17 @@ export type SurveyStatus = (typeof SURVEY_STATUSES)[number];
 export const LOCALES = ["et", "en", "ru"] as const;
 export type SurveyLocale = (typeof LOCALES)[number];
 
-/** The public runner lives at `/s/[slug]`, so slugs have to be url-safe. */
+/**
+ * A survey's name. Trimmed before validation, so a title of nothing but spaces
+ * is rejected rather than stored — the create and rename forms parse this same
+ * schema before they submit.
+ */
+export const SurveyTitleSchema = z.string().trim().min(1).max(300);
+
+/** Free text ("2026", "Q1") naming one wave of a recurring survey. */
+export const WaveLabelSchema = z.string().trim().min(1).max(100);
+
+/** The public runner lives at `/k/[slug]`, so slugs have to be url-safe. */
 export const SurveySlugSchema = z
     .string()
     .min(3)
@@ -21,7 +31,7 @@ export const SurveySlugSchema = z
 export const SurveySchema = z
     .object({
         id: SurveyIdSchema,
-        title: z.string().min(1).max(300),
+        title: SurveyTitleSchema,
         description: z.string().max(2000).optional(),
         status: z.literal(SURVEY_STATUSES),
         /** Assigned on publish; null while the survey has never been published. */
@@ -30,7 +40,7 @@ export const SurveySchema = z
         /** Shared by every wave of the same recurring survey. See DECISIONS 003. */
         waveGroupId: WaveGroupIdSchema,
         /** Free text ("2026", "Q1") used as the series label in comparisons. */
-        waveLabel: z.string().min(1).max(100).optional(),
+        waveLabel: WaveLabelSchema.optional(),
         elements: z.array(SurveyElementSchema)
     })
     .check(ctx => {

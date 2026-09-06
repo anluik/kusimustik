@@ -220,3 +220,47 @@ Append-only. Newest at the bottom. If you deviate from one of these, add a new e
 **Why not relax the compiler.** `exactOptionalPropertyTypes` is what makes the difference between an absent optional field and one explicitly set to `undefined` a type error, which the repository layer in `lib/db/` depends on throughout. Turning it off to accommodate a component we do not use would be the tail wagging the dog.
 
 **Revisit** when the shadcn registry ships an `exactOptionalPropertyTypes`-clean build; the repair can then be dropped by re-running the CLI.
+
+---
+
+## 013 — Wave grouping is part of the survey list, and the disclosure is not `Collapsible`
+
+**Status:** accepted
+
+**Context.** Phase 4 is "list, create, rename, duplicate, delete, publish/close", and duplication is what creates a wave group (003) — the copy keeps the source's `wave_group_id`. An ungrouped list therefore shows two identically titled rows the first time an owner presses duplicate, with nothing to say they are the same survey run twice. `docs/DESIGN.md` §5 shows the grouped list and maps expand/collapse to shadcn's `Collapsible`, which cannot be composed with the `Table` the same section asks for.
+
+**Decision.**
+
+- **Grouping ships with the list, not with wave comparison.** `lib/surveys/list.ts` is a pure module that folds the summaries into `StandaloneRow | WaveGroupRow`, orders by most recent activity, and filters. A group is titled for its newest wave, shows the newest wave's question count and the series' summed responses, and is never demoted to a standalone row by a filter — a wave belongs to a series whether or not its siblings are on screen. Comparison itself (PLAN, after-MVP item 2) is still deferred; there is no "compare waves" control.
+- **The disclosure is a plain `button` with `aria-expanded`, and the wave rows are conditional `TableRow`s.** `CollapsibleContent` renders a `div`, and a `div` between `tbody` and `tr` is invalid HTML that the browser hoists out of the table — the waves would render above the list. Splitting each group into its own `Collapsible`-wrapped `tbody` does not help, since trigger and content must share one parent.
+- **The group's actions menu acts on its newest wave**, per §5's "one actions menu component serves both row kinds". The delete dialog names the wave (`title · waveLabel`) rather than the series so that it cannot be read as deleting all of it.
+
+**Why not a `div` grid.** §5 permits one "if virtualising", and `Collapsible` composes with it. But the list is a table of five columns with a header row, and dropping table semantics to gain an animation is the wrong trade; nothing here is virtualised yet.
+
+**Consequence.** No expand/collapse animation. `components/ui/collapsible.tsx` was added by the CLI for this and then removed again, since nothing imports it; `pnpm dlx shadcn add collapsible` brings it back if the builder wants one.
+
+---
+
+## 014 — The builder's autosave, its staged editors, and how question keys follow titles
+
+**Status:** accepted
+
+**Context.** Phase 5 step 1 is the three-panel builder: the element list with dnd-kit reordering, add and delete, autosave, and the editor panel for `single_choice` only. Four things had to be settled to build it, and none of them is obvious from the plan.
+
+**Decision.**
+
+- **Autosave is a debounced mutation over local state, not TanStack Query.** PLAN says "autosave debounced through TanStack Query with optimistic updates", and `hooks/use-survey-builder.ts` does not use it. There is no server-state cache here to reconcile: the document arrives as props from the server render, the reducer in `lib/builder/document.ts` owns it from then on, and an edit is applied locally and never rolled back — the optimism is structural rather than something a mutation has to simulate. What the server owns is the *version*, the optimistic-concurrency token `updateSurveyDefinition` already takes: the builder keeps the version the last save returned and sends it with the next one, so a second tab gets `conflict` instead of silently overwriting. A `useMutation` would still have left the debounce, the version bookkeeping, the single-flight guard and the conflict path to write by hand. TanStack Query enters when Phase 7 has queries worth caching; `lib/query-keys.ts` does not exist yet and should not be invented before it has a key in it.
+
+  Three consequences worth knowing: the save is **held** while any element fails `SurveyElementSchema`, so an emptied option label parks the document rather than round-tripping a rejection; a failed save **stops** the loop until the owner retries, so a persistent failure cannot become a request loop; and `saveSurveyElementsAction` deliberately does **not** revalidate — it fires while the owner is typing.
+
+- **`components/ui/` is generated, but the element list is not a `Sidebar`.** DESIGN §5 maps the left panel to shadcn's `Sidebar` in its secondary variant. `Sidebar` reads `SidebarProvider` context, and `app/(app)/layout.tsx` already has one for the app's own navigation; a second `Sidebar` inside it shares that single open/collapsed state and collapses with the nav. The panel is therefore a plain `aside` carrying the sidebar tokens.
+
+- **The drag has no row displacement, so dnd-kit's transforms are ignored.** DESIGN §5 asks for a 2px primary rule with a dot and says explicitly not to displace the rows. `useSortable`'s `transform` and `transition` are therefore not applied; a `DragOverlay` follows the pointer and the rule is drawn from `activeIndex` / `overIndex`. Two things this costs: the drop indicator is hidden behind the overlay during a keyboard drag, and the collision maths no longer has the list rearranging under the pointer to confirm it. Both were checked by hand, with a pointer drag and with the keyboard sensor.
+
+  **`DndContext` needs an explicit `id`.** dnd-kit numbers its own ids from a module-level counter, so the `aria-describedby` it puts on every drag handle came out `DndDescribedBy-0` on the client and `-1` on the server and the tree failed to hydrate. Naming the context pins it. Any future `DndContext` needs the same.
+
+- **A question's `key` follows its title only while nothing can be joined on it.** `key` is preserved across duplication and is what wave comparison and CSV columns join on (003), so it cannot track the title forever — rewording a question a year later would sever its own trend line. But a key derived from the placeholder title a new question is born with (`uus_kusimus`) is no use either, and there is no key editor yet. So `lib/builder/keys.ts` derives the key from the title while **both** hold: the survey has never been published (no answers exist), and it is the only wave in its group (no sibling survey's keys line up against it). Otherwise the key is frozen and the panel says so. Within `derive`, the key still only moves while it *is* the key its current title derives to, which is what will keep a hand-written key intact once a key editor exists.
+
+- **Element types the builder cannot yet edit are named, not defaulted.** `CREATABLE_ELEMENT_TYPES` in `lib/builder/new-element.ts` is the set the add menu enables; the other eight are listed in the menu, disabled, with the "coming soon" badge (DESIGN §6). But a survey can still *contain* any of the nine — seeded, duplicated, or authored before a type's editor existed — so the preview and the editor both switch over all nine, list the eight unimplemented ones case by explicit case, and end in `assertNever`. That is not a fallback branch: a ninth type still fails the build, and the list is the checklist of what Phase 5 has left. Turning a type on means adding it to `CREATABLE_ELEMENT_TYPES` — which fails the build in `createElement` until it knows how to build one — and moving it out of the two placeholder branches.
+
+**Consequence.** Deleting an element is immediate and has no undo; the trigger tombstones the projection row rather than dropping answers (008), so nothing is lost but the definition. A key editor, option reordering, duplicating an element, and the survey-level settings (title, locale, wave label) are all still missing from the builder and belong to the later steps of Phase 5.

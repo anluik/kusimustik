@@ -9,9 +9,17 @@ import {
     LOCALES,
     SURVEY_STATUSES,
     SurveySchema,
-    SurveySlugSchema
+    SurveySlugSchema,
+    SurveyTitleSchema,
+    WaveLabelSchema
 } from "@/domain/survey";
-import { DbConflictError, DbNotFoundError, unwrap } from "@/lib/db/errors";
+import { proposeSlug } from "@/domain/slug";
+import {
+    DbConflictError,
+    DbNotFoundError,
+    DbUniqueViolationError,
+    unwrap
+} from "@/lib/db/errors";
 import { TimestampSchema, parseRow, parseRows } from "@/lib/db/parse";
 import type { Db } from "@/lib/db/types";
 
@@ -73,12 +81,12 @@ export type SurveyQuestion = z.infer<typeof SurveyQuestionSchema>;
 
 export const NewSurveySchema = z.object({
     ownerId: z.uuid(),
-    title: z.string().min(1).max(300),
+    title: SurveyTitleSchema,
     description: z.string().max(2000).optional(),
     locale: z.literal(LOCALES).default("et"),
     /** Omit for a new survey; pass the source's to add a wave to a group. */
     waveGroupId: z.uuid().optional(),
-    waveLabel: z.string().min(1).max(100).optional(),
+    waveLabel: WaveLabelSchema.optional(),
     elements: z.array(SurveyElementSchema).default([])
 });
 export type NewSurvey = z.input<typeof NewSurveySchema>;
@@ -310,6 +318,10 @@ export async function updateSurveyDefinition(
  * Publishing assigns the public slug and flips the status; the triggers do the
  * rest — the definition is snapshotted as a new `survey_versions` row that
  * every response submitted from now on points at.
+ *
+ * Takes the slug rather than deriving it: reopening a closed survey has to
+ * re-use the link that is already in people's inboxes. `publishSurveyAs` is
+ * the entry point that decides which.
  */
 export async function publishSurvey(
     db: Db,
@@ -331,6 +343,41 @@ export async function publishSurvey(
         );
     }
     return toRecord(row);
+}
+
+/** How many slugs to try before giving up; see `publishSurveyDerivingSlug`. */
+const SLUG_ATTEMPTS = 6;
+
+/**
+ * Publish, keeping the slug the survey already has or deriving a fresh one
+ * from its title.
+ *
+ * Uniqueness is the database's `slug unique` index, not a read-then-write
+ * check: two owners publishing similarly titled surveys in the same instant
+ * would both pass a pre-flight `select` and one would still fail. So the loop
+ * offers a candidate and lets the index arbitrate, with a new suffix each time.
+ * `proposeSlug` only repeats itself on a 31^6 collision, so the second attempt
+ * effectively always lands.
+ */
+export async function publishSurveyDerivingSlug(
+    db: Db,
+    record: SurveyRecord
+): Promise<SurveyRecord> {
+    const { id, slug, title } = record.survey;
+
+    // Already has one: it is in circulation and is not up for renegotiation.
+    if (slug !== null) return publishSurvey(db, id, slug);
+
+    for (let attempt = 0; attempt < SLUG_ATTEMPTS; attempt++) {
+        try {
+            return await publishSurvey(db, id, proposeSlug(title, attempt));
+        } catch (error) {
+            if (!(error instanceof DbUniqueViolationError)) throw error;
+        }
+    }
+    throw new DbConflictError(
+        `could not find a free slug for survey ${id} in ${SLUG_ATTEMPTS} attempts`
+    );
 }
 
 /** Closed surveys keep their slug and stop accepting responses. */
@@ -397,4 +444,48 @@ export async function listSurveyQuestions(
         })),
         `survey_questions of ${surveyId}`
     );
+}
+
+/** Per-survey counts for the list; see the `survey_stats` migration. */
+export const SurveyStatsSchema = z.object({
+    surveyId: SurveyIdSchema,
+    responseCount: z.int().nonnegative(),
+    /** Answerable elements still in the document — statements and tombstoned
+     *  questions are excluded by the view (docs/DECISIONS.md 008). */
+    questionCount: z.int().nonnegative()
+});
+export type SurveyStats = z.infer<typeof SurveyStatsSchema>;
+
+/**
+ * Counts for every survey the caller owns, keyed by survey id.
+ *
+ * One query for the whole list rather than one per row, and a map rather than
+ * an array because the caller has already got the summaries and only needs to
+ * look counts up. The view is `security_invoker`, so RLS still decides what is
+ * in it.
+ */
+export async function listSurveyStats(
+    db: Db
+): Promise<ReadonlyMap<SurveyId, SurveyStats>> {
+    const rows = unwrap(
+        "listSurveyStats",
+        await db
+            .from("survey_stats")
+            .select("survey_id, response_count, question_count")
+    );
+
+    // The view's columns are all nullable in the generated types — Postgres
+    // cannot prove otherwise for a view — but `count(*)` over a primary key
+    // never is, so a null here is a broken migration and should say so.
+    const stats = parseRows(
+        SurveyStatsSchema,
+        rows.map(row => ({
+            surveyId: row.survey_id,
+            responseCount: row.response_count,
+            questionCount: row.question_count
+        })),
+        "survey_stats"
+    );
+
+    return new Map(stats.map(entry => [entry.surveyId, entry]));
 }

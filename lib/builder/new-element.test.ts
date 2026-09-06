@@ -1,0 +1,115 @@
+import { describe, expect, it } from "vitest";
+
+import {
+    OTHER_OPTION_VALUE,
+    SurveyElementSchema,
+    type SurveyElement
+} from "@/domain/question";
+import {
+    CREATABLE_ELEMENT_TYPES,
+    createElement,
+    isCreatableType,
+    newOption,
+    nextOptionValue,
+    takenKeys
+} from "@/lib/builder/new-element";
+
+const defaults = {
+    title: "Uus küsimus",
+    optionLabel: (index: number) => `Valik ${index}`
+};
+
+describe("createElement", () => {
+    it("produces a single_choice question the domain accepts", () => {
+        const element = createElement("single_choice", defaults, []);
+
+        expect(SurveyElementSchema.safeParse(element).success).toBe(true);
+        expect(element.type).toBe("single_choice");
+        expect(element.title).toBe("Uus küsimus");
+    });
+
+    it("starts with the two options the schema requires", () => {
+        const element = createElement("single_choice", defaults, []);
+        if (element.type !== "single_choice") throw new Error("wrong type");
+
+        expect(element.options).toEqual([
+            { value: "option_1", label: "Valik 1" },
+            { value: "option_2", label: "Valik 2" }
+        ]);
+    });
+
+    it("gives every element a fresh id", () => {
+        const first = createElement("single_choice", defaults, []);
+        const second = createElement("single_choice", defaults, [first]);
+
+        expect(second.id).not.toBe(first.id);
+    });
+
+    it("derives a key that does not collide with its siblings", () => {
+        const first = createElement("single_choice", defaults, []);
+        const second = createElement("single_choice", defaults, [first]);
+        const third = createElement("single_choice", defaults, [first, second]);
+
+        expect(first.key).toBe("uus_kusimus");
+        expect(second.key).toBe("uus_kusimus_2");
+        expect(third.key).toBe("uus_kusimus_3");
+    });
+});
+
+describe("CREATABLE_ELEMENT_TYPES", () => {
+    it("is the set the add menu enables", () => {
+        expect(isCreatableType("single_choice")).toBe(true);
+        expect(isCreatableType("matrix_single")).toBe(false);
+        expect(isCreatableType("statement")).toBe(false);
+    });
+
+    it("has no duplicates", () => {
+        expect(new Set(CREATABLE_ELEMENT_TYPES).size).toBe(
+            CREATABLE_ELEMENT_TYPES.length
+        );
+    });
+});
+
+describe("nextOptionValue", () => {
+    it("fills the first free slot rather than counting entries", () => {
+        // Deleting the middle option must not hand the next one a value that
+        // an existing answer already points at.
+        expect(nextOptionValue(["option_1", "option_3"])).toBe("option_2");
+        expect(nextOptionValue([])).toBe("option_1");
+    });
+
+    it("never produces the reserved other value", () => {
+        const values = Array.from({ length: 20 }, (_, index) =>
+            nextOptionValue(
+                Array.from({ length: index }, (_, n) => `option_${n + 1}`)
+            )
+        );
+        expect(values).not.toContain(OTHER_OPTION_VALUE);
+    });
+});
+
+describe("newOption", () => {
+    it("numbers the label from the current option count", () => {
+        expect(
+            newOption(
+                [{ value: "option_1", label: "Valik 1" }],
+                defaults.optionLabel
+            )
+        ).toEqual({ value: "option_2", label: "Valik 2" });
+    });
+});
+
+describe("takenKeys", () => {
+    const elements: readonly SurveyElement[] = [
+        createElement("single_choice", { ...defaults, title: "Esimene" }, []),
+        createElement("single_choice", { ...defaults, title: "Teine" }, [])
+    ];
+
+    it("lists every key", () => {
+        expect(takenKeys(elements)).toEqual(["esimene", "teine"]);
+    });
+
+    it("excludes the element being edited, so it can keep its own key", () => {
+        expect(takenKeys(elements, elements[1])).toEqual(["esimene"]);
+    });
+});

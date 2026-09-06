@@ -20,10 +20,20 @@ export class DbParseError extends DbError {}
 export class DbNotFoundError extends DbError {}
 
 /**
+ * A unique index rejected the write. The one caller that cares is slug
+ * assignment, which responds by proposing a different one; everything else
+ * treats it as the bug it usually is.
+ */
+export class DbUniqueViolationError extends DbError {}
+
+/**
  * An optimistic-concurrency check failed: the survey moved on since the version
  * the caller read. The caller refetches and warns; see docs/DECISIONS.md 001.
  */
 export class DbConflictError extends DbError {}
+
+/** Postgres `unique_violation`, forwarded verbatim by PostgREST. */
+const UNIQUE_VIOLATION = "23505";
 
 /**
  * Turns a PostgREST result into its data or a thrown `DbError`. `maybeSingle()`
@@ -39,10 +49,10 @@ export function unwrap<T>(
     result: PostgrestSingleResponse<T>
 ): T {
     if (result.error !== null) {
-        throw new DbError(
-            `${context}: ${result.error.message} (${result.error.code})`,
-            { cause: result.error }
-        );
+        const message = `${context}: ${result.error.message} (${result.error.code})`;
+        throw result.error.code === UNIQUE_VIOLATION
+            ? new DbUniqueViolationError(message, { cause: result.error })
+            : new DbError(message, { cause: result.error });
     }
     return result.data;
 }

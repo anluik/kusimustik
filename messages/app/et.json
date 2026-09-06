@@ -40,17 +40,220 @@
     "Surveys": {
         "title": "Küsitlused",
         "count": "{count, plural, one {# küsitlus} other {# küsitlust}}",
+        "waveGroupCount": "{count, plural, one {# laineseeria} other {# laineseeriat}}",
         "new": "Uus küsitlus",
-        "empty": {
-            "title": "Ühtegi küsitlust veel pole",
-            "body": "Alusta tühjast küsitlusest, lisa küsimused ja jaga linki. Vastused ja graafikud tekivad siia.",
-            "action": "Uus küsitlus"
+        "search": {
+            "label": "Otsi küsitlust",
+            "placeholder": "Otsi küsitlust"
+        },
+        "filter": {
+            "label": "Olek",
+            "all": "Kõik olekud",
+            "draft": "Mustandid",
+            "published": "Avaldatud",
+            "closed": "Suletud"
         },
         "columns": {
             "survey": "Küsitlus",
             "status": "Olek",
             "responses": "Vastused",
-            "updated": "Muudetud"
+            "updated": "Muudetud",
+            "actions": "Tegevused"
+        },
+        "status": {
+            "draft": "Mustand",
+            "published": "Avaldatud",
+            "closed": "Suletud"
+        },
+        "meta": {
+            "questions": "{count, plural, one {# küsimus} other {# küsimust}}",
+            "waves": "{count, plural, one {# laine} other {# lainet}}",
+            "series": "laineseeria",
+            "notShared": "pole veel jagatud",
+            "linkClosed": "link suletud",
+            "linkClosedOn": "link suletud {date}",
+            "responsesArchived": "{count, plural, one {# vastus arhiivis} other {# vastust arhiivis}}",
+            "open": "{count, plural, one {# avatud} other {# avatud}}",
+            "allClosed": "kõik suletud",
+            "noResponses": "—",
+            "waveBadge": "Lained",
+            "unlabelledWave": "Sildita"
+        },
+        "share": {
+            "label": "Küsitluse avalik link",
+            "copy": "Kopeeri",
+            "copied": "Kopeeritud"
+        },
+        "time": {
+            "today": "täna {time}",
+            "yesterday": "eile {time}"
+        },
+        "footer": {
+            "shown": "{shown} / {total} küsitlust",
+            "sorted": "sorteeritud: muudetud ↓"
+        },
+        "rowActions": {
+            "label": "Küsitluse tegevused",
+            "expand": "Näita laineid",
+            "collapse": "Peida lained",
+            "duplicate": "Dubleeri",
+            "newWave": "Uus laine",
+            "rename": "Nimeta ümber",
+            "publish": "Avalda",
+            "publishBlocked": "0 küsimust",
+            "close": "Sulge küsitlus",
+            "delete": "Kustuta"
+        },
+        "empty": {
+            "title": "Ühtegi küsitlust veel pole",
+            "body": "Alusta tühjast küsitlusest, lisa küsimused ja jaga linki. Vastused ja graafikud tekivad siia.",
+            "action": "Uus küsitlus"
+        },
+        "noResults": {
+            "title": "Ükski küsitlus ei vasta otsingule",
+            "body": "Muuda otsingusõna või vali mõni teine olek.",
+            "action": "Tühista filtrid"
+        },
+        "create": {
+            "title": "Uus küsitlus",
+            "body": "Anna küsitlusele nimi. Küsimused lisad järgmisena; nime saab hiljem muuta.",
+            "titleLabel": "Pealkiri",
+            "titlePlaceholder": "nt Töötajate rahulolu 2026",
+            "localeLabel": "Küsitluse keel",
+            "localeHelp": "Keel, milles vastaja küsitlust näeb. Rakenduse keelt see ei muuda.",
+            "submit": "Loo küsitlus"
+        },
+        "rename": {
+            "title": "Nimeta ümber",
+            "body": "Uus nimi on nähtav ka vastajale.",
+            "titleLabel": "Pealkiri",
+            "submit": "Salvesta"
+        },
+        "duplicate": {
+            "title": "Dubleeri küsitlus",
+            "titleWave": "Uus laine",
+            "body": "Koopia saab samad küsimused ja jääb sama laineseeria osaks, nii et tulemusi saab hiljem aastate lõikes võrrelda. Koopia on mustand ja uue lingi saab alles avaldamisel.",
+            "waveLabelLabel": "Laine nimi",
+            "waveLabelPlaceholder": "nt 2026",
+            "waveLabelHelp": "Vabatahtlik. Seda kasutatakse võrdlusgraafikutel seeria nimena.",
+            "submit": "Dubleeri"
+        },
+        "publish": {
+            "title": "Avalda küsitlus",
+            "body": "Küsitlus muutub avalikuks ja hakkab vastuseid koguma. Igaüks, kellel on link, saab vastata.",
+            "bodyReopen": "Küsitlus hakkab uuesti vastuseid koguma. Vana link jääb kehtima.",
+            "submit": "Avalda"
+        },
+        "close": {
+            "title": "Sulge küsitlus",
+            "body": "Küsitlus lõpetab vastuste kogumise. Senised vastused ja link jäävad alles ning küsitluse saab hiljem uuesti avada.",
+            "submit": "Sulge küsitlus"
+        },
+        "delete": {
+            "title": "Kustuta küsitlus",
+            "body": "Küsitlus «{title}» ja kõik selle vastused kustutatakse jäädavalt. Seda ei saa tagasi võtta.",
+            "bodyWithResponses": "Küsitlus «{title}» ja selle {count, plural, one {# vastus} other {# vastust}} kustutatakse jäädavalt. Seda ei saa tagasi võtta.",
+            "submit": "Kustuta"
+        },
+        "errors": {
+            "invalidInput": "Sisestatud andmed ei sobi. Kontrolli ja proovi uuesti.",
+            "notFound": "Küsitlust ei leitud. Võib-olla on see juba kustutatud.",
+            "conflict": "Küsitlust muudeti vahepeal mujal. Värskenda lehte ja proovi uuesti.",
+            "noQuestions": "Tühja küsitlust ei saa avaldada. Lisa vähemalt üks küsimus.",
+            "failed": "Toiming ebaõnnestus. Proovi uuesti."
+        }
+    },
+    "Builder": {
+        "elements": {
+            "title": "Elemendid",
+            "count": "{count, plural, one {# element} other {# elementi}}",
+            "dragHandle": "Tõsta ümber: {title}",
+            "empty": {
+                "title": "Ühtegi küsimust veel pole",
+                "body": "Lisa esimene küsimus. Siin saad neid hiljem ümber tõsta."
+            }
+        },
+        "add": {
+            "label": "Lisa küsimus",
+            "menuLabel": "Küsimuse tüüp"
+        },
+        "canvas": {
+            "required": "kohustuslik",
+            "empty": {
+                "title": "Eelvaade on tühi",
+                "body": "Lisa küsimus ja näed siin, kuidas vastaja seda näeb."
+            }
+        },
+        "preview": {
+            "unavailable": "Eelvaade valmib koos selle tüübi redaktoriga."
+        },
+        "editor": {
+            "title": "Seaded",
+            "delete": "Kustuta",
+            "deleteLabel": "Kustuta element «{title}»",
+            "keyLabel": "Võti",
+            "keyHelp": {
+                "derive": "Tekib pealkirjast. Võti seob laineid ja annab CSV veergudele nime, seepärast lukustub see avaldamisel.",
+                "freeze": "Lukustatud: sellele võtmele viitavad juba vastused või teised lained."
+            },
+            "titleLabel": "Küsimus",
+            "titlePlaceholder": "Mida sa vastajalt küsida tahad?",
+            "descriptionLabel": "Abitekst",
+            "descriptionPlaceholder": "Vabatahtlik selgitus küsimuse all",
+            "requiredLabel": "Vastus on kohustuslik",
+            "optionsLabel": "Valikud",
+            "optionLabel": "Valik {index}",
+            "optionPlaceholder": "Valiku tekst",
+            "addOption": "Lisa valik",
+            "removeOption": "Eemalda valik {index}",
+            "allowOtherLabel": "Luba oma vastus («Muu»)",
+            "otherLabelLabel": "«Muu» silt",
+            "otherLabelPlaceholder": "Muu",
+            "empty": {
+                "title": "Ükski element pole valitud",
+                "body": "Vali element vasakult nimekirjast või eelvaatest."
+            },
+            "unavailable": {
+                "title": "Redaktor pole veel valmis",
+                "body": "Tüüpi «{type}» saab praegu ümber tõsta ja kustutada. Redaktor lisandub järgmises etapis."
+            }
+        },
+        "defaults": {
+            "questionTitle": "Uus küsimus",
+            "optionLabel": "Valik {index}"
+        },
+        "errors": {
+            "titleRequired": "Küsimusel peab olema pealkiri.",
+            "optionRequired": "Valik ei saa olla tühi.",
+            "otherLabelRequired": "Sildile tuleb tekst kirjutada."
+        },
+        "save": {
+            "label": "Salvestamise olek",
+            "saved": "salvestatud",
+            "saving": "salvestan…",
+            "pending": "salvestamata",
+            "invalid": "salvestamata — paranda vead",
+            "failed": "salvestamine ebaõnnestus",
+            "retry": "Proovi uuesti",
+            "reload": "Laadi leht uuesti"
+        },
+        "elementTypes": {
+            "statement": "Väide",
+            "single_choice": "Üks valik",
+            "multi_choice": "Mitu valikut",
+            "dropdown": "Rippmenüü",
+            "short_text": "Lühike tekst",
+            "long_text": "Pikk tekst",
+            "opinion_scale": "Hinnanguskaala",
+            "nps": "NPS",
+            "matrix_single": "Maatriks"
+        },
+        "dnd": {
+            "instructions": "Vajuta tühikuklahvi, et element üles tõsta. Nooleklahvidega liiguta, tühikuga aseta, Escape'iga loobu.",
+            "onDragStart": "Tõstsid üles elemendi «{title}», positsioon {position}.",
+            "onDragOver": "Element «{title}» on positsioonil {position}.",
+            "onDragEnd": "Element «{title}» asetati positsioonile {position}.",
+            "onDragCancel": "Loobusid. Element «{title}» jäi positsioonile {position}."
         }
     },
     "Settings": {
