@@ -131,3 +131,50 @@ Append-only. Newest at the bottom. If you deviate from one of these, add a new e
 - **`duplicateSurvey` returns a draft with `slug: null`.** A copy must not be able to take over the source's live public link. It keeps the source's title by default (a new wave is the same survey, run again), takes an optional new `waveLabel`, and has a `newWaveGroup` escape hatch for when the copy is the start of an unrelated survey rather than the next wave.
 
 **Not decided here.** Zod's validation messages are currently developer-facing English. Respondent-facing wording will be mapped from the issue `code` and `path` in Phase 6, where the message catalogue exists; `domain/` must not grow an i18n dependency to produce them.
+
+---
+
+## 008 — `survey_questions` excludes statements, and tombstones rather than deletes answered questions
+
+**Status:** accepted
+
+**Context.** Decision 002 specified the projection table but not what happens when the document changes underneath it. Two cases were undefined: whether a `statement` block gets a row, and what the rebuild trigger does with a question that has left `elements` but still has answers pointing at it. The second one is load-bearing — `answers.question_id` is a foreign key into this table (002), so the naive `delete` either cascades away collected responses or aborts the owner's edit.
+
+**Decision.**
+
+- **Statements get no row.** The table is the FK target for `answers`, so every row in it must be answerable; a statement row would make it structurally possible to record an answer against a block that has none. `position` remains the index of the element within `elements`, so the projection stays in document order and statements simply leave gaps.
+- **Removal is conditional.** The trigger deletes a question that has left the document and has no answers, and sets `removed_at` on one that has answers. Tombstoned rows keep their last known key, title and position. Every consumer filters `removed_at is null` by default; `listSurveyQuestions(..., { includeRemoved: true })` opts in.
+- **A `before insert` trigger on `answers` rejects writes to a tombstoned question**, so a stale runner cannot answer a question the owner has since removed.
+- **The FK from `answers` is `deferrable initially deferred`.** Deleting a survey cascades down two paths (through `responses` and through `survey_questions`) whose order Postgres does not guarantee; a deferred check passes at commit because by then neither row exists. An immediate `restrict` would abort survey deletion depending on cascade order, and `cascade` would silently destroy answers.
+- **The rebuild raises if an incoming question id already belongs to another survey.** Question ids are generated client-side, so without the check one owner's document could re-point another owner's answers.
+- **Closed vocabularies are mirrored as CHECK constraints** — `surveys.status`, `surveys.locale`, `survey_questions.type`, `survey_events.type`. Adding a question type to the union in `domain/question.ts` therefore requires a migration. That is deliberate: without it, a type the database has never heard of lands silently in the column that wave comparison joins on.
+
+**Why.** Owners edit published surveys, and 001 already committed to never rewriting the history of people who have answered. Deleting a question is the one edit that makes that promise hard to keep, so it is the one edit the schema treats specially. The cost is one nullable column and a filter every reader has to remember; the alternative is either data loss or an unexplainable foreign-key error surfacing from an ordinary autosave.
+
+---
+
+## 009 — The public runner reads through `get_published_survey(slug)`, not an anonymous SELECT policy
+
+**Status:** accepted
+
+**Context.** Phase 2 says anonymous users may insert into `responses`, `answers` and `survey_events` for a published survey and select nothing. It does not say how the runner reads the survey definition it is about to render. The obvious move — an RLS policy of `using (status = 'published')` on `surveys` for `anon` — has a property that is easy to miss: RLS filters rows, it cannot require a `where` clause. `select * from surveys` as `anon` would then return every published survey in the instance.
+
+**Decision.** `surveys` has no anonymous SELECT policy at all. The runner calls the `security definer` function `get_published_survey(p_slug text)`, which returns the single published row matching the slug and does not project `owner_id`. Submission goes through `submit_response(...)`, which is `security invoker` so that the RLS policies on `responses` and `answers` remain the enforcement point, and which generates the response id itself rather than using `returning` — `returning` would require granting `anon` SELECT on `responses`.
+
+**Why.** Survey links are unlisted, not secret, but "anyone can enumerate every survey anyone is running" is a different product than "anyone with the link can answer". Taking the slug as an argument makes knowing the link the capability, which is what the product already implies. Keeping submission on `security invoker` means the policies are real and testable rather than decorative.
+
+**Cost accepted.** Two functions to keep in step with the tables, and a repository read path that is an RPC rather than a query.
+
+---
+
+## 010 — Database integration tests run separately from `pnpm check`
+
+**Status:** accepted
+
+**Context.** The Phase 2 tests — RLS, the projection trigger, versioning, the seed — only mean anything against a real Postgres with the migrations applied. `pnpm check` is the contract that must be green before any task is called done, and it has to stay runnable without Docker.
+
+**Decision.** Integration tests are named `*.db.test.ts` and run under `vitest.config.db.mts` via `pnpm test:db`, against local Supabase. The default `vitest` project excludes them, so `pnpm check` stays hermetic. `pnpm test:db` is mandatory after any change under `supabase/` or `lib/db/`.
+
+**Why.** The alternative is a `pnpm check` that fails for a reason unrelated to the change being made, which trains everyone to ignore it. Splitting them keeps one command fast and always-true and the other explicit about what it needs.
+
+**Consequence.** Nothing enforces that `pnpm test:db` was run. It is in `CLAUDE.md`'s command list with that instruction attached; if it starts getting skipped, wire it into CI rather than into `check`.

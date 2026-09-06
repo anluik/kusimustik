@@ -9,6 +9,7 @@
         "check": "tsc --noEmit && eslint . && vitest run && prettier --check .",
         "lint": "eslint .",
         "test": "vitest",
+        "test:db": "vitest run --config vitest.config.db.mts",
         "test:e2e": "playwright test",
         "format": "prettier --write .",
         "format:check": "prettier --check .",

@@ -1,0 +1,214 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import type { SurveyElement } from "@/domain/question";
+import {
+    anonClient,
+    createTestUser,
+    deleteTestUser,
+    npsQuestion,
+    opinionScaleQuestion,
+    shortTextQuestion,
+    singleChoiceQuestion,
+    statementElement,
+    testSlug
+} from "@/lib/db/test-support";
+import type { TestUser } from "@/lib/db/test-support";
+import { listResponses, submitResponse } from "@/lib/db/responses";
+import {
+    createSurvey,
+    getSurvey,
+    listSurveyQuestions,
+    publishSurvey,
+    updateSurveyDefinition
+} from "@/lib/db/surveys";
+import type { SurveyRecord } from "@/lib/db/surveys";
+
+/**
+ * The derived projection (docs/DECISIONS.md 002). It is rebuilt by a trigger on
+ * every change to `elements`, and the interesting half is removal: a question
+ * nobody answered disappears, a question with answers is tombstoned so the
+ * collected responses keep something to point at.
+ */
+
+const intro = statementElement("intro");
+const role = singleChoiceQuestion("role");
+const recommend = npsQuestion("recommend");
+const city = shortTextQuestion("city");
+const satisfaction = opinionScaleQuestion("satisfaction");
+
+let owner: TestUser;
+let survey: SurveyRecord;
+
+async function setElements(elements: readonly SurveyElement[]): Promise<void> {
+    survey = await updateSurveyDefinition(
+        owner.db,
+        survey.survey.id,
+        survey.version,
+        {
+            elements
+        }
+    );
+}
+
+beforeAll(async () => {
+    owner = await createTestUser("projection");
+    survey = await createSurvey(owner.db, {
+        ownerId: owner.id,
+        title: "Projection",
+        elements: [intro, role, recommend, city]
+    });
+});
+
+afterAll(async () => {
+    await deleteTestUser(owner);
+});
+
+describe("survey_questions follows the elements column", () => {
+    it("projects the answerable elements in document order", async () => {
+        const questions = await listSurveyQuestions(owner.db, survey.survey.id);
+
+        expect(questions.map(question => question.key)).toEqual([
+            "role",
+            "recommend",
+            "city"
+        ]);
+        // Position is the index within `elements`, so the statement at 0 leaves
+        // a gap rather than shifting the questions.
+        expect(questions.map(question => question.position)).toEqual([1, 2, 3]);
+        expect(questions.map(question => question.type)).toEqual([
+            "single_choice",
+            "nps",
+            "short_text"
+        ]);
+        expect(questions.every(question => question.removedAt === null)).toBe(
+            true
+        );
+    });
+
+    it("follows a reorder, a rename and an insertion", async () => {
+        const renamed: SurveyElement = {
+            ...role,
+            key: "respondent_role",
+            title: "Which role fits you best?"
+        };
+        await setElements([recommend, intro, renamed, city, satisfaction]);
+
+        const questions = await listSurveyQuestions(owner.db, survey.survey.id);
+        expect(
+            questions.map(question => [question.key, question.position])
+        ).toEqual([
+            ["recommend", 0],
+            ["respondent_role", 2],
+            ["city", 3],
+            ["satisfaction", 4]
+        ]);
+        expect(questions[1]?.questionId).toBe(role.id);
+        expect(questions[1]?.title).toBe("Which role fits you best?");
+    });
+
+    it("deletes a question nobody has answered", async () => {
+        await setElements([recommend, intro, role, satisfaction]);
+
+        const live = await listSurveyQuestions(owner.db, survey.survey.id);
+        expect(live.map(question => question.key)).toEqual([
+            "recommend",
+            "role",
+            "satisfaction"
+        ]);
+
+        // Gone outright, not tombstoned: there was nothing to preserve.
+        const all = await listSurveyQuestions(owner.db, survey.survey.id, {
+            includeRemoved: true
+        });
+        expect(all.map(question => question.key)).not.toContain("city");
+    });
+
+    it("tombstones an answered question instead, and keeps its answers", async () => {
+        const slug = testSlug("projection");
+        survey = await publishSurvey(owner.db, survey.survey.id, slug);
+
+        await submitResponse(anonClient(), {
+            surveyId: survey.survey.id,
+            answers: [
+                { questionId: recommend.id, value: { type: "nps", value: 10 } },
+                {
+                    questionId: satisfaction.id,
+                    value: { type: "opinion_scale", value: 4 }
+                }
+            ]
+        });
+
+        await setElements([intro, role, satisfaction]);
+
+        const live = await listSurveyQuestions(owner.db, survey.survey.id);
+        expect(live.map(question => question.key)).toEqual([
+            "role",
+            "satisfaction"
+        ]);
+
+        const all = await listSurveyQuestions(owner.db, survey.survey.id, {
+            includeRemoved: true
+        });
+        const tombstone = all.find(
+            question => question.questionId === recommend.id
+        );
+        expect(tombstone?.removedAt).not.toBeNull();
+
+        const responses = await listResponses(owner.db, survey.survey.id);
+        expect(responses).toHaveLength(1);
+        expect(responses[0]?.answers[recommend.id]).toEqual({
+            type: "nps",
+            value: 10
+        });
+    });
+
+    it("refuses a new answer to a tombstoned question", async () => {
+        await expect(
+            submitResponse(anonClient(), {
+                surveyId: survey.survey.id,
+                answers: [
+                    {
+                        questionId: recommend.id,
+                        value: { type: "nps", value: 1 }
+                    }
+                ]
+            })
+        ).rejects.toThrow();
+    });
+
+    it("empties the projection when the last element goes", async () => {
+        await setElements([]);
+
+        await expect(
+            listSurveyQuestions(owner.db, survey.survey.id)
+        ).resolves.toEqual([]);
+
+        const all = await listSurveyQuestions(owner.db, survey.survey.id, {
+            includeRemoved: true
+        });
+        expect(all.map(question => question.key).sort()).toEqual([
+            "recommend",
+            "satisfaction"
+        ]);
+        expect(all.every(question => question.removedAt !== null)).toBe(true);
+    });
+
+    it("cascades away with the survey", async () => {
+        const id = survey.survey.id;
+        const doomed = await createSurvey(owner.db, {
+            ownerId: owner.id,
+            title: "Doomed",
+            elements: [npsQuestion("recommend")]
+        });
+        await owner.db.from("surveys").delete().eq("id", doomed.survey.id);
+
+        await expect(getSurvey(owner.db, doomed.survey.id)).resolves.toBeNull();
+        await expect(
+            listSurveyQuestions(owner.db, doomed.survey.id, {
+                includeRemoved: true
+            })
+        ).resolves.toEqual([]);
+        // The survey under test is untouched.
+        await expect(getSurvey(owner.db, id)).resolves.not.toBeNull();
+    });
+});

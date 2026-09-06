@@ -8,7 +8,14 @@ export default defineConfig({
     test: {
         environment: "jsdom",
         include: ["**/*.test.{ts,tsx}"],
-        // e2e/ belongs to Playwright; .next and supabase/ hold generated output.
-        exclude: ["node_modules/**", ".next/**", "e2e/**", "supabase/**"]
+        // e2e/ belongs to Playwright; .next and supabase/ hold generated
+        // output; *.db.test.ts needs a running database, see vitest.config.db.mts.
+        exclude: [
+            "node_modules/**",
+            ".next/**",
+            "e2e/**",
+            "supabase/**",
+            "**/*.db.test.ts"
+        ]
     }
 });

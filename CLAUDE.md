@@ -10,6 +10,9 @@ Survey SaaS. Next.js App Router + TypeScript + Supabase.
 pnpm dev            # dev server
 pnpm check          # typecheck + lint + unit tests — MUST be green before you say you're done
 pnpm test           # vitest
+pnpm test:db        # integration tests against local Supabase — RLS, triggers, repositories.
+                    # Needs `supabase start`; not part of `pnpm check`. Run it after
+                    # touching anything in supabase/ or lib/db/.
 pnpm test:e2e       # playwright
 pnpm format         # prettier --write .
 pnpm db:types       # regenerate lib/db/database.types.ts from local Supabase
@@ -27,6 +30,7 @@ pnpm db:reset       # reset local DB and replay migrations + seed
 - **`domain/` imports nothing.** No React, no Supabase, no Next. It is pure functions and schemas. If you need to reach for a dependency there, stop and ask.
 - **Server-side validation is not optional.** Every mutation re-derives its Zod schema server-side and re-parses. Client validation is a UX nicety only.
 - **`id` and `key` are not interchangeable.** `id` identifies a question within one survey and changes on duplication. `key` is stable across duplication and is what wave comparison joins on. Never key analytics, comparison or export column identity on `id`.
+- **`survey_questions` is derived.** A trigger rebuilds it from `surveys.elements`. Application code never writes to it and never reads a definition from it — definitions come from `surveys.elements` through `SurveySchema`. A question that leaves the document keeps a tombstoned row (`removed_at`) if it has answers; readers filter it out.
 - **Analytics never blocks.** `survey_events` writes are best-effort and batched. A failed event write must never surface to a respondent or abort a submission.
 - **No hardcoded user-facing strings.** All copy goes through next-intl message files (`messages/et.json`, `en.json`, `ru.json`). Add the key to all three; use the English text as the placeholder for et/ru and flag it in your summary.
 
@@ -50,6 +54,7 @@ components/          app components
 e2e/                 playwright specs
 messages/            et.json, en.json, ru.json
 supabase/migrations/
+supabase/seed.sql    one owner, two waves, 30 responses each — `pnpm db:reset`
 docs/PLAN.md         the phased build plan — read the current phase before starting
 docs/DECISIONS.md    settled architecture decisions — read before proposing a schema change
 docs/DESIGN.md       the visual spec — read before writing any UI
@@ -65,6 +70,8 @@ docs/DESIGN.md       the visual spec — read before writing any UI
 - Charts: Recharts via the shadcn `chart` component. Theme colours only, no hex literals.
 - IDs are branded types (`SurveyId`, `QuestionId`, `ResponseId`). Construct via the helpers in `domain/ids.ts`.
 - Every new table gets RLS enabled in the same migration that creates it. A migration that adds a table without a policy is incomplete.
+- Repository functions in `lib/db/` take the Supabase client as their first argument and never build one — the caller decides which identity, and therefore which policies, the query runs under. They parse every row through a Zod schema on the way out and throw `DbError` subclasses on failure.
+- Adding a question type means a migration too: `survey_questions.type` mirrors `ELEMENT_TYPES` as a CHECK constraint. See docs/DECISIONS.md 008.
 
 ## Next.js 16
 
