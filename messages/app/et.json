@@ -1,0 +1,101 @@
+{
+    "Meta": {
+        "title": "Küsimustik",
+        "description": "Koosta küsitlusi, kogu vastuseid ja vaata tulemusi."
+    },
+    "Nav": {
+        "workspace": "Tööruum",
+        "personalWorkspace": "Isiklik tööruum",
+        "surveys": "Küsitlused",
+        "templates": "Mallid",
+        "settings": "Seaded",
+        "toggleSidebar": "Ava või sulge külgriba"
+    },
+    "Language": {
+        "label": "Keel",
+        "description": "Rakenduse keel. Küsitluse enda keele valid küsitluse juures.",
+        "short": {
+            "et": "ET",
+            "en": "EN",
+            "ru": "RU"
+        },
+        "name": {
+            "et": "eesti keel",
+            "en": "inglise keel",
+            "ru": "vene keel"
+        }
+    },
+    "Theme": {
+        "label": "Välimus",
+        "description": "Hele või tume teema.",
+        "light": "Hele",
+        "dark": "Tume",
+        "system": "Süsteemne"
+    },
+    "UserMenu": {
+        "label": "Konto menüü",
+        "settings": "Seaded",
+        "signOut": "Logi välja"
+    },
+    "Surveys": {
+        "title": "Küsitlused",
+        "count": "{count, plural, one {# küsitlus} other {# küsitlust}}",
+        "new": "Uus küsitlus",
+        "empty": {
+            "title": "Ühtegi küsitlust veel pole",
+            "body": "Alusta tühjast küsitlusest, lisa küsimused ja jaga linki. Vastused ja graafikud tekivad siia.",
+            "action": "Uus küsitlus"
+        },
+        "columns": {
+            "survey": "Küsitlus",
+            "status": "Olek",
+            "responses": "Vastused",
+            "updated": "Muudetud"
+        }
+    },
+    "Settings": {
+        "title": "Seaded",
+        "account": {
+            "title": "Konto",
+            "email": "E-post",
+            "name": "Nimi",
+            "nameMissing": "Määramata"
+        }
+    },
+    "Auth": {
+        "title": "Logi sisse",
+        "subtitle": "Saadame sulle e-kirjaga sisselogimislingi. Parooli pole vaja.",
+        "emailLabel": "E-posti aadress",
+        "emailPlaceholder": "nimi@näide.ee",
+        "submit": "Saada sisselogimislink",
+        "submitting": "Saadan…",
+        "sent": {
+            "title": "Vaata oma postkasti",
+            "body": "Saatsime sisselogimislingi aadressile {email}. Link kehtib ühe tunni ja avaneb ainult selles brauseris.",
+            "again": "Saada uuesti",
+            "otherEmail": "Kasuta teist aadressi"
+        },
+        "errors": {
+            "invalidEmail": "Sisesta korrektne e-posti aadress.",
+            "rateLimited": "Liiga palju katseid. Oota veidi ja proovi uuesti.",
+            "sendFailed": "Linki ei õnnestunud saata. Proovi uuesti.",
+            "linkInvalid": "See sisselogimislink ei kehti enam. Küsi uus link.",
+            "wrongBrowser": "Ava link samas brauseris, kus sisselogimist alustasid."
+        }
+    },
+    "Common": {
+        "comingSoon": "Varsti",
+        "retry": "Proovi uuesti",
+        "cancel": "Loobu",
+        "skipToContent": "Liigu sisu juurde"
+    },
+    "Errors": {
+        "title": "Midagi läks valesti",
+        "body": "Seda osa ei õnnestunud laadida."
+    },
+    "NotFound": {
+        "title": "Lehte ei leitud",
+        "body": "Seda lehte pole olemas või see on eemaldatud.",
+        "action": "Tagasi küsitluste juurde"
+    }
+}

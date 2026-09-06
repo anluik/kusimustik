@@ -31,8 +31,9 @@ pnpm db:reset       # reset local DB and replay migrations + seed
 - **Server-side validation is not optional.** Every mutation re-derives its Zod schema server-side and re-parses. Client validation is a UX nicety only.
 - **`id` and `key` are not interchangeable.** `id` identifies a question within one survey and changes on duplication. `key` is stable across duplication and is what wave comparison joins on. Never key analytics, comparison or export column identity on `id`.
 - **`survey_questions` is derived.** A trigger rebuilds it from `surveys.elements`. Application code never writes to it and never reads a definition from it — definitions come from `surveys.elements` through `SurveySchema`. A question that leaves the document keeps a tombstoned row (`removed_at`) if it has answers; readers filter it out.
+- **Locale is resolved per surface, and there is no locale segment.** The owner app reads the `NEXT_LOCALE` cookie through `lib/i18n/request.ts`; the runner is rendered in `survey.locale`, passed explicitly to `getRunnerTranslations()` and `NextIntlClientProvider`. Never read the locale cookie from `app/(public)/` — it would make every respondent request dynamic. See docs/DECISIONS.md 011.
 - **Analytics never blocks.** `survey_events` writes are best-effort and batched. A failed event write must never surface to a respondent or abort a submission.
-- **No hardcoded user-facing strings.** All copy goes through next-intl message files (`messages/et.json`, `en.json`, `ru.json`). Add the key to all three; use the English text as the placeholder for et/ru and flag it in your summary.
+- **No hardcoded user-facing strings.** All copy goes through next-intl message files. Two catalogues, split by surface (docs/DECISIONS.md 011): `messages/app/{et,en,ru}.json` for the owner app, `messages/runner/{et,en,ru}.json` for the respondent runner. Top-level namespaces never collide between them. Estonian is the source of truth — add the key to `et.json` first, then all three; if you cannot write the et or ru wording, use the English text as the placeholder and flag it in your summary.
 
 ## Layout
 
@@ -41,18 +42,30 @@ everything else sits beside it at the repo root. `@/*` resolves from the repo
 root, so `domain/` is `@/domain` and `lib/db/` is `@/lib/db`.
 
 ```
-app/                 App Router — routes only
+app/                 App Router — routes only. NO app/layout.tsx: each group
+                     below is its own root layout, because <html lang> differs
+                     by surface (docs/DECISIONS.md 011)
   (app)/             authed dashboard — builder, results
-  (public)/          respondent runner, no auth
+  (auth)/            signed-out surfaces — /login
+  (public)/          respondent runner at /k/[slug], no auth
+  auth/callback/     magic-link landing (route handler)
   api/               route handlers (analytics beacons, CSV download)
+  global-not-found.tsx  the 404; needed because there are several root layouts
   globals.css        canonical design tokens — see docs/DESIGN.md §1
 domain/              pure schemas + logic (question union, answer validation, aggregation)
 lib/db/              supabase clients, generated types, repository fns
-lib/i18n/            next-intl setup
-components/ui/       shadcn — do not hand-edit, re-run the CLI
+lib/supabase/        request-scoped clients (server, proxy)
+lib/auth/            session helpers + sign-in/sign-out actions
+lib/actions/         the Server Action result envelope + wrapper
+lib/i18n/            next-intl setup, locale cookie, runner translator
+components/ui/       shadcn — do not hand-edit, re-run the CLI (one documented
+                     exception: docs/DECISIONS.md 012)
+components/shell/    app shell — sidebar, app bar, empty state, providers
 components/          app components
+hooks/               use-mobile.ts is shadcn-generated (lint/format-ignored)
 e2e/                 playwright specs
-messages/            et.json, en.json, ru.json
+messages/app/        et.json, en.json, ru.json — owner app
+messages/runner/     et.json, en.json, ru.json — respondent runner
 supabase/migrations/
 supabase/seed.sql    one owner, two waves, 30 responses each — `pnpm db:reset`
 docs/PLAN.md         the phased build plan — read the current phase before starting
@@ -77,11 +90,11 @@ docs/DESIGN.md       the visual spec — read before writing any UI
 
 Read `AGENTS.md`. These are the version differences that have already caught us out — the rest is in `node_modules/next/dist/docs/`.
 
-- **There is no `middleware.ts`.** It is `proxy.ts` at the repo root, exporting `proxy()`. Node runtime only, not configurable. next-intl's own docs still say middleware — ignore them on that point.
+- **There is no `middleware.ts`.** It is `proxy.ts` at the repo root, exporting `proxy()`. Node runtime only, not configurable. next-intl's own docs still say middleware — ignore them on that point, and note we run next-intl without its middleware anyway (DECISIONS 011). `proxy.ts` refreshes the Supabase session and protects routes *deny by default* — see `PUBLIC_PREFIXES` in `lib/routes.ts` — but it is an optimistic filter, not authorisation: pages still call `requireSessionUser()` and actions still re-check.
 - **`revalidateTag` takes two arguments** (`revalidateTag(tag, 'max')`); the one-arg form is a type error. For owner-facing mutations you almost always want `updateTag(tag)` instead — it gives read-your-writes, so the owner sees their edit immediately rather than a stale render. `refresh()` refreshes the client router from an action.
 - **Server Actions dispatch one at a time per client.** `Promise.all` over actions serialises them. Batch into a single action instead. This constrains builder autosave.
 - **Analytics beacons go to a Route Handler in `app/api/`**, not a Server Action — `sendBeacon` needs a plain endpoint, and actions queue behind each other.
-- **`params`, `searchParams`, `cookies()`, `headers()` and `draftMode()` are Promise-only.** Sync access was removed in 16. Type pages with the generated `PageProps<'/s/[slug]'>` / `LayoutProps` / `RouteContext` helpers.
+- **`params`, `searchParams`, `cookies()`, `headers()` and `draftMode()` are Promise-only.** Sync access was removed in 16. Type pages with the generated `PageProps<'/k/[slug]'>` / `LayoutProps` / `RouteContext` helpers. They only exist after a `next dev` or `next build` has written `.next/types`, so a bare `tsc --noEmit` on a clean tree reports `Cannot find name 'PageProps'` until you run one.
 - `next lint` no longer exists and `next build` does not lint — which is exactly why `pnpm check` runs `eslint` itself.
 - Turbopack is the default for `dev` and `build`. No `--turbopack` flag.
 - `cacheComponents` (the old PPR / `dynamicIO` / `useCache`) is **off** and stays off until someone deliberately adopts it. Turning it on errors on uncached data outside `<Suspense>`; it is not a rename.

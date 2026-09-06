@@ -119,7 +119,9 @@ RLS: owners read/write their own surveys. Anonymous users may `INSERT` into `res
 
 ## Phase 3 — Auth, shell, i18n
 
-Supabase magic-link auth, middleware-protected `(app)` routes, next-intl with `et` / `en` / `ru` and a locale segment. App shell from the Claude Design mockups: sidebar, survey list page, empty states.
+Supabase magic-link auth, `proxy.ts`-protected `(app)` routes, next-intl with `et` / `en` / `ru`. App shell from the Claude Design mockups: sidebar, survey list page, empty states.
+
+**Locale is resolved per surface — settled, see docs/DECISIONS.md 011.** There is no locale segment. The owner app reads a `NEXT_LOCALE` cookie written by the sidebar switcher, because language there is a property of the person, not of the URL: a results link forwarded to a colleague should render in their language. The runner takes its locale from `survey.locale`, passed explicitly, because language there is a property of the survey — and because reading a cookie would make every respondent request dynamic. Catalogues are split by surface from the start: `messages/app/{et,en,ru}.json` and `messages/runner/{et,en,ru}.json`, so the runner never ships builder copy to a phone. `<html lang>` therefore differs by surface, which means several root layouts and no `app/layout.tsx`.
 
 > **Prompt:** Phase 3 of docs/PLAN.md — magic link auth, route protection, next-intl with et/en/ru, and the app shell matching the design tokens. Every string goes in the message files. No survey functionality yet beyond an empty list page.
 
@@ -143,7 +145,7 @@ Build it as: element list first, then add/delete/reorder, then the editor panel 
 
 ## Phase 6 — The public runner
 
-`/(public)/s/[slug]`. Server-rendered, no auth, mobile-first — most respondents arrive from a WhatsApp or email link on a phone. One question per screen or all-on-one-page; pick one for MVP (all-on-one-page is less work and fine for short surveys). Validate with `buildAnswerSchema` client-side, re-validate server-side, save partial progress to localStorage so a refresh doesn't lose answers. Thank-you screen.
+`/(public)/k/[slug]` (`k` for *küsitlus*; see DECISIONS 011). Server-rendered, no auth, mobile-first — most respondents arrive from a WhatsApp or email link on a phone. One question per screen or all-on-one-page; pick one for MVP (all-on-one-page is less work and fine for short surveys). Validate with `buildAnswerSchema` client-side, re-validate server-side, save partial progress to localStorage so a refresh doesn't lose answers. Thank-you screen.
 
 **Emit `survey_events` here**, not later. A per-visit `session_id` in sessionStorage, and events fired on view, start, question answer, submit, and on `visibilitychange`/`beforeunload` for abandon (via `navigator.sendBeacon`). Batch them; never let analytics writes block or fail a submission. Retrofitting instrumentation into a finished runner is fiddly and you lose the early data.
 

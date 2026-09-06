@@ -178,3 +178,45 @@ Append-only. Newest at the bottom. If you deviate from one of these, add a new e
 **Why.** The alternative is a `pnpm check` that fails for a reason unrelated to the change being made, which trains everyone to ignore it. Splitting them keeps one command fast and always-true and the other explicit about what it needs.
 
 **Consequence.** Nothing enforces that `pnpm test:db` was run. It is in `CLAUDE.md`'s command list with that instruction attached; if it starts getting skipped, wire it into CI rather than into `check`.
+
+---
+
+## 011 — Locale is resolved per surface: a cookie for the owner app, `survey.locale` for the runner
+
+**Status:** accepted
+
+**Context.** `docs/PLAN.md` Phase 3 said "next-intl with `et` / `en` / `ru` and a locale segment". Two things downstream contradict a URL segment. The owner app is authenticated and dynamic, and language there is a property of the *person*: a results link forwarded to a colleague should render in their language, not the sender's, which a path segment cannot express. The runner's language is a property of the *survey* — a Russian-language questionnaire is Russian whoever opens it — and the share link in the design mockups is `register.ee/k/maine26`, with no locale in it.
+
+**Decision.**
+
+- **Owner app (`app/(app)`, `app/(auth)`).** next-intl without i18n routing. Locale comes from a `NEXT_LOCALE` cookie written by the sidebar switcher through a Server Action, resolved in `lib/i18n/request.ts`, and the action calls `refresh()` — there is no URL to navigate to. URLs stay `/surveys`, `/settings`, `/login`.
+- **Runner (`app/(public)/k/[slug]`, Phase 6).** Locale is `survey.locale`, passed explicitly to `NextIntlClientProvider` and to `getRunnerTranslations(locale)`. Not the cookie, not the URL. Reading a cookie there would make every respondent request dynamic and give up the cacheable render; the share link stays `/k/<slug>`.
+- **`getRunnerTranslations` takes the locale as a parameter**, so post-MVP multilingual surveys (PLAN, after-MVP item 3) can add an optional `/k/[slug]/[locale]` segment and pass that value instead, with no change below that function.
+- **The catalogues are split by surface now, not later**: `messages/app/{et,en,ru}.json` and `messages/runner/{et,en,ru}.json`. The runner is loaded on a stranger's phone over whatever connection they have and must not ship builder, results or settings copy. Estonian is the source of truth in both; a key absent from `et.json` is not a key.
+- **The runner path is `/k/[slug]`, not `/s/[slug]`.** `k` for *küsitlus*, matching the design mockups. PLAN Phase 6 and the `PageProps` example in `CLAUDE.md` said `/s/`; both were updated.
+
+**Consequences.**
+
+- **Several root layouts.** `<html lang>` differs by surface, and only a root layout can set it, so `app/layout.tsx` is gone: `app/(app)/layout.tsx` and `app/(auth)/layout.tsx` are root layouts today and the runner will be a third. That in turn requires `experimental.globalNotFound` and `app/global-not-found.tsx`, since there is no single layout to compose a 404 from. Navigating between the groups is a full page load, which is what happens at those boundaries anyway.
+- **One global `Messages` type for two catalogues.** next-intl exposes exactly one, so `lib/i18n/next-intl.d.ts` declares it as `AppMessages & RunnerMessages`. Both trees then get typed keys with no cast at the provider boundary; the price is that the type system will not stop a runner component from naming an owner key. `lib/i18n/messages.test.ts` keeps the top-level namespaces disjoint, so such a mistake surfaces as a missing message rather than resolving silently. The bundle split, which is the point, is unaffected.
+- **`lib/i18n/locales.ts` restates the locale list** instead of re-exporting `domain`'s, so a client component importing it does not drag the question union and zod into the browser. The same test asserts the two lists are equal.
+
+**Why not a segment.** It buys SEO-able localised URLs for pages that are behind auth or whose language the visitor does not choose. Neither applies here.
+
+---
+
+## 012 — `components/ui/` is generated, but the strict tsconfig wins where they collide
+
+**Status:** accepted
+
+**Context.** `docs/DESIGN.md` §5 says `components/ui/` is generated and must never be hand-edited — re-run the CLI instead. Phase 0 committed to `exactOptionalPropertyTypes`. Adding the shadcn primitives the design calls for produced code that does not compile under it: `DropdownMenuCheckboxItem` forwards `checked={checked}` where `checked` is `CheckedState | undefined` and Radix's prop is `CheckedState`. `shadcn add` output also trips `react-hooks/set-state-in-effect` in `hooks/use-mobile.ts`.
+
+**Decision.** The compiler settings win, with the smallest possible footprint and a record of every place they were applied.
+
+- **`components/ui/dropdown-menu.tsx` is repaired by hand**, one line: `checked={checked}` became `{...(checked !== undefined && { checked })}`. Re-running `shadcn add dropdown-menu` reverts it, and `pnpm check` fails immediately when it does. That is an acceptable trip-wire; a build that does not typecheck is not.
+- **`hooks/use-mobile.ts` is ignored by ESLint and Prettier**, alongside `lib/db/database.types.ts`, rather than repaired: it is regenerated by `shadcn add sidebar` and its lint failure is stylistic, not a correctness problem.
+- **The two hardcoded English strings inside the generated mobile sidebar sheet** (`"Sidebar"`, `"Displays the mobile sidebar."`, both `sr-only`) are left alone for now. Everything reachable from our own code is translated: `SidebarTrigger` was not used, because it hardcodes its own screen-reader label — `components/shell/sidebar-toggle.tsx` is the same primitive with a translated one.
+
+**Why not relax the compiler.** `exactOptionalPropertyTypes` is what makes the difference between an absent optional field and one explicitly set to `undefined` a type error, which the repository layer in `lib/db/` depends on throughout. Turning it off to accommodate a component we do not use would be the tail wagging the dog.
+
+**Revisit** when the shadcn registry ships an `exactOptionalPropertyTypes`-clean build; the repair can then be dropped by re-running the CLI.

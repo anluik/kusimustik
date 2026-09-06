@@ -15,8 +15,12 @@ const eslintConfig = defineConfig([
         "out/**",
         "build/**",
         "next-env.d.ts",
-        // Generated: Supabase types, CLI scratch state, coverage output.
+        // Generated: Supabase types, shadcn CLI output, CLI scratch state,
+        // coverage. `hooks/use-mobile.ts` ships from `shadcn add sidebar` and
+        // trips react-hooks/set-state-in-effect; re-running the CLI would undo
+        // any repair, so it is ignored rather than edited.
         "lib/db/database.types.ts",
+        "hooks/use-mobile.ts",
         "supabase/.temp/**",
         "coverage/**"
     ])

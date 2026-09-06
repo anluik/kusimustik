@@ -1,0 +1,26 @@
+{
+    "RunnerShell": {
+        "progress": "Question {current} of {total}",
+        "required": "Required",
+        "optional": "Optional",
+        "anonymous": "Responses are anonymous.",
+        "submit": "Submit answers",
+        "submitting": "Sending…"
+    },
+    "RunnerThanks": {
+        "title": "Thank you!",
+        "body": "Your answers have been saved."
+    },
+    "RunnerClosed": {
+        "title": "This survey is closed",
+        "body": "It is no longer collecting responses."
+    },
+    "RunnerNotFound": {
+        "title": "Survey not found",
+        "body": "Check the link, or ask the sender for a new one."
+    },
+    "RunnerErrors": {
+        "submitFailed": "Your answers could not be sent. Try again.",
+        "retry": "Try again"
+    }
+}

@@ -1,0 +1,101 @@
+{
+    "Meta": {
+        "title": "Küsimustik",
+        "description": "Build surveys, collect responses and read the results."
+    },
+    "Nav": {
+        "workspace": "Workspace",
+        "personalWorkspace": "Personal workspace",
+        "surveys": "Surveys",
+        "templates": "Templates",
+        "settings": "Settings",
+        "toggleSidebar": "Show or hide the sidebar"
+    },
+    "Language": {
+        "label": "Language",
+        "description": "The language of the app. A survey's own language is set on the survey.",
+        "short": {
+            "et": "ET",
+            "en": "EN",
+            "ru": "RU"
+        },
+        "name": {
+            "et": "Estonian",
+            "en": "English",
+            "ru": "Russian"
+        }
+    },
+    "Theme": {
+        "label": "Appearance",
+        "description": "Light or dark theme.",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+    },
+    "UserMenu": {
+        "label": "Account menu",
+        "settings": "Settings",
+        "signOut": "Sign out"
+    },
+    "Surveys": {
+        "title": "Surveys",
+        "count": "{count, plural, one {# survey} other {# surveys}}",
+        "new": "New survey",
+        "empty": {
+            "title": "No surveys yet",
+            "body": "Start from an empty survey, add your questions and share the link. Responses and charts will appear here.",
+            "action": "New survey"
+        },
+        "columns": {
+            "survey": "Survey",
+            "status": "Status",
+            "responses": "Responses",
+            "updated": "Updated"
+        }
+    },
+    "Settings": {
+        "title": "Settings",
+        "account": {
+            "title": "Account",
+            "email": "Email",
+            "name": "Name",
+            "nameMissing": "Not set"
+        }
+    },
+    "Auth": {
+        "title": "Sign in",
+        "subtitle": "We'll email you a sign-in link. No password needed.",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "you@example.com",
+        "submit": "Send sign-in link",
+        "submitting": "Sending…",
+        "sent": {
+            "title": "Check your inbox",
+            "body": "We sent a sign-in link to {email}. It is valid for one hour and only opens in this browser.",
+            "again": "Send again",
+            "otherEmail": "Use a different address"
+        },
+        "errors": {
+            "invalidEmail": "Enter a valid email address.",
+            "rateLimited": "Too many attempts. Wait a moment and try again.",
+            "sendFailed": "The link could not be sent. Try again.",
+            "linkInvalid": "This sign-in link is no longer valid. Request a new one.",
+            "wrongBrowser": "Open the link in the same browser you started from."
+        }
+    },
+    "Common": {
+        "comingSoon": "Soon",
+        "retry": "Try again",
+        "cancel": "Cancel",
+        "skipToContent": "Skip to content"
+    },
+    "Errors": {
+        "title": "Something went wrong",
+        "body": "This part could not be loaded."
+    },
+    "NotFound": {
+        "title": "Page not found",
+        "body": "This page does not exist, or it has been removed.",
+        "action": "Back to surveys"
+    }
+}

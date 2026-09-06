@@ -1,0 +1,26 @@
+{
+    "RunnerShell": {
+        "progress": "Küsimus {current} / {total}",
+        "required": "Kohustuslik",
+        "optional": "Valikuline",
+        "anonymous": "Vastused on anonüümsed.",
+        "submit": "Saada vastused",
+        "submitting": "Saadan…"
+    },
+    "RunnerThanks": {
+        "title": "Aitäh vastamast!",
+        "body": "Sinu vastused on salvestatud."
+    },
+    "RunnerClosed": {
+        "title": "Küsitlus on suletud",
+        "body": "See küsitlus enam vastuseid ei kogu."
+    },
+    "RunnerNotFound": {
+        "title": "Küsitlust ei leitud",
+        "body": "Kontrolli linki või küsi saatjalt uus."
+    },
+    "RunnerErrors": {
+        "submitFailed": "Vastuste saatmine ebaõnnestus. Proovi uuesti.",
+        "retry": "Proovi uuesti"
+    }
+}

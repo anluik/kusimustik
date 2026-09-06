@@ -4,6 +4,7 @@ pnpm-lock.yaml
 supabase/.temp/
 lib/db/database.types.ts
 components/ui/
+hooks/use-mobile.ts
 
 # The audited design tokens live here verbatim. Prettier normalises
 # `oklch(0.450 0.090 235)` to `oklch(0.45 0.09 235)` — numerically identical,
