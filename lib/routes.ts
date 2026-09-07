@@ -8,6 +8,8 @@ export const ROUTES = {
     surveys: "/surveys",
     /** The builder for one survey; the survey's own page for now. */
     builder: (surveyId: string) => `/surveys/${surveyId}`,
+    /** Charts, individual responses and the drop-off funnel. */
+    results: (surveyId: string) => `/surveys/${surveyId}/results`,
     settings: "/settings",
     login: "/login",
     authCallback: "/auth/callback",

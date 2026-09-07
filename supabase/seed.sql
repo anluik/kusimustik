@@ -281,3 +281,87 @@ from r,
               'support', case when r.n <= 8 then 'poor' when r.n <= 18 then 'ok' else 'good' end)))
          ) as a(question_id, value)
 where a.value is not null;
+
+-- Interaction events for wave two ---------------------------------------------
+--
+-- The drop-off funnel (PLAN Phase 7) reads survey_events, and Phase 6 only
+-- emits them from a live runner — so without these the report renders its empty
+-- state against a survey that plainly has 30 responses, which is the one thing
+-- it must not do. Wave one is deliberately left without events: a survey that
+-- collected responses before the instrumentation existed is a real state, and
+-- the empty state has to be reachable somewhere.
+--
+-- Session ids are synthetic here. In production they are anonymous, per-visit,
+-- and never written to responses (DECISIONS 004) — the same is true of these:
+-- session n does not correspond to response n, and nothing joins them.
+--
+-- Shape: 50 visits, 42 of which start, declining reach across the eight
+-- questions with a deliberate cliff at the free-text question, and 30 submits
+-- to match the 30 seeded responses. Dwell is constant per question so the
+-- median is exact and `pnpm test:db` can assert it.
+
+-- 50 views.
+insert into public.survey_events (survey_id, session_id, question_id, type, at, meta)
+select '00000000-0000-4000-8000-0000000000a2',
+       ('50000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+       null,
+       'view',
+       timestamptz '2026-04-01 09:00:00+03' + (n * interval '3 hours'),
+       jsonb_build_object('device', case when n % 3 = 0 then 'mobile' else 'desktop' end,
+                          'referrer', case when n % 5 = 0 then 'direct' else 'link' end)
+from generate_series(1, 50) as n;
+
+-- 42 of them begin answering.
+insert into public.survey_events (survey_id, session_id, question_id, type, at, meta)
+select '00000000-0000-4000-8000-0000000000a2',
+       ('50000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+       null,
+       'start',
+       timestamptz '2026-04-01 09:00:00+03' + (n * interval '3 hours') + interval '12 seconds',
+       null
+from generate_series(1, 42) as n;
+
+-- Per-question reach and answers. `reached` is how many sessions saw the card,
+-- `answered` how many left it holding an acceptable answer — the gap on the two
+-- optional questions (city, feedback) is people skipping, not dropping out.
+with q(pos, question_id, reached, answered, dwell_ms) as (values
+    (1, '20000000-0000-4000-8000-000000000002'::uuid, 42, 41,  4200),
+    (2, '20000000-0000-4000-8000-000000000003'::uuid, 41, 40,  8600),
+    (3, '20000000-0000-4000-8000-000000000004'::uuid, 40, 39,  3100),
+    (4, '20000000-0000-4000-8000-000000000005'::uuid, 39, 27,  5200),
+    -- The cliff: a long free-text question two thirds of the way in.
+    (5, '20000000-0000-4000-8000-000000000006'::uuid, 38, 19, 41000),
+    (6, '20000000-0000-4000-8000-000000000007'::uuid, 32, 32,  3800),
+    (7, '20000000-0000-4000-8000-000000000008'::uuid, 31, 31,  3200),
+    (8, '20000000-0000-4000-8000-000000000009'::uuid, 31, 30, 14500))
+insert
+into public.survey_events (survey_id, session_id, question_id, type, at, meta)
+select '00000000-0000-4000-8000-0000000000a2',
+       ('50000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+       q.question_id,
+       e.type,
+       timestamptz '2026-04-01 09:00:00+03'
+           + (n * interval '3 hours')
+           + interval '12 seconds'
+           + (q.pos * interval '20 seconds')
+           + e.after,
+       e.meta
+from q,
+     generate_series(1, 42) as n,
+     lateral (values
+         ('question_view'::text, interval '0 seconds', null::jsonb, q.reached),
+         ('question_answer', make_interval(secs => q.dwell_ms / 1000.0),
+          jsonb_build_object('dwellMs', q.dwell_ms), q.answered)
+         ) as e(type, after, meta, cutoff)
+where n <= e.cutoff;
+
+-- 30 submits — the 30 responses above — and 12 abandons, which is every session
+-- that started and did not finish.
+insert into public.survey_events (survey_id, session_id, question_id, type, at, meta)
+select '00000000-0000-4000-8000-0000000000a2',
+       ('50000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+       null,
+       case when n <= 30 then 'submit' else 'abandon' end,
+       timestamptz '2026-04-01 09:00:00+03' + (n * interval '3 hours') + interval '5 minutes',
+       null
+from generate_series(1, 42) as n;

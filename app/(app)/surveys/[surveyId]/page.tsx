@@ -67,6 +67,9 @@ export default async function BuilderPage({
                 publishedVersion: record.publishedVersion,
                 waveCount
             })}
+            // A survey that has never been published has collected nothing and
+            // emitted nothing, so its results page would be three empty states.
+            hasResults={record.survey.slug !== null}
         />
     );
 }

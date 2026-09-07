@@ -401,7 +401,25 @@ export type Database = {
         }
         Returns: string
       }
+      survey_funnel_totals: {
+        Args: { p_survey_id: string }
+        Returns: {
+          abandons: number
+          starts: number
+          submits: number
+          views: number
+        }[]
+      }
       survey_is_published: { Args: { p_survey_id: string }; Returns: boolean }
+      survey_question_funnel: {
+        Args: { p_survey_id: string }
+        Returns: {
+          answered: number
+          median_dwell_ms: number
+          question_id: string
+          reached: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

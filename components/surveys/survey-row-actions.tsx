@@ -2,6 +2,7 @@
 
 import { MoreHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useState } from "react";
 
 import { ConfirmActionDialog } from "@/components/surveys/confirm-action-dialog";
@@ -16,6 +17,7 @@ import {
     DropdownMenuShortcut,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { ROUTES } from "@/lib/routes";
 import {
     closeSurveyAction,
     deleteSurveyAction,
@@ -86,6 +88,23 @@ export function SurveyRowActions({
                         onSelect={() => setDialog("rename")}
                     >
                         {t("rename")}
+                    </DropdownMenuItem>
+                    {/* DESIGN §6: an item that is contextually unavailable
+                        stays in the menu rather than disappearing, so the
+                        menu's shape never shifts under the pointer. A survey
+                        that has never been published has nothing to show. */}
+                    <DropdownMenuItem
+                        asChild={wasPublishedBefore}
+                        disabled={!wasPublishedBefore}
+                        className="rounded text-xs"
+                    >
+                        {wasPublishedBefore ? (
+                            <Link href={ROUTES.results(survey.id)}>
+                                {t("results")}
+                            </Link>
+                        ) : (
+                            <span>{t("results")}</span>
+                        )}
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator />

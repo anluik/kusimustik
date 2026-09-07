@@ -334,3 +334,71 @@ Append-only. Newest at the bottom. If you deviate from one of these, add a new e
 **Consequences.** Phase 6 is complete: a stranger can open the link on a phone, answer all nine element types, lose the tab and come back to their answers, and submit — and the owner gets the response, the answers and the interaction events Phase 7's funnel is built from. `e2e/runner.spec.ts` proves it end to end on a desktop and a phone viewport, and cleans the response it made back out of the seed so `pnpm test:db`'s distribution assertions keep holding.
 
 **Not done here, deliberately.** Bot protection and rate limiting on the public endpoints (PLAN, after-MVP item 11) — the submit action and the beacon are both open, and that has to be closed before any real launch. There is also no resume-across-devices: the draft is one browser's `localStorage` and nothing else.
+
+---
+
+## 017 — DESIGN.md wins on presentation, PLAN.md wins on scope; the chart switcher is derived from the question type
+
+**Status:** accepted
+
+**Context.** Phase 7 asks for a per-question chart switcher and named its options as "bar / horizontal bar / pie / doughnut / line", calling it connect.ee's genuinely good idea. `docs/DESIGN.md` §7 says "Never a pie or donut, at any count", caps the categorical palette at five entries, and requires six or more categories to become horizontal bars in a single fill. Both documents claim authority and neither cites the other, so the conflict had to be settled as a class rather than one chart at a time — §11 records overrides of *earlier decisions* but never names PLAN.
+
+**Decision.**
+
+- **`docs/DESIGN.md` governs presentation; `docs/PLAN.md` governs scope.** What a phase must deliver is PLAN's call. What it looks like, what it is coloured, and which encodings are permissible is DESIGN's, and DESIGN wins wherever the two touch. PLAN Phase 7 was rewritten to match rather than left standing, because a stale list in the plan is how a future session reinstates a pie chart.
+
+- **Pie and doughnut are gone entirely**, not merely defaulted away from. They predate the contrast audit and were copied from a competitor's feature list; §7's prohibition was derived from measured constraints — the categorical palette is deuteranopia-separable only to five entries, and angle is the least accurately read of the visual encodings besides.
+
+- **The switcher's options are derived from the question, by `chartKindsFor` in `domain/charts.ts`, which ends in `assertNever`.** A fixed menu of five buttons filtered at the render site would let a tenth question type inherit every encoding by default and be wrong silently. Deriving them makes "how is this charted?" a question the compiler asks. The rules:
+
+  | Question type | Kinds, default first |
+  |---|---|
+  | `single_choice`, `multi_choice`, `dropdown` | `bar_horizontal`, then `bar_vertical` **only** at ≤ 5 options with short labels |
+  | `opinion_scale`, `nps`, `matrix_single` | `ramp_bar`, `ramp_stacked` |
+  | `short_text`, `long_text` | none — a `TextSummary` is a list of responses, and there is nothing to chart |
+
+  Vertical bars are conditional because §7 forbids rotated labels outright: a vertical bar chart whose category names do not fit horizontally has no legal way to label itself, so the encoding is offered only where it can be drawn correctly. `CHART_VERTICAL_MAX_OPTIONS` and `CHART_SHORT_LABEL_MAX` are the two thresholds, in `domain/charts.ts` and tested.
+
+- **`line` exists in the union but is offered by nothing yet.** §7 permits vertical bars for time series, and a line is the encoding for a value tracked across waves — but that is a *series*, and nothing in MVP produces one. `chartKindsFor` therefore takes the data shape as its second argument (`"single_wave" | "series"`) and returns `line` only for `"series"`. Every Phase 7 call site passes `"single_wave"`. This is one parameter and two tests rather than a comment promising a future reader something, and it means wave comparison (PLAN, after-MVP item 2) adds a call site rather than a rule.
+
+**Why not simply let the owner pick any chart for any question.** Because they would, and §7's rules are the ones that keep the result readable — a fourteen-option question rendered as five colours recycled three times is not a preference, it is a defect. The switcher exists to let an owner choose between encodings that are all correct for their data, which is the part of connect.ee's idea that is actually good.
+
+**Consequence.** Adding a question type now fails the build in two more places: `chartKindsFor` joins `buildAnswerSchema`, `aggregate` and `toCsvColumns` in `domain/`, and `toAnswerDisplay` in `lib/results/` joins them from outside it. Verified by adding a tenth type and reading the errors — the failure in each is a prompt to decide how the type is drawn and how one answer to it reads in a table.
+
+---
+
+## 018 — Building the results surface: where aggregation happens, what is live, and what the funnel counts
+
+**Status:** accepted
+
+**Context.** Phase 7 is the results surface — stat cards, per-question charts, the individual-responses table, and the drop-off funnel. 017 settled the charts. These are the rest of the calls, recorded because most of them are not recoverable from the code.
+
+**Decisions.**
+
+- **Aggregation happens in TypeScript, not in SQL.** The page fetches every response and calls `aggregate()`. Doing it in Postgres would be faster and is the obvious thing to reach for, but it would be a *second* definition of what a summary means — a second answer to "what is the mean of this scale", "does a skipped question count in the denominator", "where does an `allowOther` answer go" — with nothing comparing the two. `domain/aggregate.ts` is the definition, it is tested against a hand-built fixture, and the runner, the CSV export and the charts all have to agree with it. Paging enters when a survey has enough responses for the fetch to hurt; nothing here is written in a way that makes that hard.
+
+- **The funnel *is* SQL, because it is not a domain question.** `survey_funnel_totals` and `survey_question_funnel` group `survey_events`, which PostgREST cannot express and which would otherwise mean shipping a busy survey's whole interaction log to the browser to count it. Both are `security invoker`, so the RLS policy on `survey_events` stays the enforcement point — `lib/db/funnel.db.test.ts` proves a second owner gets an empty funnel rather than an error, which is the property that stops the endpoint being an oracle for which survey ids exist.
+
+- **Neither funnel function returns a key, title or position.** Those are definition data and come from `surveys.elements` through `SurveySchema`; `survey_questions` is an index, not a source of truth (002). `buildFunnel` joins the counts onto the document, which is also what settles the two cases the counts alone cannot: a question added since the last visit is a genuine zero, and a question removed since must not appear at all.
+
+- **Counts are of distinct sessions, not event rows.** The runner already emits each type at most once per visit, but the funnel's meaning *depends* on that, so the SQL enforces it rather than trusting the client that wrote the rows. A retried beacon is otherwise a second view.
+
+- **A skip and a drop-out are reported separately.** `reached` and `answered` are different columns, and a question stage carries both. They look identical in a single count and are entirely different things to an owner: one says the question was hard to answer, the other says it was where people left. The drop itself is attributed to the stage people failed to *reach* — the standard funnel reading — so the cliff caused by a long free-text question is flagged on the question after it, and the free-text question shows the large skip.
+
+- **Completion rate is submits over *starts*, not over views**, and is `null` rather than 0 when nobody started. Someone who opened the link and never touched a control did not enter the survey, and counting them makes the figure a measure of the link's audience. A card reading "0% completed" for a survey nobody has opened states a failure that has not happened.
+
+- **Only the response count is live, and only `responses` is published to realtime.** `answers` and `survey_events` are not: an owner watching a number does not need every answer pushed to their browser, and `survey_events` is the highest-volume table in the schema. The subscription only ever moves the count forward — a submitted response is immutable and has no UPDATE policy — and a failed subscription leaves the server's number in place rather than breaking the page. The "live" badge appears only once a submission has actually arrived over the socket, because a badge claiming live on a page whose socket silently failed is a lie the owner cannot check.
+
+- **TanStack Query is still not used, and `lib/query-keys.ts` still does not exist.** 014 deferred it to "when Phase 7 has queries worth caching". It does not: the page is one server render, the shaping is pure, and the one live thing owns a websocket rather than a cache. Inventing a key factory with nothing to put in it would be worse than not having one.
+
+- **TanStack Table is v9**, which is a different library from the v8 every example describes: `useTable` rather than `useReactTable`, and row models registered as slots inside `tableFeatures` rather than passed as options. Only `rowSortingFeature` is registered — an unregistered feature has no state, which is the point of the v9 model. The search filters the rows *before* they reach the table, against a precomputed `searchText` built from the answers, so a search matches what people answered rather than what the owner's current UI language formatted it into.
+
+- **The individual-responses table is not the CSV's shape.** `toCsvColumns` fans a multi-choice out to one flag column per option so a machine can read it; a person reading one respondent's answers wants "Email, Slack" in one cell. Both are driven from the same question, so they cannot disagree about *what* was answered — only about layout. `toAnswerDisplay` returns the answer structured rather than joined, so the separators stay in the JSX where they belong and no punctuation is hardcoded in a pure module.
+
+- **No value label sits on a ramp fill except inside a stacked segment**, where there is nowhere else for it to go. DESIGN §7 requires such a label to flip at `--ramp-label-flip`, which is 5 in light and 4 in dark — a threshold that cannot be known at render time on the server. `rampLabelColor` does it in CSS instead, exploiting `color-mix`'s clamping of an out-of-range percentage to turn the comparison into arithmetic. Everywhere else the label sits beside the bar, which §7 also permits and which needs no flip.
+
+- **`rampStep` bins with `ceil((index + 1) * 7 / count)`** because that reproduces §7's worked fifteen-stage example exactly, and it spreads a *short* sequence across the whole ramp rather than crowding it into the pale end where §7 notes steps 1-4 fall below 3:1 on `--card`.
+
+- **The seed grows interaction events, for wave two only.** The funnel is otherwise unviewable and untestable against a survey that plainly has 30 responses, which is the one thing the empty state must not do. Wave one is deliberately left without them: a survey that collected responses before the instrumentation existed is a real state and its empty state has to be reachable. Dwell is held constant per question so `pnpm test:db` can assert the medians exactly.
+
+**Not done here, deliberately.** DESIGN §5's **device-mix bar** is listed under the behaviour tab but is not in PLAN Phase 7's scope, and 017 settles that PLAN governs scope — the `meta.device` the runner already sends makes it a later afternoon's work. There is no response paging, no date filtering on the funnel, and no delta figures against a previous period (§5 specifies the delta's *styling*, but there is nothing to compare against until wave comparison ships, which is after-MVP item 2).

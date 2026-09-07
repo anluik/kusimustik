@@ -99,6 +99,7 @@
             "duplicate": "Duplicate",
             "newWave": "New wave",
             "rename": "Rename",
+            "results": "View results",
             "publish": "Publish",
             "publishBlocked": "0 questions",
             "close": "Close survey",
@@ -314,6 +315,118 @@
             "wavePlaceholder": "e.g. 2026",
             "waveHelp": "Names this round in the comparison against other waves. Leave it empty for an unnamed wave.",
             "submit": "Save"
+        }
+    },
+    "Results": {
+        "title": "Results",
+        "backToBuilder": "Open builder",
+        "tabs": {
+            "questions": "Questions",
+            "responses": "Individual responses",
+            "behaviour": "Behaviour"
+        },
+        "stats": {
+            "responses": "Responses",
+            "responsesHint": "Submitted responses",
+            "completionRate": "Completion rate",
+            "completionRateHint": "Of those who started, reached submit",
+            "views": "Views",
+            "viewsHint": "Times the link was opened",
+            "medianTime": "Median time",
+            "medianTimeHint": "Median time to answer a question",
+            "unknown": "—",
+            "unknownHint": "No data yet",
+            "live": "live"
+        },
+        "chart": {
+            "label": "Chart type",
+            "kind": {
+                "bar_horizontal": "Horizontal bars",
+                "bar_vertical": "Vertical bars",
+                "ramp_bar": "Ramp bars",
+                "ramp_stacked": "Stacked",
+                "line": "Line"
+            },
+            "overflow": "Other ({count})",
+            "overflowContains": "Contains: {labels}",
+            "count": "Responses"
+        },
+        "question": {
+            "answered": "{count, plural, one {# answer} other {# answers}}",
+            "skipped": "{count, plural, one {# skipped} other {# skipped}}",
+            "otherResponses": "Free-text answers",
+            "noAnswers": "Nobody has answered this question yet."
+        },
+        "nps": {
+            "score": "NPS",
+            "promoters": "Promoters",
+            "passives": "Passives",
+            "detractors": "Detractors"
+        },
+        "numeric": {
+            "mean": "Mean",
+            "median": "Median"
+        },
+        "text": {
+            "count": "{count, plural, one {# written answer} other {# written answers}}",
+            "showAll": "Show all",
+            "showLess": "Show fewer",
+            "empty": "No respondent wrote anything here."
+        },
+        "matrix": {
+            "answered": "{count} answers"
+        },
+        "table": {
+            "submittedAt": "Submitted",
+            "locale": "Language",
+            "version": "Version",
+            "caption": "Individual responses, newest first",
+            "rowCount": "{shown} of {total} responses",
+            "scoreOf": "{value} of {max}",
+            "empty": "—",
+            "search": "Search responses",
+            "noMatches": "No response matches that search."
+        },
+        "funnel": {
+            "title": "Drop-off",
+            "stages": {
+                "view": "Link opened",
+                "start": "Started answering",
+                "submit": "Response submitted"
+            },
+            "drop": "−{value} pp",
+            "lost": "{count, plural, one {# left} other {# left}}",
+            "problem": "Steep drop",
+            "skipped": "{count, plural, one {# skipped it} other {# skipped it}}",
+            "share": "{value}%",
+            "callout": {
+                "title": "Steepest drop: {stage}",
+                "body": "You lost {value} percentage points of respondents here. Check whether the question is too long, too personal, or required without need.",
+                "action": "Open the question in the builder"
+            },
+            "medianTime": {
+                "title": "Median time per question",
+                "hint": "Time from seeing the question to answering it.",
+                "seconds": "{value} s"
+            },
+            "empty": {
+                "title": "No behaviour data yet",
+                "body": "The drop-off view appears once somebody opens the survey's public link. Responses collected before this measurement existed carry no behaviour data."
+            }
+        },
+        "empty": {
+            "questions": {
+                "title": "No responses yet",
+                "body": "Share the survey's public link. The first response appears here as soon as it is submitted."
+            },
+            "responses": {
+                "title": "No individual responses yet",
+                "body": "Every submitted response appears here as its own row, question by question."
+            },
+            "draft": {
+                "title": "This survey is not published",
+                "body": "A draft cannot be answered. Publish the survey to start collecting responses."
+            }
         }
     },
     "Settings": {

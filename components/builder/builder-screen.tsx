@@ -1,7 +1,8 @@
 "use client";
 
-import { Settings2 } from "lucide-react";
+import { BarChart3, Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useState } from "react";
 
 import { AddElementMenu } from "@/components/builder/add-element-menu";
@@ -31,6 +32,7 @@ import {
     duplicateElement,
     type CreatableElementType
 } from "@/lib/builder/new-element";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * The three-panel builder: what the survey contains, what it will look like,
@@ -54,15 +56,19 @@ export function BuilderScreen({
     initialSettings,
     initialElements,
     initialVersion,
-    keyPolicy
+    keyPolicy,
+    hasResults
 }: {
     readonly surveyId: SurveyId;
     readonly initialSettings: SurveySettings;
     readonly initialElements: readonly SurveyElement[];
     readonly initialVersion: number;
     readonly keyPolicy: KeyPolicy;
+    /** The survey has been published at least once, so results exist. */
+    readonly hasResults: boolean;
 }) {
     const t = useTranslations("Builder");
+    const tResults = useTranslations("Results");
     const builder = useSurveyBuilder({
         surveyId,
         initialElements,
@@ -131,6 +137,25 @@ export function BuilderScreen({
                 }
                 actions={
                     <>
+                        {/* Only once the survey has been published: before
+                            that there is nothing to show, and DESIGN §6 would
+                            have this be a disabled control rather than an
+                            absent one — but the app bar is not a menu, and a
+                            dead button beside the primary action reads as a
+                            fault. The row menu carries the disabled form. */}
+                        {hasResults && (
+                            <Button
+                                asChild
+                                variant="outline"
+                                size="sm"
+                                className="h-[30px] rounded text-xs"
+                            >
+                                <Link href={ROUTES.results(surveyId)}>
+                                    <BarChart3 aria-hidden />
+                                    {tResults("title")}
+                                </Link>
+                            </Button>
+                        )}
                         <Button
                             type="button"
                             variant="outline"

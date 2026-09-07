@@ -155,7 +155,21 @@ This is the phase to write the one Playwright test that matters: open the seeded
 
 ## Phase 7 — Results
 
-Response count and completion rate. Per-question cards, each rendering the right chart for its `QuestionSummary` variant via — again — an exhaustive switch. Chart type switcher per question (bar / horizontal bar / pie / doughnut / line), because that's connect.ee's genuinely good idea. Individual responses table via TanStack Table. Real-time count via Supabase realtime subscription — cheap to add, and neither competitor has it.
+Response count and completion rate. Per-question cards, each rendering the right chart for its `QuestionSummary` variant via — again — an exhaustive switch.
+
+**Chart type switcher per question** — connect.ee's genuinely good idea, and the part of it worth keeping. But *which* encodings a question offers is derived from the question type by a pure function in `domain/` ending in `assertNever`, not a fixed menu: adding a question type must force a decision about how it is charted rather than silently inheriting every option. `docs/DESIGN.md` §7 governs what those encodings are and how they are coloured, and it is stricter than the competitor's menu:
+
+| Question type | Encodings offered |
+|---|---|
+| `single_choice`, `multi_choice`, `dropdown` | horizontal bars (default); vertical bars only at ≤ 5 options with short labels |
+| `opinion_scale`, `nps`, `matrix_single` | ramp bars (default); stacked ramp |
+| `short_text`, `long_text` | none — the summary is a response list |
+
+**There are no pie or doughnut charts, at any count** (DESIGN §7). An earlier draft of this phase listed them; they were copied from a competitor's feature list and predate the token audit. See DECISIONS 017, which also settles the general rule: DESIGN.md wins on presentation, PLAN.md wins on scope.
+
+A line encoding is offered only where the data is a series — grouped by wave or over time. Nothing in MVP produces one, so nothing offers it yet; wave comparison is after-MVP item 2.
+
+Individual responses table via TanStack Table. Real-time count via Supabase realtime subscription — cheap to add, and neither competitor has it.
 
 Plus a **drop-off funnel** from `survey_events`: views → starts → per-question reach → submits, with median time per question. Since Phase 6 already emits the events, this is a couple of grouped queries and a bar chart. It's the first thing that makes the product feel more serious than either competitor, so don't defer it past MVP.
 

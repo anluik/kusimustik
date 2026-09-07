@@ -99,6 +99,7 @@
             "duplicate": "Dubleeri",
             "newWave": "Uus laine",
             "rename": "Nimeta ümber",
+            "results": "Vaata tulemusi",
             "publish": "Avalda",
             "publishBlocked": "0 küsimust",
             "close": "Sulge küsitlus",
@@ -314,6 +315,118 @@
             "wavePlaceholder": "nt 2026",
             "waveHelp": "Nimetab selle vooru lainete võrdluses. Tühi väli tähendab nimeta lainet.",
             "submit": "Salvesta"
+        }
+    },
+    "Results": {
+        "title": "Tulemused",
+        "backToBuilder": "Ava koostaja",
+        "tabs": {
+            "questions": "Küsimused",
+            "responses": "Üksikvastused",
+            "behaviour": "Käitumine"
+        },
+        "stats": {
+            "responses": "Vastuseid",
+            "responsesHint": "Esitatud vastust",
+            "completionRate": "Lõpetamise määr",
+            "completionRateHint": "Alustanutest jõudis esitamiseni",
+            "views": "Avamisi",
+            "viewsHint": "Korda on link avatud",
+            "medianTime": "Mediaanaeg",
+            "medianTimeHint": "Küsimusele vastamise mediaanaeg",
+            "unknown": "—",
+            "unknownHint": "Andmeid ei ole veel",
+            "live": "reaalajas"
+        },
+        "chart": {
+            "label": "Diagrammi tüüp",
+            "kind": {
+                "bar_horizontal": "Rõhtsad tulbad",
+                "bar_vertical": "Püstised tulbad",
+                "ramp_bar": "Astmestik",
+                "ramp_stacked": "Virnastatud",
+                "line": "Joon"
+            },
+            "overflow": "Muud ({count})",
+            "overflowContains": "Sisaldab: {labels}",
+            "count": "Vastuseid"
+        },
+        "question": {
+            "answered": "{count, plural, one {# vastus} other {# vastust}}",
+            "skipped": "{count, plural, one {# vahele jäetud} other {# vahele jäetud}}",
+            "otherResponses": "Vabad vastused",
+            "noAnswers": "Sellele küsimusele ei ole veel vastatud."
+        },
+        "nps": {
+            "score": "NPS",
+            "promoters": "Soovitajad",
+            "passives": "Neutraalsed",
+            "detractors": "Mittesoovitajad"
+        },
+        "numeric": {
+            "mean": "Keskmine",
+            "median": "Mediaan"
+        },
+        "text": {
+            "count": "{count, plural, one {# kirjalik vastus} other {# kirjalikku vastust}}",
+            "showAll": "Näita kõiki",
+            "showLess": "Näita vähem",
+            "empty": "Ükski vastaja ei kirjutanud siia midagi."
+        },
+        "matrix": {
+            "answered": "{count} vastust"
+        },
+        "table": {
+            "submittedAt": "Esitatud",
+            "locale": "Keel",
+            "version": "Versioon",
+            "caption": "Üksikvastused, uuemad ees",
+            "rowCount": "{shown} / {total} vastust",
+            "scoreOf": "{value} / {max}",
+            "empty": "—",
+            "search": "Otsi vastustest",
+            "noMatches": "Ükski vastus ei vasta otsingule."
+        },
+        "funnel": {
+            "title": "Väljalangevus",
+            "stages": {
+                "view": "Link avatud",
+                "start": "Vastamist alustatud",
+                "submit": "Vastus esitatud"
+            },
+            "drop": "−{value} pp",
+            "lost": "{count, plural, one {# lahkus} other {# lahkus}}",
+            "problem": "Suur langus",
+            "skipped": "{count, plural, one {# jättis vahele} other {# jättis vahele}}",
+            "share": "{value}%",
+            "callout": {
+                "title": "Kõige järsem langus: {stage}",
+                "body": "Siin kaotasid {value} protsendipunkti vastajatest. Vaata, kas küsimus on liiga pikk, liiga isiklik või asjatult kohustuslik.",
+                "action": "Ava küsimus koostajas"
+            },
+            "medianTime": {
+                "title": "Mediaanaeg küsimuse kohta",
+                "hint": "Aeg küsimuse nägemisest vastamiseni.",
+                "seconds": "{value} s"
+            },
+            "empty": {
+                "title": "Käitumisandmeid ei ole veel",
+                "body": "Väljalangevuse ülevaade tekib siis, kui keegi avab küsitluse avaliku lingi. Enne mõõtmise lisamist kogutud vastustel käitumisandmeid ei ole."
+            }
+        },
+        "empty": {
+            "questions": {
+                "title": "Vastuseid ei ole veel",
+                "body": "Jaga küsitluse avalikku linki. Esimene vastus ilmub siia kohe pärast esitamist."
+            },
+            "responses": {
+                "title": "Üksikvastuseid ei ole veel",
+                "body": "Iga esitatud vastus ilmub siia eraldi reana, küsimuse kaupa."
+            },
+            "draft": {
+                "title": "Küsitlus ei ole avaldatud",
+                "body": "Mustandile ei saa vastata. Avalda küsitlus, et hakata vastuseid koguma."
+            }
         }
     },
     "Settings": {
