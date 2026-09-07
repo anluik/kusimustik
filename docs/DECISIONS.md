@@ -292,3 +292,45 @@ Append-only. Newest at the bottom. If you deviate from one of these, add a new e
 - **`EditorPanel` insets its header inside the `Sheet`.** `SheetContent`'s own close button is `absolute top-3 right-3`, directly on top of the panel header's actions. With Delete alone that was a near miss; with Duplicate beside it, one mis-aimed click deletes an element that has no undo. `insetHeader` adds the padding rather than hand-editing `components/ui/sheet.tsx` (012).
 
 **Consequence.** Phase 5 is complete: every type can be created, previewed, edited, reordered, duplicated and deleted, and the survey's own settings are reachable from the builder. Still absent, and correctly so — they are later phases or post-MVP: the type picker that converts one question into another (DESIGN §5 lists it, but the answer-migration question it raises is not a Phase 5 question), the builder's Build/Logic tabs and the ⌘K palette (skip logic is post-MVP item 1), and undo.
+
+---
+
+## 016 — The runner: one page, native controls, and a closed survey that says so
+
+**Status:** accepted
+
+**Context.** Phase 6 is the public runner at `/k/[slug]`. `docs/PLAN.md` settles the big shape — server-rendered, no auth, mobile-first, all-on-one-page, `survey_events` emitted from the start — and leaves the rest open. These are the calls made building it.
+
+**Decisions.**
+
+- **A closed survey is reachable, and `get_published_survey` is gone.** It is replaced by `get_runner_survey(slug)`, which returns a published *or* closed row. Without it a link to a survey that has stopped collecting renders the same 404 as a typo, and `RunnerClosed` — copy that has been in the catalogue since Phase 3 — is unreachable. Nothing about 009 changes: the slug is still the capability, `surveys` still has no anonymous SELECT policy, `owner_id` is still not projected, and the insert policy on `responses` still requires `status = 'published'`, so the database refuses an answer to a closed survey whatever the runner renders. The repository returns the survey *and* its `published_version`, which the draft's storage key needs.
+
+- **The runner reads through its own cookie-less anonymous client.** `lib/supabase/public.ts`. `createServerDb()` calls `cookies()`, and DECISIONS 011 chose `survey.locale` over a locale cookie precisely so a respondent request need not be dynamic — reading the session cookie instead would have given that back. It also means a signed-in owner opening their own public link is treated as a stranger, so the policies the runner exercises are a respondent's rather than the owner's.
+
+- **The root layout is `app/(public)/k/[slug]/layout.tsx`.** `<html lang>` must be `survey.locale` (011) and only a root layout can set it, so the root layout has to be the segment that knows the slug. `loadRunnerSurvey` is wrapped in React's `cache`, so the layout and the page share one query. A slug that matches nothing falls back to Estonian and renders `not-found.tsx` **inside that shell** rather than `app/global-not-found.tsx`, which is the owner's 404 — it speaks the owner's cookie locale and offers a link into the dashboard.
+
+- **Respondent-facing validation is a code, not a Zod message.** 007 deferred this to Phase 6. `lib/runner/validation.ts` runs `buildAnswerSchema` for the verdict and then *names* the failure as an `AnswerProblem` — `required`, `selectAtLeast`, `matrixIncomplete`, … — which maps one-to-one onto `RunnerProblems.*`. It cannot disagree with the schema, because the schema is what decides; it only supplies wording. `domain/` keeps no i18n dependency.
+
+- **Native radios, checkboxes and `<select>`, not Radix.** The builder uses shadcn primitives; the runner does not. DESIGN §10 says the respondent cannot be asked anything — not to use a modern browser, not to wait for hydration. Native controls have the right keyboard behaviour, the right screen-reader semantics and the right on-screen keyboard before any of our JavaScript arrives, and a native `<select>` opens the phone's own picker, which is what the long option lists `dropdown` exists for actually want. `accent-color` makes them the survey's colour without giving that up. No new `components/ui/` primitive was needed.
+
+- **The matrix is stacked, not a grid.** One labelled radio group per row. DESIGN §4's "one column, no side-by-side controls" at a 380px baseline is the reason: a five-column grid on a phone truncates every column label and gives each cell a target no thumb can hit. The builder's canvas still previews the grid, which is the shape the *author* is editing; the two are deliberately different views of the same question.
+
+- **Progress is answered-questions, not position.** All-on-one-page has no "current question", so `RunnerShell.progress` counts answerable questions holding an acceptable answer. A statement block is not progress, and an answer that is present but invalid does not count — the bar never fills while something is still blocking the submit.
+
+- **A problem is shown once the respondent could have caused it**: after they have touched that question, or after they have pressed submit. A page of red on arrival is not feedback. Pressing submit with something outstanding focuses the first blocking card and *then* scrolls to it — `focus()` cancels a smooth scroll already in flight, even with `preventScroll`, and the respondent is otherwise told something is wrong without being shown where.
+
+- **The draft is stored state plus an overlay, not state restored in an effect.** `localStorage` is read once `useMounted()` is true and the typed edits are laid over it; an edit of `null` is how a cleared answer beats a stored one. Setting state from an effect to catch up after hydration is the cascading render `react-hooks/set-state-in-effect` exists to stop, and the codebase already has `useMounted` for exactly this. The storage key carries the survey's `published_version`, and every restored entry is re-parsed and matched against the question it claims to answer, so a republished definition cannot leave a form that refuses to submit for an invisible reason.
+
+- **Analytics timestamps are monotonic offsets, and the server anchors them.** The beacon sends `performance.now()` offsets rather than wall-clock times, and `stampEvents` reconstructs the spacing against the moment the batch arrived, clamped to six hours. A phone with a wrong clock would otherwise file its events in 2019, where the funnel's date filters silently lose them — and a client timestamp is attacker-controlled input on a public endpoint besides. Dwell time is measured client-side and travels in `meta`, so it is immune to both.
+
+- **`view` is claimed in `sessionStorage`, not in a ref.** React's development-mode double mount would otherwise count every visit twice. `question_view` comes from an `IntersectionObserver` at 40%, `question_answer` fires once per question when it first holds an acceptable answer, and `abandon` fires at most once, on `visibilitychange`/`pagehide`, never after a submit. `/api/events` is exempted from the proxy's deny-by-default **by endpoint rather than by prefix**, because Phase 8's CSV download lands under `/api` and belongs to the owner.
+
+- **The thank-you screen is a state, not a route.** Submitting swaps the form for the notice in place. A `/k/[slug]/thanks` route would need its own copy of the root layout's survey lookup to know its own language, and would be reachable — and refreshable — by anyone who never answered anything.
+
+- **The runner is `noindex, nofollow`.** A survey link is unlisted rather than secret, and indexing it would make it neither: search traffic answering a questionnaire is noise in someone else's data.
+
+- **`--survey-*` is declared once, in `:root`.** DESIGN §8's namespace is aliases of the app tokens, which `.dark` already redefines, so they are correct in both themes without being restated there; §1's "add it to both blocks" rule is about colour values, and the only real value here is the 6px radius, which does not vary. The runner still ships `ThemeProvider`: a respondent has no theme switch, so the runner follows the device, and DESIGN §1 expects both themes to be correct everywhere.
+
+**Consequences.** Phase 6 is complete: a stranger can open the link on a phone, answer all nine element types, lose the tab and come back to their answers, and submit — and the owner gets the response, the answers and the interaction events Phase 7's funnel is built from. `e2e/runner.spec.ts` proves it end to end on a desktop and a phone viewport, and cleans the response it made back out of the seed so `pnpm test:db`'s distribution assertions keep holding.
+
+**Not done here, deliberately.** Bot protection and rate limiting on the public endpoints (PLAN, after-MVP item 11) — the submit action and the beacon are both open, and that has to be closed before any real launch. There is also no resume-across-devices: the draft is one browser's `localStorage` and nothing else.

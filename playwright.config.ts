@@ -1,4 +1,14 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 import { defineConfig, devices } from "@playwright/test";
+
+// The runner spec checks that a submission actually reached the database, so
+// the run needs the same Supabase credentials `next dev` is using. Resolved
+// from the working directory rather than `import.meta`: Playwright loads this
+// config as CommonJS.
+const envFile = join(process.cwd(), ".env.local");
+if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 const baseURL = process.env["PLAYWRIGHT_BASE_URL"] ?? "http://localhost:3000";
 

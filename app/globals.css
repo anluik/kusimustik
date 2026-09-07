@@ -107,6 +107,21 @@
     --ramp-7: oklch(0.395 0.085 235);
     --ramp-track: oklch(0.955 0.006 230);
     --ramp-label-flip: 5;
+
+    /* DESIGN.md §8. The respondent runner reads its colours and its radius
+       from this namespace only, so owner-customisable branding later overrides
+       this block rather than every runner component. They are
+       aliases of the app tokens, which `.dark` already redefines, so they are
+       correct in both themes without being restated there — the "add it to
+       both blocks" rule in §1 is about colour values, and there are none here.
+       §4's 6px runner radius is the one real value, and it does not vary. */
+    --survey-radius: 0.375rem;
+    --survey-primary: var(--primary);
+    --survey-primary-foreground: var(--primary-foreground);
+    --survey-background: var(--background);
+    --survey-card: var(--card);
+    --survey-accent: var(--accent);
+    --survey-accent-foreground: var(--accent-foreground);
 }
 
 .dark {
@@ -170,6 +185,13 @@
 }
 
 @theme inline {
+    --color-survey-primary: var(--survey-primary);
+    --color-survey-primary-foreground: var(--survey-primary-foreground);
+    --color-survey-background: var(--survey-background);
+    --color-survey-card: var(--survey-card);
+    --color-survey-accent: var(--survey-accent);
+    --color-survey-accent-foreground: var(--survey-accent-foreground);
+    --radius-survey: var(--survey-radius);
     --color-ramp-1: var(--ramp-1);
     --color-ramp-2: var(--ramp-2);
     --color-ramp-3: var(--ramp-3);

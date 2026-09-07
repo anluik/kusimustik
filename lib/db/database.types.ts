@@ -375,7 +375,7 @@ export type Database = {
       }
     }
     Functions: {
-      get_published_survey: {
+      get_runner_survey: {
         Args: { p_slug: string }
         Returns: {
           description: string

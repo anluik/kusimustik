@@ -14,7 +14,7 @@ import { listResponses, submitResponse } from "@/lib/db/responses";
 import {
     closeSurvey,
     createSurvey,
-    getPublishedSurveyBySlug,
+    getRunnerSurveyBySlug,
     publishSurvey,
     updateSurveyDefinition
 } from "@/lib/db/surveys";
@@ -88,8 +88,8 @@ describe("survey versioning", () => {
         expect(survey.publishedVersion).toBe(survey.version);
         expect(survey.publishedAt).not.toBeNull();
 
-        const published = await getPublishedSurveyBySlug(anonClient(), slug);
-        expect(published?.elements.map(element => element.key)).toEqual([
+        const published = await getRunnerSurveyBySlug(anonClient(), slug);
+        expect(published?.survey.elements.map(element => element.key)).toEqual([
             "recommend",
             "city"
         ]);

@@ -3,19 +3,24 @@ import { describe, expect, it } from "vitest";
 import { ROUTES, isPublicPath, safeReturnPath } from "@/lib/routes";
 
 describe("isPublicPath", () => {
-    it.each(["/login", "/auth/callback", "/k/maine26", "/k"])(
+    it.each(["/login", "/auth/callback", "/k/maine26", "/k", ROUTES.events])(
         "lets %s through without a session",
         path => {
             expect(isPublicPath(path)).toBe(true);
         }
     );
 
-    it.each(["/", "/surveys", "/settings", "/surveys/abc/results"])(
-        "protects %s",
-        path => {
-            expect(isPublicPath(path)).toBe(false);
-        }
-    );
+    it.each([
+        "/",
+        "/surveys",
+        "/settings",
+        "/surveys/abc/results",
+        // The beacon is exempt by endpoint, not by prefix: Phase 8's CSV
+        // download lands under /api and belongs to the owner.
+        "/api/surveys/abc/export"
+    ])("protects %s", path => {
+        expect(isPublicPath(path)).toBe(false);
+    });
 
     it("does not treat a prefix collision as public", () => {
         // `/kanalid` starts with `/k` but is not the runner.

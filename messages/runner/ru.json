@@ -1,11 +1,30 @@
 {
     "RunnerShell": {
-        "progress": "Вопрос {current} из {total}",
+        "progress": "Отвечено {answered} из {total}",
+        "progressLabel": "Прогресс",
         "required": "Обязательный",
         "optional": "Необязательный",
         "anonymous": "Ответы анонимны.",
         "submit": "Отправить ответы",
         "submitting": "Отправляем…"
+    },
+    "RunnerQuestion": {
+        "otherPlaceholder": "Напишите свой ответ",
+        "dropdownPlaceholder": "Выберите…",
+        "clear": "Очистить ответ",
+        "characters": "{count} / {max}",
+        "matrixRowsHeader": "Утверждение",
+        "npsMinLabel": "Совсем не порекомендую",
+        "npsMaxLabel": "Обязательно порекомендую"
+    },
+    "RunnerProblems": {
+        "required": "Это обязательный вопрос.",
+        "selectAtLeast": "Выберите не менее {count}.",
+        "selectAtMost": "Выберите не более {count}.",
+        "otherRequired": "Напишите свой ответ.",
+        "matrixIncomplete": "{count, plural, one {Одна строка без ответа.} few {# строки без ответа.} many {# строк без ответа.} other {# строки без ответа.}}",
+        "tooLong": "Не более {count} символов.",
+        "invalid": "Такой ответ не подходит."
     },
     "RunnerThanks": {
         "title": "Спасибо за ответы!",
@@ -20,7 +39,11 @@
         "body": "Проверьте ссылку или запросите новую у отправителя."
     },
     "RunnerErrors": {
-        "submitFailed": "Не удалось отправить ответы. Попробуйте снова.",
+        "notFound": "Опрос не найден. Проверьте ссылку.",
+        "closed": "Опрос закрылся, пока вы отвечали, и больше не собирает ответы.",
+        "invalidAnswers": "Некоторые ответы не приняты. Проверьте отмеченные вопросы.",
+        "failed": "Не удалось отправить ответы. Попробуйте снова.",
+        "incomplete": "{count, plural, one {Ещё один вопрос без ответа.} few {Ещё # вопроса без ответа.} many {Ещё # вопросов без ответа.} other {Ещё # вопроса без ответа.}}",
         "retry": "Попробовать снова"
     }
 }

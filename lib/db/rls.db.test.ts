@@ -21,7 +21,7 @@ import {
 import {
     closeSurvey,
     createSurvey,
-    getPublishedSurveyBySlug,
+    getRunnerSurveyBySlug,
     getSurvey,
     publishSurvey
 } from "@/lib/db/surveys";
@@ -44,6 +44,7 @@ let publishedId: SurveyId;
 let publishedSlug: string;
 let draftId: SurveyId;
 let closedId: SurveyId;
+let closedSlug: string;
 let closedResponseId: ResponseId;
 
 beforeAll(async () => {
@@ -74,7 +75,8 @@ beforeAll(async () => {
         title: "Closed survey",
         elements: [closedNps]
     });
-    await publishSurvey(owner.db, closed.survey.id, testSlug("closed"));
+    closedSlug = testSlug("closed");
+    await publishSurvey(owner.db, closed.survey.id, closedSlug);
     // Answered while it was live, so the answers policy can be tested against
     // an existing response after the survey stops accepting new ones.
     closedResponseId = await submitResponse(anonClient(), {
@@ -294,16 +296,21 @@ describe("an anonymous client may only write into a published survey", () => {
     });
 
     it("reaches a published survey by slug and nothing else", async () => {
-        const survey = await getPublishedSurveyBySlug(
-            anonClient(),
-            publishedSlug
-        );
-        expect(survey?.id).toBe(publishedId);
-        expect(survey?.elements).toHaveLength(2);
+        const survey = await getRunnerSurveyBySlug(anonClient(), publishedSlug);
+        expect(survey?.survey.id).toBe(publishedId);
+        expect(survey?.survey.elements).toHaveLength(2);
+        expect(survey?.publishedVersion).toBe(1);
 
         await expect(
-            getPublishedSurveyBySlug(anonClient(), testSlug("nope"))
+            getRunnerSurveyBySlug(anonClient(), testSlug("nope"))
         ).resolves.toBeNull();
+
+        // A closed survey is still reachable so the runner can say it is
+        // closed rather than 404 (DECISIONS 016) — while the insert policy
+        // still refuses an answer to it, which the submission test covers.
+        const closed = await getRunnerSurveyBySlug(anonClient(), closedSlug);
+        expect(closed?.survey.id).toBe(closedId);
+        expect(closed?.survey.status).toBe("closed");
 
         // Not enumerable: the table itself is closed to anonymous clients.
         const listed = await anonClient().from("surveys").select("id");

@@ -12,14 +12,21 @@ export const ROUTES = {
     login: "/login",
     authCallback: "/auth/callback",
     /** The respondent runner; `k` for *küsitlus*. See docs/DECISIONS.md 011. */
-    runner: (slug: string) => `/k/${slug}`
+    runner: (slug: string) => `/k/${slug}`,
+    /** The runner's analytics beacon. A Route Handler, not a Server Action. */
+    events: "/api/events"
 } as const;
 
 /**
  * Prefixes reachable without a session. `/k` is the runner: strangers arrive
- * there from a shared link and must never be bounced to a sign-in page.
+ * there from a shared link and must never be bounced to a sign-in page, and
+ * their analytics beacons must not be answered with a redirect to one either.
+ *
+ * Listed one endpoint at a time rather than as `/api`: the CSV download that
+ * lands there in Phase 8 is the owner's, and a whole-prefix exemption would
+ * quietly make it public the moment it exists.
  */
-const PUBLIC_PREFIXES = ["/login", "/auth", "/k"] as const;
+const PUBLIC_PREFIXES = ["/login", "/auth", "/k", ROUTES.events] as const;
 
 export function isPublicPath(pathname: string): boolean {
     return PUBLIC_PREFIXES.some(

@@ -1,11 +1,30 @@
 {
     "RunnerShell": {
-        "progress": "Küsimus {current} / {total}",
+        "progress": "Vastatud {answered} / {total}",
+        "progressLabel": "Edenemine",
         "required": "Kohustuslik",
         "optional": "Valikuline",
         "anonymous": "Vastused on anonüümsed.",
         "submit": "Saada vastused",
         "submitting": "Saadan…"
+    },
+    "RunnerQuestion": {
+        "otherPlaceholder": "Kirjuta oma vastus",
+        "dropdownPlaceholder": "Vali…",
+        "clear": "Tühjenda vastus",
+        "characters": "{count} / {max}",
+        "matrixRowsHeader": "Väide",
+        "npsMinLabel": "Ei soovitaks üldse",
+        "npsMaxLabel": "Soovitaksin kindlasti"
+    },
+    "RunnerProblems": {
+        "required": "See küsimus on kohustuslik.",
+        "selectAtLeast": "Vali vähemalt {count}.",
+        "selectAtMost": "Vali kõige rohkem {count}.",
+        "otherRequired": "Kirjuta oma vastus.",
+        "matrixIncomplete": "{count, plural, one {Üks rida on vastamata.} other {# rida on vastamata.}}",
+        "tooLong": "Kõige rohkem {count} tähemärki.",
+        "invalid": "See vastus ei sobi."
     },
     "RunnerThanks": {
         "title": "Aitäh vastamast!",
@@ -20,7 +39,11 @@
         "body": "Kontrolli linki või küsi saatjalt uus."
     },
     "RunnerErrors": {
-        "submitFailed": "Vastuste saatmine ebaõnnestus. Proovi uuesti.",
+        "notFound": "Küsitlust ei leitud. Kontrolli linki.",
+        "closed": "Küsitlus suleti vastamise ajal ega kogu enam vastuseid.",
+        "invalidAnswers": "Mõni vastus ei sobinud. Vaata märgitud küsimused üle.",
+        "failed": "Vastuste saatmine ebaõnnestus. Proovi uuesti.",
+        "incomplete": "{count, plural, one {Üks küsimus vajab veel vastust.} other {# küsimust vajavad veel vastust.}}",
         "retry": "Proovi uuesti"
     }
 }

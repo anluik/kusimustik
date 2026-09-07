@@ -1,11 +1,30 @@
 {
     "RunnerShell": {
-        "progress": "Question {current} of {total}",
+        "progress": "{answered} of {total} answered",
+        "progressLabel": "Progress",
         "required": "Required",
         "optional": "Optional",
         "anonymous": "Responses are anonymous.",
         "submit": "Submit answers",
         "submitting": "Sending…"
+    },
+    "RunnerQuestion": {
+        "otherPlaceholder": "Write your answer",
+        "dropdownPlaceholder": "Choose…",
+        "clear": "Clear answer",
+        "characters": "{count} / {max}",
+        "matrixRowsHeader": "Statement",
+        "npsMinLabel": "Not at all likely",
+        "npsMaxLabel": "Extremely likely"
+    },
+    "RunnerProblems": {
+        "required": "This question is required.",
+        "selectAtLeast": "Select at least {count}.",
+        "selectAtMost": "Select at most {count}.",
+        "otherRequired": "Write your answer.",
+        "matrixIncomplete": "{count, plural, one {One row is unanswered.} other {# rows are unanswered.}}",
+        "tooLong": "At most {count} characters.",
+        "invalid": "This answer is not valid."
     },
     "RunnerThanks": {
         "title": "Thank you!",
@@ -20,7 +39,11 @@
         "body": "Check the link, or ask the sender for a new one."
     },
     "RunnerErrors": {
-        "submitFailed": "Your answers could not be sent. Try again.",
+        "notFound": "Survey not found. Check the link.",
+        "closed": "The survey closed while you were answering and is no longer collecting responses.",
+        "invalidAnswers": "Some answers were not accepted. Please review the marked questions.",
+        "failed": "Your answers could not be sent. Try again.",
+        "incomplete": "{count, plural, one {One question still needs an answer.} other {# questions still need an answer.}}",
         "retry": "Try again"
     }
 }

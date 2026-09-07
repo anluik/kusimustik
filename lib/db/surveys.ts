@@ -191,16 +191,39 @@ export async function getSurvey(
     return row === null ? null : toRecord(row);
 }
 
-/** The runner's read path: reachable by slug, never enumerable. */
-export async function getPublishedSurveyBySlug(
+/**
+ * The definition a respondent sees, plus the snapshot number it came from —
+ * which the runner keys its saved progress on, so republishing a survey under
+ * a half-finished draft starts that respondent afresh rather than restoring
+ * answers to questions that have changed.
+ */
+export type RunnerSurvey = {
+    readonly survey: Survey;
+    readonly publishedVersion: number;
+};
+
+/**
+ * The runner's read path: reachable by slug, never enumerable.
+ *
+ * A *closed* survey comes back too, so the runner can say so rather than 404 —
+ * the branch is the caller's (docs/DECISIONS.md 016). A draft has no public
+ * existence at all and is indistinguishable from a slug that was never used.
+ */
+export async function getRunnerSurveyBySlug(
     db: Db,
     slug: string
-): Promise<Survey | null> {
+): Promise<RunnerSurvey | null> {
     const row = unwrap(
-        `getPublishedSurveyBySlug(${slug})`,
-        await db.rpc("get_published_survey", { p_slug: slug }).maybeSingle()
+        `getRunnerSurveyBySlug(${slug})`,
+        await db.rpc("get_runner_survey", { p_slug: slug }).maybeSingle()
     );
-    return row === null ? null : toSurvey(row);
+    if (row === null) return null;
+    return {
+        survey: toSurvey(row),
+        // Non-null for anything this function can return — only a published or
+        // closed survey has a slug — but the generated type cannot say so.
+        publishedVersion: row.published_version ?? row.version
+    };
 }
 
 /** Newest first. RLS already scopes this to the caller's own surveys. */
