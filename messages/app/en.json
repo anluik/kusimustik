@@ -387,6 +387,15 @@
             "search": "Search responses",
             "noMatches": "No response matches that search."
         },
+        "export": {
+            "action": "Download CSV",
+            "columns": {
+                "responseId": "Response ID",
+                "submittedAt": "Submitted",
+                "locale": "Language",
+                "surveyVersion": "Version"
+            }
+        },
         "funnel": {
             "title": "Drop-off",
             "stages": {
@@ -461,13 +470,15 @@
     },
     "Common": {
         "comingSoon": "Soon",
+        "loading": "Loading…",
         "retry": "Try again",
         "cancel": "Cancel",
         "skipToContent": "Skip to content"
     },
     "Errors": {
         "title": "Something went wrong",
-        "body": "This part could not be loaded."
+        "body": "This part could not be loaded.",
+        "reference": "Error code"
     },
     "NotFound": {
         "title": "Page not found",

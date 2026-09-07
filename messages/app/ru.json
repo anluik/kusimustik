@@ -387,6 +387,15 @@
             "search": "Поиск по ответам",
             "noMatches": "Ни один ответ не соответствует запросу."
         },
+        "export": {
+            "action": "Скачать CSV",
+            "columns": {
+                "responseId": "ID ответа",
+                "submittedAt": "Отправлено",
+                "locale": "Язык",
+                "surveyVersion": "Версия"
+            }
+        },
         "funnel": {
             "title": "Отток",
             "stages": {
@@ -461,13 +470,15 @@
     },
     "Common": {
         "comingSoon": "Скоро",
+        "loading": "Загрузка…",
         "retry": "Попробовать снова",
         "cancel": "Отмена",
         "skipToContent": "Перейти к содержимому"
     },
     "Errors": {
         "title": "Что-то пошло не так",
-        "body": "Не удалось загрузить эту часть."
+        "body": "Не удалось загрузить эту часть.",
+        "reference": "Код ошибки"
     },
     "NotFound": {
         "title": "Страница не найдена",

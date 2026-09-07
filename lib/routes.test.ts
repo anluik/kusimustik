@@ -22,6 +22,14 @@ describe("isPublicPath", () => {
         expect(isPublicPath(path)).toBe(false);
     });
 
+    it("keeps the CSV download behind a session", () => {
+        // The one thing that could go wrong quietly: someone adds `/api` to
+        // `PUBLIC_PREFIXES` for the beacon's sake and takes the owner's export
+        // with it.
+        expect(ROUTES.export("abc")).toBe("/api/surveys/abc/export");
+        expect(isPublicPath(ROUTES.export("abc"))).toBe(false);
+    });
+
     it("does not treat a prefix collision as public", () => {
         // `/kanalid` starts with `/k` but is not the runner.
         expect(isPublicPath("/kanalid")).toBe(false);

@@ -402,3 +402,31 @@ Append-only. Newest at the bottom. If you deviate from one of these, add a new e
 - **The seed grows interaction events, for wave two only.** The funnel is otherwise unviewable and untestable against a survey that plainly has 30 responses, which is the one thing the empty state must not do. Wave one is deliberately left without them: a survey that collected responses before the instrumentation existed is a real state and its empty state has to be reachable. Dwell is held constant per question so `pnpm test:db` can assert the medians exactly.
 
 **Not done here, deliberately.** DESIGN §5's **device-mix bar** is listed under the behaviour tab but is not in PLAN Phase 7's scope, and 017 settles that PLAN governs scope — the `meta.device` the runner already sends makes it a later afternoon's work. There is no response paging, no date filtering on the funnel, and no delta figures against a previous period (§5 specifies the delta's *styling*, but there is nothing to compare against until wave comparison ships, which is after-MVP item 2).
+
+---
+
+## 019 — The CSV export's file conventions, and where the close-out states live
+
+**Status:** accepted
+
+**Context.** Phase 8 wires `toCsvColumns` / `toCsvCells` to a download route and then closes the MVP out: empty states, loading skeletons, error boundaries, a pass over the et/ru catalogues, and mobile QA on the runner. The domain settled what a question contributes to a file in Phase 1; none of what follows was settled anywhere.
+
+**Decisions.**
+
+- **The file is semicolon-delimited, BOM-prefixed and CRLF-terminated.** RFC 4180 says comma; Excel splits on the *system list separator*, which is `;` on an Estonian Windows, and a comma-delimited file therefore opens as a single column of junk for the customer this product is for. The BOM is what makes the same Excel read `õ` as `õ`. Both are decisions about the file opening at all, so they are not negotiable on style grounds; `lib/results/csv.ts` is where they live and the only place they are written down in code.
+
+- **A cell that a spreadsheet would execute is prefixed with an apostrophe.** Respondents type free text and owners open the result in Excel or Sheets, both of which run a cell beginning `=`, `+`, `-` or `@` on open. Numbers are exempt — a leading sign followed by nothing but digits and separators cannot be a formula — so `-5` from a scale and `+372 5555 5555` from a text answer survive intact and only the genuinely formula-shaped cells are mangled.
+
+- **Timestamps are ISO 8601, not `12. jaan 2026`.** DESIGN §9's Estonian formatting is for *display*; a spreadsheet has to sort and parse this column, and a localised date string in a CSV is data that has been turned into presentation on the way out.
+
+- **The metadata columns come first and are translated; the question columns are the author's own words.** `Vastuse ID`, `Esitatud`, `Keel`, `Versioon` are ours and go through the catalogue in the *owner's* UI locale, because they are chrome. A question header is what the author wrote in `surveys.elements` and is never translated — there is only one of it, and it is the same string the runner showed.
+
+- **The download is a Route Handler at `/api/surveys/[surveyId]/export`, not a Server Action.** The browser has to navigate to it for `Content-Disposition` to mean anything, and actions queue one at a time per client besides. It is deliberately not under a public prefix: `PUBLIC_PREFIXES` lists `/api/events` as one endpoint rather than exempting `/api`, which is what keeps this one behind a session — `lib/routes.test.ts` asserts it. The handler re-checks the session itself and lets RLS scope the reads, so "not yours" and "deleted" are the same 404.
+
+- **Error boundaries are per root layout, plus one global.** `(app)`, `(auth)` and the runner each get an `error.tsx` inside their own layout, so the chrome stays on screen and the wording comes from the provider that layout set up — DESIGN §6 forbids a full-page error for a partial failure. `global-error.tsx` catches what those cannot, a root layout's own failure, and **its copy is Estonian in every locale**: the locale is in a cookie a client component cannot read and the provider is part of what failed. The strings are still read from `messages/app/et.json` rather than written inline, so a copy edit reaches it.
+
+- **The runner gets no `loading.tsx`.** Its root layout awaits the same cached read the page does, so a fallback under that layout could only appear after the data had already arrived. The three owner routes get one each, matching final geometry — 46px list rows, the builder's 268 / fluid / 340 panels, the four stat cards above the results tabs.
+
+- **Mobile QA is a spec, not a checklist.** `e2e/runner-mobile.spec.ts` asserts what DESIGN §4 and §10 actually promise — no horizontal scroll at 380 *or* 320, every tap target ≥ 44px, the progress and the action still pinned half way down, and the same after a failed submit puts an alert above the action. It measures inside the page rather than through Playwright locators, because a CSS locator pierces shadow DOM and hands you Next.js's own dev-mode indicator to fail on.
+
+**Consequence.** Adding a question type still fails the build in `toCsvColumns` and `toCsvCells`; nothing in this phase adds a new exhaustive switch, because the file format is a property of the file rather than of the question. What did change is that `lib/results/` now has two consumers of the same questions — the table and the export — which is the split DECISIONS 018 predicted and the reason neither is allowed to invent its own reading of an answer.

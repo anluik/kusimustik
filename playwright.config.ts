@@ -14,6 +14,10 @@ const baseURL = process.env["PLAYWRIGHT_BASE_URL"] ?? "http://localhost:3000";
 
 export default defineConfig({
     testDir: "./e2e",
+    // Visiting the seeded runner emits interaction events, and the db suite
+    // asserts wave one has none. Cleared once at the end rather than per spec,
+    // because the projects run in parallel — see e2e/support.ts.
+    globalTeardown: "./e2e/global-teardown.ts",
     fullyParallel: true,
     forbidOnly: !!process.env["CI"],
     retries: process.env["CI"] ? 2 : 0,

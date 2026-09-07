@@ -1,5 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
+
+import { SEED_SLUG, SEED_SURVEY_ID, serviceDb } from "./support";
 
 /**
  * The one end-to-end test docs/PLAN.md Phase 6 asks for: open the seeded
@@ -12,7 +13,7 @@ import { expect, test } from "@playwright/test";
  * anonymous client is allowed to read back.
  */
 
-const SLUG = "rahulolu-2025";
+const SLUG = SEED_SLUG;
 
 /** From supabase/seed.sql, wave one. Stable across `pnpm db:reset`. */
 const Q = {
@@ -27,18 +28,7 @@ const Q = {
     teamRatings: "10000000-0000-4000-8000-000000000009"
 } as const;
 
-const SURVEY_ID = "00000000-0000-4000-8000-0000000000a1";
-
-function serviceDb() {
-    const url = process.env["NEXT_PUBLIC_SUPABASE_URL"];
-    const key = process.env["SUPABASE_SECRET_KEY"];
-    if (url === undefined || key === undefined) {
-        throw new Error(
-            "e2e needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY; see .env.example"
-        );
-    }
-    return createClient(url, key, { auth: { persistSession: false } });
-}
+const SURVEY_ID = SEED_SURVEY_ID;
 
 /**
  * The city this run answered with. Unique per test, because the two projects
@@ -50,8 +40,9 @@ let marker: string | null = null;
 test.afterEach(async () => {
     // The seed is two waves of 30 responses with distributions
     // `lib/db/seed.db.test.ts` asserts on, so a run of this spec must leave it
-    // exactly as it found it. Events are left alone: nothing asserts on them,
-    // and deleting by time would take the other project's with them.
+    // exactly as it found it. The interaction events this visit emitted are
+    // cleared by the global teardown instead: they are asserted on below, and
+    // the other project is still running.
     if (marker === null) return;
     const db = serviceDb();
     const { data } = await db

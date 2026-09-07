@@ -38,6 +38,10 @@
         "title": "Survey not found",
         "body": "Check the link, or ask the sender for a new one."
     },
+    "RunnerFailed": {
+        "title": "Something went wrong",
+        "body": "The survey could not be shown. Your answers are still saved — try again."
+    },
     "RunnerErrors": {
         "notFound": "Survey not found. Check the link.",
         "closed": "The survey closed while you were answering and is no longer collecting responses.",

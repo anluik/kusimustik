@@ -16,7 +16,12 @@ export const ROUTES = {
     /** The respondent runner; `k` for *küsitlus*. See docs/DECISIONS.md 011. */
     runner: (slug: string) => `/k/${slug}`,
     /** The runner's analytics beacon. A Route Handler, not a Server Action. */
-    events: "/api/events"
+    events: "/api/events",
+    /**
+     * The owner's CSV download. A Route Handler because the browser navigates
+     * to it, and deliberately *not* under a public prefix.
+     */
+    export: (surveyId: string) => `/api/surveys/${surveyId}/export`
 } as const;
 
 /**

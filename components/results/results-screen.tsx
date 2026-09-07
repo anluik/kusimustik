@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useMemo } from "react";
 
+import { ExportButton } from "@/components/results/export-button";
 import { FunnelPanel } from "@/components/results/funnel-panel";
 import { QuestionCard } from "@/components/results/question-card";
 import { ResponsesTable } from "@/components/results/responses-table";
@@ -98,17 +99,23 @@ export function ResultsScreen({
                 title={title}
                 meta={t("title")}
                 actions={
-                    <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="h-[30px] rounded text-xs"
-                    >
-                        <Link href={ROUTES.builder(surveyId)}>
-                            <PencilLine aria-hidden />
-                            {t("backToBuilder")}
-                        </Link>
-                    </Button>
+                    <>
+                        <ExportButton
+                            surveyId={surveyId}
+                            enabled={hasResponses}
+                        />
+                        <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="h-[30px] rounded text-xs"
+                        >
+                            <Link href={ROUTES.builder(surveyId)}>
+                                <PencilLine aria-hidden />
+                                {t("backToBuilder")}
+                            </Link>
+                        </Button>
+                    </>
                 }
             />
 

@@ -38,6 +38,10 @@
         "title": "Küsitlust ei leitud",
         "body": "Kontrolli linki või küsi saatjalt uus."
     },
+    "RunnerFailed": {
+        "title": "Midagi läks valesti",
+        "body": "Küsitlust ei õnnestunud kuvada. Sinu vastused on alles — proovi uuesti."
+    },
     "RunnerErrors": {
         "notFound": "Küsitlust ei leitud. Kontrolli linki.",
         "closed": "Küsitlus suleti vastamise ajal ega kogu enam vastuseid.",

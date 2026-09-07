@@ -387,6 +387,15 @@
             "search": "Otsi vastustest",
             "noMatches": "Ükski vastus ei vasta otsingule."
         },
+        "export": {
+            "action": "Laadi CSV alla",
+            "columns": {
+                "responseId": "Vastuse ID",
+                "submittedAt": "Esitatud",
+                "locale": "Keel",
+                "surveyVersion": "Versioon"
+            }
+        },
         "funnel": {
             "title": "Väljalangevus",
             "stages": {
@@ -461,13 +470,15 @@
     },
     "Common": {
         "comingSoon": "Varsti",
+        "loading": "Laadin…",
         "retry": "Proovi uuesti",
         "cancel": "Loobu",
         "skipToContent": "Liigu sisu juurde"
     },
     "Errors": {
         "title": "Midagi läks valesti",
-        "body": "Seda osa ei õnnestunud laadida."
+        "body": "Seda osa ei õnnestunud laadida.",
+        "reference": "Vea kood"
     },
     "NotFound": {
         "title": "Lehte ei leitud",
