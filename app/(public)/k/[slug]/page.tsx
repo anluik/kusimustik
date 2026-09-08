@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { RunnerNotice } from "@/components/runner/runner-notice";
 import { RunnerScreen } from "@/components/runner/runner-screen";
+import { isAnswerableElement } from "@/domain/question";
 import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
 import { getRunnerTranslations } from "@/lib/i18n/runner";
 import { loadRunnerSurvey } from "@/lib/runner/load";
@@ -49,6 +50,15 @@ export default async function RunnerPage({ params }: PageProps<"/k/[slug]">) {
     if (found === null) notFound();
     if (found.survey.status !== "published") {
         return <RunnerNotice kind="closed" surveyTitle={found.survey.title} />;
+    }
+
+    // Publishing refuses a survey with nothing to answer, but the questions
+    // can leave afterwards: deleting the last one from a live survey used to
+    // leave the link serving a blank page with a working submit button, which
+    // filed empty responses and counted them. `submitResponseAction` refuses
+    // the same case, since a Server Action is reachable without this page.
+    if (!found.survey.elements.some(isAnswerableElement)) {
+        return <RunnerNotice kind="empty" surveyTitle={found.survey.title} />;
     }
 
     return (

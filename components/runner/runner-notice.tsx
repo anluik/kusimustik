@@ -5,9 +5,9 @@ import type { ReactNode } from "react";
 
 /**
  * The runner's terminal screens: the link matched nothing, the survey has
- * stopped collecting, the answers are in, and — from `error.tsx` — the page
- * itself failed. The last of those is the only one with an action, because it
- * is the only one the respondent can do anything about.
+ * stopped collecting, it has nothing to ask, the answers are in, and — from
+ * `error.tsx` — the page itself failed. `failed` is the only one with an
+ * action, because it is the only one the respondent can do anything about.
  *
  * Each names the survey it is about wherever the survey is known: these are
  * the only screens a respondent sees with nothing else on them, and an
@@ -25,7 +25,7 @@ export function RunnerNotice({
     surveyTitle,
     action
 }: {
-    readonly kind: "notFound" | "closed" | "thanks" | "failed";
+    readonly kind: "notFound" | "closed" | "empty" | "thanks" | "failed";
     /**
      * The survey these words are about, when it is known. A respondent who
      * has just answered — or arrived at a survey that has closed — is looking
@@ -38,6 +38,7 @@ export function RunnerNotice({
 }) {
     const notFound = useTranslations("RunnerNotFound");
     const closed = useTranslations("RunnerClosed");
+    const empty = useTranslations("RunnerEmpty");
     const thanks = useTranslations("RunnerThanks");
     const failed = useTranslations("RunnerFailed");
 
@@ -46,9 +47,11 @@ export function RunnerNotice({
             ? notFound
             : kind === "closed"
               ? closed
-              : kind === "failed"
-                ? failed
-                : thanks;
+              : kind === "empty"
+                ? empty
+                : kind === "failed"
+                  ? failed
+                  : thanks;
 
     return (
         <main className="grid min-h-svh place-items-center p-3.5">

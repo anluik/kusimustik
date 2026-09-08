@@ -50,6 +50,13 @@ export async function submitResponseAction(
         if (found.survey.status !== "published") return failed("closed");
         const { survey } = found;
 
+        // Nothing to answer means nothing to submit. The page renders a notice
+        // rather than a form for this, so reaching here is a stale tab or a
+        // direct POST; either way an empty response would only inflate the
+        // owner's count. `closed` is the honest code — this survey is not
+        // collecting — and it is the notice the page would have shown.
+        if (!survey.elements.some(isAnswerableElement)) return failed("closed");
+
         const answers: SubmittedAnswer[] = [];
         for (const element of survey.elements) {
             if (!isAnswerableElement(element)) continue;

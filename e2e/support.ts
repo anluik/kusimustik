@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 /**
@@ -41,4 +42,62 @@ export async function clearSeededEvents(): Promise<void> {
         .from("survey_events")
         .delete()
         .eq("survey_id", SEED_SURVEY_ID);
+}
+
+/**
+ * Where `globalSetup` leaves the owner's signed-in cookies.
+ *
+ * The owner app had no end-to-end coverage at all, which is how a live count
+ * that never updated survived a green suite: nothing ever opened the results
+ * page as the person it is built for. Signing in once and reusing the state
+ * keeps that cheap, and keeps Supabase's per-address magic-link rate limit out
+ * of the test run.
+ */
+export const OWNER_STATE = "e2e/.auth/owner.json";
+export const OWNER_EMAIL = "owner@kusimustik.test";
+
+/** Mailpit, from `supabase status`. The local stack's inbox. */
+const MAILPIT = "http://127.0.0.1:54324";
+
+/**
+ * The most recent message's id, so a later poll can tell a new mail from the
+ * one already sitting there.
+ */
+async function latestMessageId(): Promise<string> {
+    const res = await fetch(`${MAILPIT}/api/v1/messages?limit=1`);
+    const body = (await res.json()) as { messages: { ID: string }[] };
+    return body.messages[0]?.ID ?? "";
+}
+
+/**
+ * Signs in through the real magic link rather than a forged cookie.
+ *
+ * The link is PKCE: the verifier is a cookie the sign-in page set, so the link
+ * only works in the browser that asked for it and in a context that kept that
+ * cookie. Reading it out of Mailpit and opening it in the same page is the
+ * only faithful way to arrive signed in — and it exercises the callback route
+ * on the way, which is a flow nothing else covers.
+ */
+export async function signInAsOwner(page: Page): Promise<void> {
+    const before = await latestMessageId();
+
+    await page.goto("/login");
+    await page.getByLabel(/E-posti aadress/i).fill(OWNER_EMAIL);
+    await page.getByRole("button", { name: /Saada sisselogimislink/i }).click();
+
+    let link: string | null = null;
+    for (let attempt = 0; attempt < 40 && link === null; attempt++) {
+        await page.waitForTimeout(400);
+        const id = await latestMessageId();
+        if (id === "" || id === before) continue;
+
+        const res = await fetch(`${MAILPIT}/api/v1/message/${id}`);
+        const mail = (await res.json()) as { HTML: string };
+        const href = /href="([^"]+)"/.exec(mail.HTML)?.[1];
+        if (href !== undefined) link = href.replaceAll("&amp;", "&");
+    }
+    if (link === null) throw new Error("no sign-in link arrived in Mailpit");
+
+    await page.goto(link);
+    await page.waitForURL(/\/surveys/, { timeout: 20_000 });
 }

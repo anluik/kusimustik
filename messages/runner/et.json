@@ -34,6 +34,10 @@
         "title": "Küsitlus on suletud",
         "body": "See küsitlus enam vastuseid ei kogu."
     },
+    "RunnerEmpty": {
+        "title": "Küsitlus pole veel valmis",
+        "body": "Selles küsitluses ei ole ühtegi küsimust. Anna saatjale teada — link hakkab tööle, kui küsimused on lisatud."
+    },
     "RunnerNotFound": {
         "title": "Küsitlust ei leitud",
         "body": "Kontrolli linki või küsi saatjalt uus."

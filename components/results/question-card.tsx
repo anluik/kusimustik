@@ -103,6 +103,17 @@ export function QuestionCard({
                                 {t("skipped", { count: summary.skippedCount })}
                             </span>
                         )}
+                        {/* Sits with the rest of the accounting rather than
+                            under the chart: it is the line that makes the
+                            three numbers add up, and it is only ever there
+                            because the author edited the question after the
+                            answers arrived. The answers themselves are still
+                            in the table and the CSV. */}
+                        {summary.unshownCount > 0 && (
+                            <span className={cn(META, "text-muted-foreground")}>
+                                {t("unshown", { count: summary.unshownCount })}
+                            </span>
+                        )}
                     </div>
                 </div>
 

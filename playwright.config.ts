@@ -17,6 +17,9 @@ export default defineConfig({
     // Visiting the seeded runner emits interaction events, and the db suite
     // asserts wave one has none. Cleared once at the end rather than per spec,
     // because the projects run in parallel — see e2e/support.ts.
+    // Signs the owner in once; owner specs pick the session up through
+    // `storageState`. See e2e/global-setup.ts.
+    globalSetup: "./e2e/global-setup.ts",
     globalTeardown: "./e2e/global-teardown.ts",
     fullyParallel: true,
     forbidOnly: !!process.env["CI"],

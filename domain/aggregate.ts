@@ -35,6 +35,19 @@ export type SummaryBase = {
     readonly responseCount: number;
     readonly answeredCount: number;
     readonly skippedCount: number;
+    /**
+     * Answers counted in `answeredCount` that nothing below represents.
+     *
+     * An option, a matrix row or column, or the top of a scale can be taken
+     * out of a question that has already been answered. The answer keeps the
+     * value it was given — `toCsvCells` still writes it out — but the question
+     * no longer describes it, so no bar can. Reporting it is what stops the
+     * card's own arithmetic silently disagreeing with itself.
+     *
+     * It counts answers rather than choices: one respondent who picked two
+     * removed options is one unshown answer.
+     */
+    readonly unshownCount: number;
 };
 
 export type CategoryCount = {
@@ -128,7 +141,16 @@ export function aggregate(
             const given = answers.filter(answer =>
                 isAnswerOfType(answer, "single_choice")
             );
-            const base = summaryBase(question, answers.length, given.length);
+            const offered = offeredValues(
+                question.options,
+                question.allowOther
+            );
+            const base = summaryBase(
+                question,
+                answers.length,
+                given.length,
+                given.filter(answer => !offered.has(answer.value)).length
+            );
             const counts = new Map(
                 question.options.map(option => [option.value, 0])
             );
@@ -168,7 +190,18 @@ export function aggregate(
             const given = answers.filter(answer =>
                 isAnswerOfType(answer, "multi_choice")
             );
-            const base = summaryBase(question, answers.length, given.length);
+            const offered = offeredValues(
+                question.options,
+                question.allowOther
+            );
+            const base = summaryBase(
+                question,
+                answers.length,
+                given.length,
+                given.filter(answer =>
+                    answer.values.some(value => !offered.has(value))
+                ).length
+            );
             const counts = new Map(
                 question.options.map(option => [option.value, 0])
             );
@@ -210,6 +243,8 @@ export function aggregate(
             const given = answers.filter(answer =>
                 isAnswerOfType(answer, "dropdown")
             );
+            // A dropdown has no "other", so anything off the list is unshown.
+            const offered = offeredValues(question.options, false);
             const counts = new Map(
                 question.options.map(option => [option.value, 0])
             );
@@ -217,7 +252,12 @@ export function aggregate(
                 counts.set(answer.value, (counts.get(answer.value) ?? 0) + 1);
 
             return {
-                ...summaryBase(question, answers.length, given.length),
+                ...summaryBase(
+                    question,
+                    answers.length,
+                    given.length,
+                    given.filter(answer => !offered.has(answer.value)).length
+                ),
                 kind: "categorical",
                 multiSelect: false,
                 options: question.options.map(option =>
@@ -236,7 +276,9 @@ export function aggregate(
                 isAnswerOfType(answer, "short_text")
             );
             return {
-                ...summaryBase(question, answers.length, given.length),
+                // Nothing was chosen from a list, so nothing can be taken out
+                // from under it.
+                ...summaryBase(question, answers.length, given.length, 0),
                 kind: "text",
                 responses: given.map(answer => answer.value)
             };
@@ -247,7 +289,9 @@ export function aggregate(
                 isAnswerOfType(answer, "long_text")
             );
             return {
-                ...summaryBase(question, answers.length, given.length),
+                // Nothing was chosen from a list, so nothing can be taken out
+                // from under it.
+                ...summaryBase(question, answers.length, given.length, 0),
                 kind: "text",
                 responses: given.map(answer => answer.value)
             };
@@ -259,7 +303,18 @@ export function aggregate(
                 .map(answer => answer.value);
 
             return {
-                ...summaryBase(question, answers.length, scores.length),
+                ...summaryBase(
+                    question,
+                    answers.length,
+                    scores.length,
+                    // Lowering `max` leaves the scores above it with no step
+                    // to sit on; they stay in the mean, which is the whole
+                    // reason the card has to say they are there.
+                    scores.filter(
+                        score =>
+                            score < OPINION_SCALE_MIN || score > question.max
+                    ).length
+                ),
                 kind: "numeric",
                 min: OPINION_SCALE_MIN,
                 max: question.max,
@@ -288,7 +343,8 @@ export function aggregate(
             const promoters = scores.filter(score => score >= 9).length;
 
             return {
-                ...summaryBase(question, answers.length, scores.length),
+                // 0-10 is fixed by the type, so no answer can fall off it.
+                ...summaryBase(question, answers.length, scores.length, 0),
                 kind: "nps",
                 promoters,
                 passives,
@@ -313,9 +369,22 @@ export function aggregate(
             const columnValues = new Set(
                 question.columns.map(column => column.value)
             );
+            const rowValues = new Set(question.rows.map(row => row.value));
 
             return {
-                ...summaryBase(question, answers.length, given.length),
+                ...summaryBase(
+                    question,
+                    answers.length,
+                    given.length,
+                    // Either half of the grid can be edited away, and a cell
+                    // needs both halves to be drawable.
+                    given.filter(answer =>
+                        Object.entries(answer.values).some(
+                            ([row, column]) =>
+                                !rowValues.has(row) || !columnValues.has(column)
+                        )
+                    ).length
+                ),
                 kind: "matrix",
                 columns: question.columns.map(column => ({
                     value: column.value,
@@ -358,7 +427,10 @@ export function aggregate(
 function summaryBase(
     question: AnswerableQuestion,
     responseCount: number,
-    answeredCount: number
+    answeredCount: number,
+    /** Required rather than defaulted: a tenth question type has to decide
+     *  what "a choice this question no longer offers" means for it. */
+    unshownCount: number
 ): SummaryBase {
     return {
         questionId: question.id,
@@ -367,8 +439,25 @@ function summaryBase(
         title: question.title,
         responseCount,
         answeredCount,
-        skippedCount: responseCount - answeredCount
+        skippedCount: responseCount - answeredCount,
+        unshownCount
     };
+}
+
+/**
+ * Every value a choice question would accept from a respondent today.
+ *
+ * `OTHER_OPTION_VALUE` belongs in it only while the question still offers a
+ * written answer: turning "other" off leaves the answers that used it with
+ * nowhere to appear, exactly as removing a listed option does.
+ */
+function offeredValues(
+    options: readonly { readonly value: string }[],
+    allowOther: boolean
+): ReadonlySet<string> {
+    const values = new Set(options.map(option => option.value));
+    if (allowOther) values.add(OTHER_OPTION_VALUE);
+    return values;
 }
 
 function category(

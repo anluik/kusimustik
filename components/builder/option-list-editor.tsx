@@ -24,7 +24,18 @@ import { GripVertical, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 
+import { useCollectedAnswers } from "@/components/builder/collected-answers";
 import { EditorSection } from "@/components/builder/element-fields";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ChoiceOption } from "@/domain/question";
@@ -53,6 +64,8 @@ export type ChoiceListCopy = {
     readonly add: string;
     readonly remove: (index: number) => string;
     readonly reorder: (index: number) => string;
+    /** Asked before removing this kind of choice from a survey with answers. */
+    readonly confirmTitle: (label: string) => string;
 };
 
 /** The three lists' copy, so an editor names the one it needs and no more. */
@@ -69,7 +82,8 @@ export function useChoiceListCopy(): Record<
             placeholder: t("optionPlaceholder"),
             add: t("addOption"),
             remove: index => t("removeOption", { index }),
-            reorder: index => t("reorderOption", { index })
+            reorder: index => t("reorderOption", { index }),
+            confirmTitle: label => t("removeWarning.option", { label })
         },
         rows: {
             section: t("rowsLabel"),
@@ -77,7 +91,8 @@ export function useChoiceListCopy(): Record<
             placeholder: t("rowPlaceholder"),
             add: t("addRow"),
             remove: index => t("removeRow", { index }),
-            reorder: index => t("reorderRow", { index })
+            reorder: index => t("reorderRow", { index }),
+            confirmTitle: label => t("removeWarning.row", { label })
         },
         columns: {
             section: t("columnsLabel"),
@@ -85,7 +100,8 @@ export function useChoiceListCopy(): Record<
             placeholder: t("columnPlaceholder"),
             add: t("addColumn"),
             remove: index => t("removeColumn", { index }),
-            reorder: index => t("reorderColumn", { index })
+            reorder: index => t("reorderColumn", { index }),
+            confirmTitle: label => t("removeWarning.column", { label })
         }
     };
 }
@@ -194,6 +210,21 @@ export function OptionListEditor({
     readonly onChange: (options: readonly ChoiceOption[]) => void;
 }) {
     const tErrors = useTranslations("Builder.errors");
+    const tWarning = useTranslations("Builder.editor.removeWarning");
+
+    /**
+     * Removing a choice from a survey that has already been answered is not
+     * undoable and not visible: the answers keep the value they were given,
+     * the CSV keeps writing it out, and every chart stops being able to draw
+     * it. So it asks first — but only once answers exist. Building a draft is
+     * where this list is edited most, and a dialog on every stray option there
+     * would be noise guarding nothing.
+     */
+    const collected = useCollectedAnswers();
+    const [confirming, setConfirming] = useState<ChoiceOption | null>(null);
+
+    const remove = (value: string) =>
+        onChange(options.filter(option => option.value !== value));
 
     /**
      * Adding an option and then having to aim at the row it created is the
@@ -269,13 +300,10 @@ export function OptionListEditor({
                                         )
                                     )
                                 }
-                                onRemove={() =>
-                                    onChange(
-                                        options.filter(
-                                            (_, position) => position !== index
-                                        )
-                                    )
-                                }
+                                onRemove={() => {
+                                    if (collected === 0) remove(option.value);
+                                    else setConfirming(option);
+                                }}
                             />
                         ))}
                     </ul>
@@ -296,6 +324,44 @@ export function OptionListEditor({
                 <Plus aria-hidden />
                 {copy.add}
             </Button>
+
+            <AlertDialog
+                open={confirming !== null}
+                onOpenChange={open => {
+                    if (!open) setConfirming(null);
+                }}
+            >
+                <AlertDialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+                    <AlertDialogHeader className="gap-1">
+                        <AlertDialogTitle className="text-[13px] leading-[1.2] font-semibold">
+                            {copy.confirmTitle(confirming?.label ?? "")}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-xs leading-[1.35]">
+                            {tWarning("body", { count: collected })}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel
+                            size="sm"
+                            className="h-[30px] rounded text-xs"
+                        >
+                            {tWarning("cancel")}
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            size="sm"
+                            variant="destructive"
+                            className="h-[30px] rounded text-xs"
+                            onClick={() => {
+                                if (confirming !== null)
+                                    remove(confirming.value);
+                                setConfirming(null);
+                            }}
+                        >
+                            {tWarning("confirm")}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </EditorSection>
     );
 }

@@ -197,6 +197,7 @@
             "deleteWarning": {
                 "title": "Delete this element?",
                 "body": "Element “{title}” goes, along with its options, rows and labels. This cannot be undone.",
+                "bodyWithResponses": "“{title}” goes, and its options, rows and labels with it. This survey has {count, plural, one {# response} other {# responses}} — the answers already given stay in the database, but neither the results nor the CSV will show them again. This cannot be undone.",
                 "cancel": "Keep it",
                 "confirm": "Delete element"
             },
@@ -247,6 +248,14 @@
             "columnPlaceholder": "Column text",
             "addColumn": "Add column",
             "removeColumn": "Remove column {index}",
+            "removeWarning": {
+                "option": "Remove the option “{label}”?",
+                "row": "Remove the row “{label}”?",
+                "column": "Remove the column “{label}”?",
+                "body": "This survey has collected {count, plural, one {# response} other {# responses}}. Answers already given stay in the database and in the CSV, but no chart will show them.",
+                "cancel": "Keep it",
+                "confirm": "Remove"
+            },
             "reorderColumn": "Reorder column {index}",
             "selectionsLabel": "How many may be ticked",
             "minSelectionsLabel": "At least",
@@ -266,6 +275,11 @@
             "scaleMaxLabel": "Label at the high end ({step})",
             "scaleLabelPlaceholder": "e.g. Strongly disagree",
             "npsHelp": "The NPS scale is always {min}–{max}, and promoters, passives and detractors follow from it. Only the wording is yours to set."
+        },
+        "publish": {
+            "publish": "Publish",
+            "republish": "Publish again",
+            "collectingNothing": "no questions — the link collects nothing"
         },
         "defaults": {
             "questionTitle": "New question",
@@ -363,6 +377,7 @@
         "question": {
             "answered": "{count, plural, one {# answer} other {# answers}}",
             "skipped": "{count, plural, one {# skipped} other {# skipped}}",
+            "unshown": "{count, plural, one {# answer to a removed choice} other {# answers to removed choices}}",
             "otherResponses": "Free-text answers",
             "noAnswers": "Nobody has answered this question yet."
         },
@@ -444,6 +459,10 @@
             "draft": {
                 "title": "This survey is not published",
                 "body": "A draft cannot be answered. Publish the survey to start collecting responses."
+            },
+            "noQuestions": {
+                "title": "Nothing left to summarise",
+                "body": "This survey has no answerable questions — they have all been removed in the builder. The responses collected are still here and still reach the CSV, but there is nothing to chart them against."
             }
         }
     },

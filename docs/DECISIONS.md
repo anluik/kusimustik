@@ -468,3 +468,57 @@ Append-only. Newest at the bottom. If you deviate from one of these, add a new e
 **Component tests exist now, and this is what they are for.** `vitest.config.mts` was already jsdom with `@vitejs/plugin-react`, and no `.tsx` test had ever been written — which is precisely why every defect above survived a green suite. `components/test-support.tsx` renders with both catalogues under one `NextIntlClientProvider`, and `vitest.setup.ts` unmounts between tests (auto-cleanup does not register, because `globals` is deliberately off). The new tests are regression tests first: a chart that draws in a container of no measured size, a delete that does not fire until it is confirmed, an added option that has the caret in it.
 
 **Still open.** The review also recorded a "Maximum update depth exceeded" seen once in the console during builder editing and never reproduced, by the reviewer or here. No render-time `setState`, no effect that writes the state it depends on, and no unstable `items` identity feeding a dnd-kit measurement loop was found in our own code; the nine editors are now mounted and edited in `editor-panel.test.tsx`, where React throws that error rather than logging it, so a reappearance fails a test instead of scrolling past.
+
+---
+
+## 021 — The second review: a live count that was never live, and edits that rewrote history
+
+**Status:** accepted
+
+**Context.** The second review ran every suite green again — 469 unit, 62 database, 12 e2e, a clean production build — and again found the defects in the running product. Two were serious enough to fix before anything else: the live response count had never once updated, and removing a choice from a published survey silently changed what its results said. Both had been shipped, reviewed and tested without anyone noticing, for the same underlying reason: nothing in the suite had ever opened the owner's app as the owner.
+
+**Decisions.**
+
+- **The realtime channel is authorised before it joins, not after.** `RealtimeChannel.subscribe()` reads `socket.accessTokenValue` *synchronously* and puts it in the join frame. `createBrowserClient` resolves its session from cookies asynchronously, so a channel opened in a mount effect always won that race and joined as `anon` — which holds `INSERT` on `responses` and nothing else, so Realtime could not even resolve the filter column and answered `"invalid column for filter survey_id"`. `await db.realtime.setAuth()` first is the fix, with no argument: supabase-js installs an `accessToken` callback on the realtime client, and passing a token explicitly would switch it to manual mode and stop it refreshing on heartbeat.
+
+  The hook's third promise — *it never breaks the page* — was the reason this lasted. A subscription that never opens is indistinguishable from a survey nobody is answering. It still may not disturb the page, so a failed `subscribe()` now warns in development, where a developer sees it and a respondent cannot.
+
+- **The owner app has end-to-end coverage, and it starts here.** `e2e/global-setup.ts` signs the seeded owner in once through the real magic link — Mailpit, PKCE verifier, callback route and all — and saves the session for every owner spec through `storageState`. Per-spec sign-in would be slow, and Supabase rate limits magic links per address. `e2e/results-live.spec.ts` is the first spec to use it, and it waits for Realtime's own *"Subscribed to PostgreSQL"* frame before inserting: a fixed delay races a cold compile, and the announcement is precisely the thing the broken version never received. Verified the honest way — with `setAuth` commented out, the spec fails.
+
+- **A summary reports the answers it cannot draw.** An option, a matrix row or column, or the top of a scale can be taken out of a question that has already been answered. `toCsvCells` has always kept those answers, falling back to the stored value; every chart dropped them; the card went on counting them in "30 vastust". Three readings of the same data, none of which said so. `SummaryBase.unshownCount` is the fourth number that reconciles the other three, and it is a required argument to `summaryBase` so that a tenth question type has to decide what "a choice this question no longer offers" means for it. It counts *answers*, not choices — one respondent naming two removed options is one unshown answer — because that is the sentence the card renders.
+
+  Turning `allowOther` off counts too: the written answers that used it are as orphaned as a deleted option's. The scale's mean and median deliberately still include scores above a lowered `max`: they are real answers on the same axis, and the card now says how many of them the distribution cannot show rather than quietly dropping them from both.
+
+- **Removing a choice asks first — but only once answers exist.** This list is edited most while a draft is being written, where a dialog would be noise guarding nothing. On a survey that has collected responses it is destructive, silent and permanent, so it goes through an `AlertDialog` naming the choice, the same treatment DESIGN §5 gives deleting a survey and DECISIONS 020 gave deleting an element. The element-delete dialog now names the response count too, which `Surveys.delete.bodyWithResponses` had been doing for whole surveys since Phase 4.
+
+- **`CollectedAnswersProvider` carries the count, rather than nine editors' props.** The place that most needs to know — `OptionListEditor` — is four editors below the panel, and threading it there would put the field on all nine editor prop types whether or not they have a list to guard. A context also means a tenth choice editor inherits the guard instead of having to remember to ask for it. The number is the server render's and does not follow submissions arriving mid-edit: it decides whether an edit needs a warning, and "none when the page loaded" is the only case where it does not.
+
+**Consequence.** `pnpm test:e2e` now needs Mailpit as well as the database, which `supabase start` already provides. `e2e/.auth/` holds a real session and is git-ignored. The live count spec runs on chromium only: both projects share one seeded survey, and two workers inserting at once could take the figure from 30 to 32 without ever showing 31.
+
+**Still open from the review.** The owner app's 404, publishing from the builder, and the empty published survey — all three are 022.
+
+---
+
+## 022 — The second review, part two: a 404 in the wrong language, a path that ran off the end, and a link with nothing behind it
+
+**Status:** accepted
+
+**Context.** The three remaining serious findings from the second review. None of them is a bug in a computation; each is a state the product can genuinely reach that nothing had ever been written for.
+
+**Decisions.**
+
+- **`app/(app)/not-found.tsx` exists, and `global-not-found.tsx` could not have covered it.** `notFound()` resolves to the *nearest* `not-found.tsx`; there was none between `app/(app)/**` and Next.js's built-in page, so a bookmark to a deleted survey answered a signed-in Estonian owner with "404 · This page could not be found" in English, inside a fully localized shell. `globalNotFound` serves whole documents for requests matching no route at all — `/surveys/[surveyId]` matches perfectly well, and the survey behind the id is what is missing. The new page keeps the sidebar, because DESIGN §6 wants the chrome to stay for a partial failure and because the way out is the list the sidebar already points at. The heading lives in the app bar and the card carries only the explanation and the way back, rather than saying the same sentence twice.
+
+  Its HTTP status is still 200, as it was before: the `(app)` layout awaits a session and begins streaming before the page throws, and a status cannot be set once the response has started. That matters to monitoring, not to a person, and not at all to search engines — this is behind a session.
+
+- **Publishing and the link live in the builder as well as the row menu.** Creating a survey opens the builder (020), so the path the product promises — write it, then send it — ran off the end of the builder and back into a list to hunt for a `…` menu. `PublishControl` changes shape with the survey rather than staying put and greying out: the publish button for a draft or a closed survey, the link for a published one. The row menu keeps the disabled-with-a-reason form, because a menu has room to explain itself and a 44px bar does not; here the empty canvas already says the first question comes next.
+
+- **Publish is unavailable while the document is unsaved, and that is not a detail.** Publishing acts on the document *the server* holds. Offering it while the screen is ahead of the server publishes the wrong thing — and in the first draft of this control it did something worse: adding a question and immediately pressing Avalda refused with "a survey with no questions cannot be published", about a survey the owner was looking at a question in, because the 700ms autosave debounce had not fired. The button now follows `BuilderSaveStatus`, and the `SaveIndicator` in the same bar is already saying which of "salvestamata", "salvestan…" or "paranda vead" applies.
+
+- **A published survey with nothing to answer says so, on all three surfaces.** `publishSurveyAction` has always refused an empty survey; what nothing covered is that the questions can leave *afterwards*. Deleting the last one from a live survey left the link serving a blank page with a working submit button, which filed empty responses and counted them. The runner now renders `RunnerNotice kind="empty"` instead of a form; `submitResponseAction` refuses the same case with `closed`, since a Server Action is reachable without the page and a stale tab is the realistic way in; the results tab says there is nothing to summarise instead of rendering a blank strip under a card claiming a response count; and the builder's bar replaces the copy-link control with "küsimusteta — link ei kogu vastuseid", because copying a link that collects nothing is the wrong offer.
+
+  Deliberately *not* done: refusing the save that empties a published survey. It would trap an author who deletes one question intending to add another, and it would not cover a survey emptied any other way. Telling the truth on every surface covers all of them.
+
+  Also deliberately not done: refusing to publish a question still called "Uus küsimus" with options "Valik 1" and "Valik 2". An empty title is already impossible — `QuestionSchema` requires one — and any check beyond that is a guess about the author's intent, which is not the app's to make.
+
+**Consequence.** `e2e/owner-surfaces.spec.ts` covers all three, and builds the emptied-survey fixture through the service key rather than clicking it into existence: publishing refuses an empty survey, so the only route to that state is removing the last question afterwards, and what is under test is the state rather than the route. It deletes what it creates, the same contract `runner.spec.ts` and `results-live.spec.ts` keep with the seed.

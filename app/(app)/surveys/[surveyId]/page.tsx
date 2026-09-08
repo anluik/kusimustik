@@ -6,6 +6,7 @@ import { BuilderScreen } from "@/components/builder/builder-screen";
 import { SurveyIdSchema } from "@/domain/ids";
 import { requireSessionUser } from "@/lib/auth/session";
 import { keyPolicyFor } from "@/lib/builder/keys";
+import { countResponses } from "@/lib/db/responses";
 import { getSurvey, listSurveysInWaveGroup } from "@/lib/db/surveys";
 import { createServerDb } from "@/lib/supabase/server";
 
@@ -31,7 +32,11 @@ const loadSurvey = cache(async (raw: string) => {
     if (record === null) return null;
 
     const waves = await listSurveysInWaveGroup(db, record.survey.waveGroupId);
-    return { record, waveCount: waves.length };
+    // What makes an edit here destructive rather than merely undoable: taking
+    // a choice out of a question that has been answered leaves those answers
+    // with nothing on a chart to belong to (`aggregate`'s `unshownCount`).
+    const responseCount = await countResponses(db, id.data);
+    return { record, waveCount: waves.length, responseCount };
 });
 
 export async function generateMetadata({
@@ -51,7 +56,7 @@ export default async function BuilderPage({
     const found = await loadSurvey(surveyId);
     if (found === null) notFound();
 
-    const { record, waveCount } = found;
+    const { record, waveCount, responseCount } = found;
 
     return (
         <BuilderScreen
@@ -71,6 +76,9 @@ export default async function BuilderPage({
             // A survey that has never been published has collected nothing and
             // emitted nothing, so its results page would be three empty states.
             hasResults={record.survey.slug !== null}
+            responseCount={responseCount}
+            status={record.survey.status}
+            slug={record.survey.slug}
         />
     );
 }

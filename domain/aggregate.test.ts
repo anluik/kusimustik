@@ -258,3 +258,130 @@ describe("aggregate — matrix_single", () => {
         ]);
     });
 });
+
+/**
+ * An author may remove an option, a matrix row or column, or lower a scale's
+ * maximum, long after answers naming those choices have arrived. The answers
+ * stay in the database and `toCsvCells` still writes them out, so a summary
+ * that quietly dropped them would leave the card's own arithmetic — responses,
+ * answered, skipped — refusing to add up with nothing on screen to explain it.
+ * `unshownCount` is what the card says instead. It counts *answers*, not
+ * choices: one respondent naming two removed options is one unshown answer.
+ */
+describe("aggregate — choices removed after the answers arrived", () => {
+    it("counts nothing as unshown while every answer names a current choice", () => {
+        for (const question of ALL_QUESTIONS) {
+            const summary = aggregate(question, answersFor(question));
+            expect(summary.unshownCount, question.key).toBe(0);
+        }
+    });
+
+    it("reports a single_choice answer naming a removed option", () => {
+        const trimmed = {
+            ...singleChoice,
+            options: singleChoice.options.filter(o => o.value !== "pm")
+        };
+        const summary = aggregate(trimmed, [
+            { type: "single_choice", value: "dev" },
+            { type: "single_choice", value: "pm" },
+            { type: "single_choice", value: "pm" },
+            null
+        ]);
+
+        expect(summary.answeredCount).toBe(3);
+        expect(summary.unshownCount).toBe(2);
+        if (summary.kind !== "categorical")
+            return expect.fail("expected a categorical summary");
+        // The bars still describe only what the question currently offers.
+        expect(summary.options.map(o => o.value)).toEqual(["dev", "design"]);
+        expect(summary.options.reduce((sum, o) => sum + o.count, 0)).toBe(1);
+    });
+
+    it("counts a free-text answer as unshown once the question stops offering one", () => {
+        const closed = { ...singleChoice, allowOther: false as const };
+        const summary = aggregate(closed, [
+            { type: "single_choice", value: "dev" },
+            { type: "single_choice", value: "__other__", other: "Ops" }
+        ]);
+
+        expect(summary.unshownCount).toBe(1);
+        if (summary.kind !== "categorical")
+            return expect.fail("expected a categorical summary");
+        expect(summary.other).toBeNull();
+    });
+
+    it("counts a multi_choice respondent once however many removed options they picked", () => {
+        const trimmed = {
+            ...multiChoice,
+            options: multiChoice.options.filter(
+                o => o.value !== "phone" && o.value !== "in_person"
+            )
+        };
+        const summary = aggregate(trimmed, [
+            { type: "multi_choice", values: ["email", "slack"] },
+            { type: "multi_choice", values: ["email", "phone", "in_person"] },
+            { type: "multi_choice", values: ["phone"] }
+        ]);
+
+        expect(summary.answeredCount).toBe(3);
+        expect(summary.unshownCount).toBe(2);
+    });
+
+    it("reports a dropdown answer naming a removed option", () => {
+        const trimmed = {
+            ...dropdown,
+            options: dropdown.options.filter(o => o.value !== "se")
+        };
+        const summary = aggregate(trimmed, [
+            { type: "dropdown", value: "ee" },
+            { type: "dropdown", value: "se" }
+        ]);
+
+        expect(summary.unshownCount).toBe(1);
+    });
+
+    it("reports a score left outside a scale whose maximum was lowered", () => {
+        const shortened = { ...opinionScale, max: 3 };
+        const summary = aggregate(shortened, [
+            { type: "opinion_scale", value: 1 },
+            { type: "opinion_scale", value: 5 },
+            { type: "opinion_scale", value: 4 }
+        ]);
+
+        expect(summary.answeredCount).toBe(3);
+        expect(summary.unshownCount).toBe(2);
+        if (summary.kind !== "numeric")
+            return expect.fail("expected a numeric summary");
+        expect(summary.distribution.map(b => b.value)).toEqual([1, 2, 3]);
+    });
+
+    it("reports a matrix answer naming a removed row or column", () => {
+        const trimmed = {
+            ...matrixSingle,
+            rows: matrixSingle.rows.filter(r => r.value !== "quality"),
+            columns: matrixSingle.columns.filter(c => c.value !== "low")
+        };
+        const summary = aggregate(trimmed, [
+            { type: "matrix_single", values: { speed: "high" } },
+            { type: "matrix_single", values: { speed: "low" } },
+            { type: "matrix_single", values: { speed: "mid", quality: "mid" } }
+        ]);
+
+        expect(summary.answeredCount).toBe(3);
+        expect(summary.unshownCount).toBe(2);
+    });
+
+    it("never reports an unshown answer for a fixed or free-form question", () => {
+        expect(aggregate(nps, [{ type: "nps", value: 10 }]).unshownCount).toBe(
+            0
+        );
+        expect(
+            aggregate(shortText, [{ type: "short_text", value: "Tartu" }])
+                .unshownCount
+        ).toBe(0);
+        expect(
+            aggregate(longText, [{ type: "long_text", value: "More" }])
+                .unshownCount
+        ).toBe(0);
+    });
+});

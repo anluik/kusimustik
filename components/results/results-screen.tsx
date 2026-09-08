@@ -153,6 +153,12 @@ export function ResultsScreen({
                     >
                         {!hasResponses ? (
                             <NoResponses status={status} surveyId={surveyId} />
+                        ) : results.length === 0 ? (
+                            // Responses but nothing to summarise: every
+                            // question has left the document since they
+                            // arrived. Without this the tab rendered a blank
+                            // strip under a card claiming two responses.
+                            <NoQuestions surveyId={surveyId} />
                         ) : (
                             results.map((result, index) => (
                                 <QuestionCard
@@ -183,6 +189,45 @@ export function ResultsScreen({
                 </Tabs>
             </div>
         </>
+    );
+}
+
+/**
+ * A survey whose questions have all been deleted since its answers arrived.
+ * The answers are still in the database and still in the CSV — what is gone is
+ * anything to aggregate them into, so the summary says so rather than showing
+ * the owner an empty strip below a card that claims a response count.
+ */
+function NoQuestions({ surveyId }: { readonly surveyId: SurveyId }) {
+    const t = useTranslations("Results.empty");
+    const tResults = useTranslations("Results");
+
+    return (
+        <Card className="gap-3 rounded px-3.5 py-3">
+            <EmptyState
+                title={t("noQuestions.title")}
+                body={t("noQuestions.body")}
+                preview={
+                    <>
+                        <EmptyStateRow />
+                        <EmptyStateRow />
+                        <EmptyStateRow />
+                    </>
+                }
+                actions={
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="h-[30px] rounded text-xs"
+                    >
+                        <Link href={ROUTES.builder(surveyId)}>
+                            {tResults("backToBuilder")}
+                        </Link>
+                    </Button>
+                }
+            />
+        </Card>
     );
 }
 

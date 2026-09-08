@@ -2,6 +2,7 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { CollectedAnswersProvider } from "@/components/builder/collected-answers";
 import { EditorPanel } from "@/components/builder/editor-panel";
 import { MESSAGES, renderWithIntl } from "@/components/test-support";
 import type { SurveyElement } from "@/domain/question";
@@ -53,30 +54,40 @@ const DELETE_LABEL = label(copy.editor.deleteLabel, {
  */
 function StatefulPanel({
     initial,
-    onDelete = () => {}
+    onDelete = () => {},
+    collected = 0
 }: {
     readonly initial: SurveyElement;
     readonly onDelete?: () => void;
+    /** Responses the survey has already taken; 0 is an unpublished draft. */
+    readonly collected?: number;
 }) {
     const [element, setElement] = useState(initial);
 
     return (
-        <EditorPanel
-            selected={element}
-            elements={[element]}
-            keyPolicy="derive"
-            onChange={setElement}
-            onDuplicate={() => {}}
-            onDelete={onDelete}
-        />
+        <CollectedAnswersProvider count={collected}>
+            <EditorPanel
+                selected={element}
+                elements={[element]}
+                keyPolicy="derive"
+                onChange={setElement}
+                onDuplicate={() => {}}
+                onDelete={onDelete}
+            />
+        </CollectedAnswersProvider>
     );
 }
 
-function renderPanel(type: CreatableElementType, onDelete?: () => void) {
+function renderPanel(
+    type: CreatableElementType,
+    onDelete?: () => void,
+    collected = 0
+) {
     const element = createElement(type, defaults, []);
     return renderWithIntl(
         <StatefulPanel
             initial={element}
+            collected={collected}
             {...(onDelete !== undefined && { onDelete })}
         />
     );
@@ -226,5 +237,95 @@ describe.each([
         // The key follows the title until the owner overrides it (DECISIONS
         // 014), which is the one piece of derived state in the panel.
         expect(screen.getByText("kui_rahul_oled")).not.toBeNull();
+    });
+});
+
+/**
+ * Removing a choice from a question that has already been answered is silent
+ * and permanent: the answer keeps the value it was given, `toCsvCells` keeps
+ * writing it out, and no chart can draw it again (`aggregate`'s
+ * `unshownCount`). It is also one small button beside a text field that the
+ * author is typing in. So on a survey with answers it asks first — and on a
+ * draft, where this list is edited most, it must not.
+ */
+describe("removing a choice", () => {
+    const editor = MESSAGES.app.Builder.editor;
+    const removeFirst = editor.removeOption.replaceAll("{index}", "1");
+    const warning = editor.removeWarning;
+
+    /**
+     * A choice question is born with exactly the two options its schema
+     * requires, so nothing is removable until a third exists — the control is
+     * present but quiet (DESIGN §6). Adding one is therefore part of the
+     * arrangement, not part of what is under test.
+     */
+    function withThreeOptions(
+        type: CreatableElementType,
+        collected: number
+    ): void {
+        renderPanel(type, undefined, collected);
+        fireEvent.click(screen.getByRole("button", { name: editor.addOption }));
+    }
+
+    it("goes straight through on a survey that has collected nothing", () => {
+        withThreeOptions("single_choice", 0);
+
+        expect(screen.queryByDisplayValue("Valik 1")).not.toBeNull();
+        fireEvent.click(screen.getByRole("button", { name: removeFirst }));
+
+        expect(screen.queryByDisplayValue("Valik 1")).toBeNull();
+    });
+
+    it("asks first once the survey has answers behind it", () => {
+        withThreeOptions("single_choice", 30);
+
+        fireEvent.click(screen.getByRole("button", { name: removeFirst }));
+
+        // Nothing has gone yet, and the dialog names the option by its label.
+        expect(screen.queryByDisplayValue("Valik 1")).not.toBeNull();
+        expect(
+            screen.getByText(warning.option.replaceAll("{label}", "Valik 1"))
+        ).not.toBeNull();
+    });
+
+    it("removes the choice once the warning is accepted", () => {
+        withThreeOptions("multi_choice", 30);
+
+        fireEvent.click(screen.getByRole("button", { name: removeFirst }));
+        fireEvent.click(screen.getByRole("button", { name: warning.confirm }));
+
+        expect(screen.queryByDisplayValue("Valik 1")).toBeNull();
+    });
+
+    it("keeps the choice when the warning is declined", () => {
+        withThreeOptions("dropdown", 30);
+
+        fireEvent.click(screen.getByRole("button", { name: removeFirst }));
+        fireEvent.click(screen.getByRole("button", { name: warning.cancel }));
+
+        expect(screen.queryByDisplayValue("Valik 1")).not.toBeNull();
+    });
+
+    it("guards a matrix's rows and columns too, each by its own name", () => {
+        renderPanel("matrix_single", undefined, 30);
+
+        fireEvent.click(
+            screen.getByRole("button", {
+                name: editor.removeRow.replaceAll("{index}", "1")
+            })
+        );
+        expect(
+            screen.getByText(warning.row.replaceAll("{label}", "Rida 1"))
+        ).not.toBeNull();
+        fireEvent.click(screen.getByRole("button", { name: warning.cancel }));
+
+        fireEvent.click(
+            screen.getByRole("button", {
+                name: editor.removeColumn.replaceAll("{index}", "1")
+            })
+        );
+        expect(
+            screen.getByText(warning.column.replaceAll("{label}", "Veerg 1"))
+        ).not.toBeNull();
     });
 });

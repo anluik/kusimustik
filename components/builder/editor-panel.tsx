@@ -4,6 +4,7 @@ import { Copy, Trash } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { useCollectedAnswers } from "@/components/builder/collected-answers";
 import { DropdownEditor } from "@/components/builder/dropdown-editor";
 import { useElementTypeName } from "@/components/builder/element-type";
 import { MatrixSingleEditor } from "@/components/builder/matrix-single-editor";
@@ -118,6 +119,9 @@ export function EditorPanel({
     const t = useTranslations("Builder.editor");
     const typeName = useElementTypeName();
     const [confirming, setConfirming] = useState(false);
+    // The survey-delete dialog names what it destroys (`Surveys.delete`); a
+    // question with answers behind it deserves the same sentence.
+    const collected = useCollectedAnswers();
 
     return (
         <div
@@ -204,9 +208,14 @@ export function EditorPanel({
                             {t("deleteWarning.title")}
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-xs leading-[1.35]">
-                            {t("deleteWarning.body", {
-                                title: selected?.title ?? ""
-                            })}
+                            {collected === 0
+                                ? t("deleteWarning.body", {
+                                      title: selected?.title ?? ""
+                                  })
+                                : t("deleteWarning.bodyWithResponses", {
+                                      title: selected?.title ?? "",
+                                      count: collected
+                                  })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">

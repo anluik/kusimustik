@@ -50,3 +50,6 @@ next-env.d.ts
 
 # Supabase
 .supabase/snippets/
+
+# Playwright: the owner session global-setup signs in with. Real cookies.
+e2e/.auth/

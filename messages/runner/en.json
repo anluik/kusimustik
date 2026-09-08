@@ -34,6 +34,10 @@
         "title": "This survey is closed",
         "body": "It is no longer collecting responses."
     },
+    "RunnerEmpty": {
+        "title": "This survey is not ready",
+        "body": "It has no questions in it yet. Let whoever sent you the link know — it will work once the questions are there."
+    },
     "RunnerNotFound": {
         "title": "Survey not found",
         "body": "Check the link, or ask the sender for a new one."

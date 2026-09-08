@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { AddElementMenu } from "@/components/builder/add-element-menu";
+import { CollectedAnswersProvider } from "@/components/builder/collected-answers";
+import { PublishControl } from "@/components/builder/publish-control";
 import { EditorPanel } from "@/components/builder/editor-panel";
 import { ElementCanvas } from "@/components/builder/element-canvas";
 import { ElementList } from "@/components/builder/element-list";
@@ -24,6 +26,7 @@ import {
 } from "@/components/ui/sheet";
 import type { QuestionId, SurveyId } from "@/domain/ids";
 import type { SurveyElement } from "@/domain/question";
+import type { SurveyStatus } from "@/domain/survey";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSurveyBuilder } from "@/hooks/use-survey-builder";
 import type { KeyPolicy } from "@/lib/builder/keys";
@@ -57,7 +60,10 @@ export function BuilderScreen({
     initialElements,
     initialVersion,
     keyPolicy,
-    hasResults
+    hasResults,
+    responseCount,
+    status,
+    slug
 }: {
     readonly surveyId: SurveyId;
     readonly initialSettings: SurveySettings;
@@ -66,6 +72,11 @@ export function BuilderScreen({
     readonly keyPolicy: KeyPolicy;
     /** The survey has been published at least once, so results exist. */
     readonly hasResults: boolean;
+    /** Answers already collected, which is what makes an edit destructive. */
+    readonly responseCount: number;
+    readonly status: SurveyStatus;
+    /** The public slug, once the survey has been published at least once. */
+    readonly slug: string | null;
 }) {
     const t = useTranslations("Builder");
     const tResults = useTranslations("Results");
@@ -126,7 +137,7 @@ export function BuilderScreen({
     );
 
     return (
-        <>
+        <CollectedAnswersProvider count={responseCount}>
             <AppBar
                 title={settings.title}
                 meta={
@@ -137,6 +148,17 @@ export function BuilderScreen({
                 }
                 actions={
                     <>
+                        <PublishControl
+                            surveyId={surveyId}
+                            status={status}
+                            slug={slug}
+                            answerableCount={
+                                builder.elements.filter(
+                                    element => element.isAnswerable
+                                ).length
+                            }
+                            unsaved={builder.status.kind !== "clean"}
+                        />
                         {/* Only once the survey has been published: before
                             that there is nothing to show, and DESIGN §6 would
                             have this be a disabled control rather than an
@@ -219,6 +241,6 @@ export function BuilderScreen({
                     builder.syncVersion(version);
                 }}
             />
-        </>
+        </CollectedAnswersProvider>
     );
 }

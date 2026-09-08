@@ -197,6 +197,7 @@
             "deleteWarning": {
                 "title": "Kas kustutada element?",
                 "body": "Element «{title}» kaob koos oma valikute, ridade ja siltidega. Seda ei saa tagasi võtta.",
+                "bodyWithResponses": "Element «{title}» kaob koos oma valikute, ridade ja siltidega. Küsitlusel on {count, plural, one {# vastus} other {# vastust}} — juba antud vastused jäävad alles, aga tulemustes ega CSV-s neid enam ei näidata. Seda ei saa tagasi võtta.",
                 "cancel": "Jäta alles",
                 "confirm": "Kustuta element"
             },
@@ -247,6 +248,14 @@
             "columnPlaceholder": "Veeru tekst",
             "addColumn": "Lisa veerg",
             "removeColumn": "Eemalda veerg {index}",
+            "removeWarning": {
+                "option": "Kas eemaldada valik «{label}»?",
+                "row": "Kas eemaldada rida «{label}»?",
+                "column": "Kas eemaldada veerg «{label}»?",
+                "body": "Küsitlus on kogunud {count, plural, one {# vastuse} other {# vastust}}. Juba antud vastused jäävad alles ja on CSV-failis olemas, aga graafik neid enam ei näita.",
+                "cancel": "Jäta alles",
+                "confirm": "Eemalda"
+            },
             "reorderColumn": "Tõsta ümber veerg {index}",
             "selectionsLabel": "Valikute arv",
             "minSelectionsLabel": "Vähemalt",
@@ -266,6 +275,11 @@
             "scaleMaxLabel": "Silt lõpus ({step})",
             "scaleLabelPlaceholder": "nt Ei nõustu üldse",
             "npsHelp": "NPS-i skaala on alati {min}–{max} ja soovitajad, passiivsed ning mittesoovitajad arvutatakse sellest. Muuta saad ainult sõnastust."
+        },
+        "publish": {
+            "publish": "Avalda",
+            "republish": "Avalda uuesti",
+            "collectingNothing": "küsimusteta — link ei kogu vastuseid"
         },
         "defaults": {
             "questionTitle": "Uus küsimus",
@@ -363,6 +377,7 @@
         "question": {
             "answered": "{count, plural, one {# vastus} other {# vastust}}",
             "skipped": "{count, plural, one {# vahele jäetud} other {# vahele jäetud}}",
+            "unshown": "{count, plural, one {# vastus eemaldatud valikule} other {# vastust eemaldatud valikutele}}",
             "otherResponses": "Vabad vastused",
             "noAnswers": "Sellele küsimusele ei ole veel vastatud."
         },
@@ -444,6 +459,10 @@
             "draft": {
                 "title": "Küsitlus ei ole avaldatud",
                 "body": "Mustandile ei saa vastata. Avalda küsitlus, et hakata vastuseid koguma."
+            },
+            "noQuestions": {
+                "title": "Kokkuvõtteks pole midagi",
+                "body": "Selles küsitluses ei ole ühtegi vastatavat küsimust — kõik on koostajast eemaldatud. Kogutud vastused on alles ja jõuavad CSV-faili, aga graafikuid neist teha ei saa."
             }
         }
     },
