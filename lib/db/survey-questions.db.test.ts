@@ -13,6 +13,7 @@ import {
     testSlug
 } from "@/lib/db/test-support";
 import type { TestUser } from "@/lib/db/test-support";
+import { DbUniqueViolationError } from "@/lib/db/errors";
 import { listResponses, submitResponse } from "@/lib/db/responses";
 import {
     createSurvey,
@@ -191,6 +192,72 @@ describe("survey_questions follows the elements column", () => {
             "satisfaction"
         ]);
         expect(all.every(question => question.removedAt !== null)).toBe(true);
+    });
+
+    it("hands a key from one question to another in a single write", async () => {
+        // The builder reaches this in one gesture: delete a question and add
+        // another inside the 700ms autosave debounce, and both carry the
+        // default title, so both derive the same key. The trigger used to
+        // insert the arrival before removing the departure and trip its own
+        // unique index, wedging the builder in a save-failed state no retry
+        // could clear. See the 20260908120000 migration.
+        const fresh = await createSurvey(owner.db, {
+            ownerId: owner.id,
+            title: "Key handover",
+            elements: [shortTextQuestion("linn")]
+        });
+        const replacement = shortTextQuestion("linn");
+
+        const saved = await updateSurveyDefinition(
+            owner.db,
+            fresh.survey.id,
+            fresh.version,
+            { elements: [replacement] }
+        );
+
+        const questions = await listSurveyQuestions(owner.db, saved.survey.id, {
+            includeRemoved: true
+        });
+        expect(questions).toHaveLength(1);
+        expect(questions[0]?.questionId).toBe(replacement.id);
+        expect(questions[0]?.key).toBe("linn");
+    });
+
+    it("will not hand a key away from a question that kept its answers", async () => {
+        // The other half of the same invariant: a tombstone holds its key for
+        // the life of the survey, because the answers filed under it are still
+        // exported and still compared. The builder is told which keys those
+        // are (`listReservedQuestionKeys`) and mints `linn_2` instead; this is
+        // the backstop for a client that does not.
+        const fresh = await createSurvey(owner.db, {
+            ownerId: owner.id,
+            title: "Reserved key",
+            elements: [npsQuestion("recommend")]
+        });
+        const answered = fresh.survey.elements[0];
+        if (answered === undefined) throw new Error("no question");
+
+        const published = await publishSurvey(
+            owner.db,
+            fresh.survey.id,
+            testSlug("reserved")
+        );
+        await submitResponse(anonClient(), {
+            surveyId: published.survey.id,
+            answers: [
+                { questionId: answered.id, value: { type: "nps", value: 7 } }
+            ]
+        });
+
+        const usurper = npsQuestion("recommend");
+        await expect(
+            updateSurveyDefinition(
+                owner.db,
+                published.survey.id,
+                published.version,
+                { elements: [usurper] }
+            )
+        ).rejects.toBeInstanceOf(DbUniqueViolationError);
     });
 
     it("cascades away with the survey", async () => {

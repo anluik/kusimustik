@@ -554,3 +554,27 @@ Append-only. Newest at the bottom. If you deviate from one of these, add a new e
 **Not done, deliberately.** The responses table still holds to `PAGE_WIDTH` on a wide monitor and scrolls inside its own container. That is what DESIGN asks of wide content, and 020 exempted the builder because it is a three-panel workspace, not because tables are cramped. The runner progress bar's `aria-valuemax="0"` needed no fix: 022 stopped a survey with no questions rendering a form at all.
 
 **Consequence.** `e2e/runner-recovery.spec.ts` covers the two runner paths. Both it and `results-live.spec.ts` now build a survey of their own through the service key rather than working on the seed: the two Playwright projects run in parallel over one fixture, and the moment two specs both *changed* it — one closing it, one counting its responses exactly — the suite started failing intermittently in ways neither spec was wrong about. `createFixtureSurvey` in `e2e/support.ts` is that pattern, with the project name in the slug so the two runs cannot collide.
+
+## 024 — A question key belongs to one question, for the life of the survey
+
+**Status:** accepted
+
+**Context.** Testing what happens when two surveys, or two questions, are given the same name turned up one bug that wedged the builder and three smaller things around it. Slugs came through clean — `proposeSlug` offers the bare title, the `slug unique` index arbitrates, and a random six-character suffix settles the second claimant (003) — so everything here is about `key`.
+
+The wedge: `sync_survey_questions()` inserted the arriving projection rows *before* it removed the departed ones. Any single write to `elements` in which a key moved from one `question_id` to another therefore tripped `survey_questions_live_key_idx` against a row the same trigger was about to delete. The builder reaches that in one gesture — delete a question and add another inside the 700ms autosave debounce, where both carry the default title and so both derive `uus_kusimus`. The save failed; the document was unchanged, so every retry re-sent it and failed identically; the owner's edit was unrecoverable short of hand-editing a key.
+
+**Decisions.**
+
+- **The trigger departs before it arrives.** The `delete` and the tombstone `update` now run above the `insert`. A key freed by an element leaving is free within the same write, which is the only thing the old order got wrong — the end state was always correct when the two halves arrived as separate saves.
+
+- **Uniqueness is total, not just over live rows.** `survey_questions_survey_key_idx` replaces the partial index. Enforcing it only `where removed_at is null` meant a key freed by deleting an *answered* question could be handed to a new question on a later save, leaving one survey holding two questions on one key: a tombstone carrying the real answers and a live newcomer. Wave comparison joins on exactly that key (003), so this would have merged two different questions' answers into one column the first time the comparison shipped. A tombstone keeps its key for the life of the survey.
+
+- **The builder is told which keys are spent, from both directions.** `listReservedQuestionKeys` reads the tombstoned ones at page load, and `useSurveyBuilder` adds every key whose element has left the document *this session* — the page's snapshot predates a delete the owner has only just made, and the tombstone that delete creates is the one the next question would collide with. `takenKeys` takes both, so `createElement`, `duplicateElement` and `nextKeyFor` all mint `linn_2` rather than proposing something the database will refuse. Retirement is keyed on the element leaving, never on its key changing, or backspacing a title under `derive` would mint a `_2` against the key the question started with.
+
+  The two travel as one `SurveyKeys` value rather than as a policy prop and a reserved-keys prop, because every site that mints or edits a key needs both and a site assembling them separately can assemble only one.
+
+- **The autosave gate parses the document, not each element.** It ran `SurveyElementSchema` per element, which no per-element schema can catch a *collision* with — so hand-typing a key a sibling already owned produced a correct `keyTaken` message on the field and a doomed save on top of it. `SurveyElementsSchema` is `SurveySchema`'s element rules lifted out so both sides run the same check; the builder now holds the save, as it already did for an emptied option label, and resumes when the document is whole.
+
+- **The CSV disambiguates headers, having nothing else to go on.** Headers are the author's titles and two questions may share one; the file carries no keys, so a spreadsheet got two columns with one name. `withUniqueHeaders` qualifies *both* colliding headers with the column id — the same string a comparison joins on — and leaves a file whose titles are distinct exactly as it was. The on-screen responses table needs none of this: it is keyed on `QuestionId` and its columns sit in document order beside the questions.
+
+**Consequence.** `lib/builder/keys.ts` is now the whole of the builder's key logic, `takenKeys` included; `new-element.ts` imports from it rather than the other way round. Migration `20260908120000` refuses to apply if a survey already holds two questions on one key: there is no safe automatic answer, because renaming either row rewrites a CSV column header and a comparison join someone may already be reading.

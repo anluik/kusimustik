@@ -29,7 +29,7 @@ import type { SurveyElement } from "@/domain/question";
 import type { SurveyStatus } from "@/domain/survey";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSurveyBuilder } from "@/hooks/use-survey-builder";
-import type { KeyPolicy } from "@/lib/builder/keys";
+import type { SurveyKeys } from "@/lib/builder/keys";
 import {
     createElement,
     duplicateElement,
@@ -59,7 +59,7 @@ export function BuilderScreen({
     initialSettings,
     initialElements,
     initialVersion,
-    keyPolicy,
+    keys,
     hasResults,
     responseCount,
     status,
@@ -69,7 +69,8 @@ export function BuilderScreen({
     readonly initialSettings: SurveySettings;
     readonly initialElements: readonly SurveyElement[];
     readonly initialVersion: number;
-    readonly keyPolicy: KeyPolicy;
+    /** Which keys are spoken for, and whether a key may still follow its title. */
+    readonly keys: SurveyKeys;
     /** The survey has been published at least once, so results exist. */
     readonly hasResults: boolean;
     /** Answers already collected, which is what makes an edit destructive. */
@@ -83,7 +84,8 @@ export function BuilderScreen({
     const builder = useSurveyBuilder({
         surveyId,
         initialElements,
-        initialVersion
+        initialVersion,
+        keys
     });
 
     const asSheet = useMediaQuery(EDITOR_AS_SHEET);
@@ -102,7 +104,9 @@ export function BuilderScreen({
     };
 
     function add(type: CreatableElementType) {
-        builder.add(createElement(type, defaults, builder.elements));
+        builder.add(
+            createElement(type, defaults, builder.elements, builder.keys)
+        );
         setSheetOpen(true);
     }
 
@@ -117,7 +121,7 @@ export function BuilderScreen({
         <EditorPanel
             selected={builder.selected}
             elements={builder.elements}
-            keyPolicy={keyPolicy}
+            keys={builder.keys}
             insetHeader={asSheet}
             onChange={builder.replace}
             onDuplicate={() => {
@@ -125,7 +129,7 @@ export function BuilderScreen({
                 if (source === null) return;
                 builder.duplicate(
                     source.id,
-                    duplicateElement(source, builder.elements)
+                    duplicateElement(source, builder.elements, builder.keys)
                 );
             }}
             onDelete={() => {

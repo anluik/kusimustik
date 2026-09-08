@@ -22,7 +22,7 @@ import {
     withSelectionBound,
     withSelectionBoundsInRange
 } from "@/lib/builder/element-patch";
-import type { KeyPolicy } from "@/lib/builder/keys";
+import type { SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * Checkboxes, with an optional floor and ceiling on how many may be ticked.
@@ -36,12 +36,12 @@ import type { KeyPolicy } from "@/lib/builder/keys";
 export function MultiChoiceEditor({
     question,
     siblings,
-    keyPolicy,
+    keys,
     onChange
 }: {
     readonly question: MultiChoiceQuestion;
     readonly siblings: readonly SurveyElement[];
-    readonly keyPolicy: KeyPolicy;
+    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
@@ -78,7 +78,7 @@ export function MultiChoiceEditor({
             <ElementFields
                 element={question}
                 siblings={siblings}
-                keyPolicy={keyPolicy}
+                keys={keys}
                 onChange={onChange}
                 titleLabel={t("titleLabel")}
                 titlePlaceholder={t("titlePlaceholder")}

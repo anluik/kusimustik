@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toCsvCells, toCsvColumns } from "@/domain/export";
+import { toCsvCells, toCsvColumns, withUniqueHeaders } from "@/domain/export";
 import {
     ALL_QUESTIONS,
     RESPONSES,
@@ -165,5 +165,46 @@ describe("toCsvCells", () => {
             );
             expect(row).toHaveLength(width);
         }
+    });
+});
+
+describe("withUniqueHeaders", () => {
+    it("leaves distinct headers exactly as the author wrote them", () => {
+        const columns = ALL_QUESTIONS.flatMap(toCsvColumns);
+        expect(withUniqueHeaders(columns)).toEqual(columns);
+    });
+
+    it("qualifies both sides when two questions share a title", () => {
+        // Same title, different keys — which is what the builder mints for a
+        // second question added under the same name.
+        const twin = { ...nps, key: "recommend_2" };
+        const [first, second] = withUniqueHeaders([
+            ...toCsvColumns(nps),
+            ...toCsvColumns(twin)
+        ]);
+
+        expect(first?.header).toBe(`${nps.title} [recommend]`);
+        expect(second?.header).toBe(`${nps.title} [recommend_2]`);
+    });
+
+    it("keeps one column per input column, in order", () => {
+        const columns = [
+            ...toCsvColumns(nps),
+            ...toCsvColumns({ ...nps, key: "x" })
+        ];
+        const unique = withUniqueHeaders(columns);
+
+        expect(unique).toHaveLength(columns.length);
+        expect(unique.map(column => column.id)).toEqual(
+            columns.map(column => column.id)
+        );
+    });
+
+    it("still separates two columns that share an id as well as a header", () => {
+        const [column] = toCsvColumns(nps);
+        if (!column) throw new Error("no column");
+        const headers = withUniqueHeaders([column, column]).map(c => c.header);
+
+        expect(new Set(headers).size).toBe(2);
     });
 });

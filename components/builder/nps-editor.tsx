@@ -9,7 +9,7 @@ import {
 } from "@/components/builder/element-fields";
 import { NPS_MAX, NPS_MIN } from "@/domain/question";
 import type { NpsQuestion, SurveyElement } from "@/domain/question";
-import type { KeyPolicy } from "@/lib/builder/keys";
+import type { SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * Net Promoter Score. The scale is fixed at 0–10 and the promoter, passive and
@@ -20,12 +20,12 @@ import type { KeyPolicy } from "@/lib/builder/keys";
 export function NpsEditor({
     question,
     siblings,
-    keyPolicy,
+    keys,
     onChange
 }: {
     readonly question: NpsQuestion;
     readonly siblings: readonly SurveyElement[];
-    readonly keyPolicy: KeyPolicy;
+    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
@@ -35,7 +35,7 @@ export function NpsEditor({
             <ElementFields
                 element={question}
                 siblings={siblings}
-                keyPolicy={keyPolicy}
+                keys={keys}
                 onChange={onChange}
                 titleLabel={t("titleLabel")}
                 titlePlaceholder={t("titlePlaceholder")}

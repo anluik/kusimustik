@@ -3,8 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
     ELEMENT_TYPES,
     OTHER_OPTION_VALUE,
-    SurveyElementSchema,
-    type SurveyElement
+    SurveyElementSchema
 } from "@/domain/question";
 import {
     CREATABLE_ELEMENT_TYPES,
@@ -12,9 +11,12 @@ import {
     duplicateElement,
     isCreatableType,
     newOption,
-    nextOptionValue,
-    takenKeys
+    nextOptionValue
 } from "@/lib/builder/new-element";
+import type { SurveyKeys } from "@/lib/builder/keys";
+
+/** No wave, nothing published, nothing removed: the plain case. */
+const KEYS: SurveyKeys = { policy: "derive", reserved: [] };
 
 const defaults = {
     title: "Uus küsimus",
@@ -26,7 +28,7 @@ const defaults = {
 
 describe("createElement", () => {
     it("produces a single_choice question the domain accepts", () => {
-        const element = createElement("single_choice", defaults, []);
+        const element = createElement("single_choice", defaults, [], KEYS);
 
         expect(SurveyElementSchema.safeParse(element).success).toBe(true);
         expect(element.type).toBe("single_choice");
@@ -34,7 +36,7 @@ describe("createElement", () => {
     });
 
     it("starts with the two options the schema requires", () => {
-        const element = createElement("single_choice", defaults, []);
+        const element = createElement("single_choice", defaults, [], KEYS);
         if (element.type !== "single_choice") throw new Error("wrong type");
 
         expect(element.options).toEqual([
@@ -58,7 +60,7 @@ describe("createElement", () => {
                 "matrix_single"
             ] as const
         ).map(type => {
-            const element = createElement(type, defaults, []);
+            const element = createElement(type, defaults, [], KEYS);
             return [type, element.isAnswerable && element.required] as const;
         });
 
@@ -75,16 +77,21 @@ describe("createElement", () => {
     });
 
     it("gives every element a fresh id", () => {
-        const first = createElement("single_choice", defaults, []);
-        const second = createElement("single_choice", defaults, [first]);
+        const first = createElement("single_choice", defaults, [], KEYS);
+        const second = createElement("single_choice", defaults, [first], KEYS);
 
         expect(second.id).not.toBe(first.id);
     });
 
     it("derives a key that does not collide with its siblings", () => {
-        const first = createElement("single_choice", defaults, []);
-        const second = createElement("single_choice", defaults, [first]);
-        const third = createElement("single_choice", defaults, [first, second]);
+        const first = createElement("single_choice", defaults, [], KEYS);
+        const second = createElement("single_choice", defaults, [first], KEYS);
+        const third = createElement(
+            "single_choice",
+            defaults,
+            [first, second],
+            KEYS
+        );
 
         expect(first.key).toBe("uus_kusimus");
         expect(second.key).toBe("uus_kusimus_2");
@@ -118,19 +125,19 @@ describe("CREATABLE_ELEMENT_TYPES", () => {
 describe.each(ELEMENT_TYPES)("a new %s", type => {
     it("is a document the domain accepts", () => {
         const parsed = SurveyElementSchema.safeParse(
-            createElement(type, defaults, [])
+            createElement(type, defaults, [], KEYS)
         );
         expect(parsed.error?.issues ?? []).toEqual([]);
     });
 
     it("is answerable unless it is a statement", () => {
-        const element = createElement(type, defaults, []);
+        const element = createElement(type, defaults, [], KEYS);
         expect(element.isAnswerable).toBe(type !== "statement");
     });
 
     it("can be duplicated into a document the domain accepts", () => {
-        const source = createElement(type, defaults, []);
-        const copy = duplicateElement(source, [source]);
+        const source = createElement(type, defaults, [], KEYS);
+        const copy = duplicateElement(source, [source], KEYS);
 
         expect(SurveyElementSchema.safeParse(copy).success).toBe(true);
         expect(copy.type).toBe(type);
@@ -139,7 +146,7 @@ describe.each(ELEMENT_TYPES)("a new %s", type => {
 
 describe("duplicateElement", () => {
     it("keeps everything the author wrote", () => {
-        const source = createElement("multi_choice", defaults, []);
+        const source = createElement("multi_choice", defaults, [], KEYS);
         if (source.type !== "multi_choice") throw new Error("wrong type");
         const edited = {
             ...source,
@@ -151,7 +158,7 @@ describe("duplicateElement", () => {
             minSelections: 1
         };
 
-        const copy = duplicateElement(edited, [edited]);
+        const copy = duplicateElement(edited, [edited], KEYS);
 
         expect(copy).toMatchObject({
             type: "multi_choice",
@@ -165,8 +172,8 @@ describe("duplicateElement", () => {
         // Two questions in one survey may not share a key: SurveySchema
         // rejects it, and the CSV would grow two columns with one header.
         // Preserving keys is a *cross-survey* rule (docs/DECISIONS.md 003).
-        const source = createElement("single_choice", defaults, []);
-        const copy = duplicateElement(source, [source]);
+        const source = createElement("single_choice", defaults, [], KEYS);
+        const copy = duplicateElement(source, [source], KEYS);
 
         expect(copy.id).not.toBe(source.id);
         expect(copy.key).not.toBe(source.key);
@@ -200,20 +207,5 @@ describe("newOption", () => {
                 defaults.optionLabel
             )
         ).toEqual({ value: "option_2", label: "Valik 2" });
-    });
-});
-
-describe("takenKeys", () => {
-    const elements: readonly SurveyElement[] = [
-        createElement("single_choice", { ...defaults, title: "Esimene" }, []),
-        createElement("single_choice", { ...defaults, title: "Teine" }, [])
-    ];
-
-    it("lists every key", () => {
-        expect(takenKeys(elements)).toEqual(["esimene", "teine"]);
-    });
-
-    it("excludes the element being edited, so it can keep its own key", () => {
-        expect(takenKeys(elements, elements[1])).toEqual(["esimene"]);
     });
 });

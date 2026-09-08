@@ -32,8 +32,7 @@ import {
     withOther,
     withOtherLabel
 } from "@/lib/builder/element-patch";
-import { nextKeyFor, type KeyPolicy } from "@/lib/builder/keys";
-import { takenKeys } from "@/lib/builder/new-element";
+import { nextKeyFor, takenKeys, type SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * The fields every element has: its title, its help text, its key, and — for
@@ -83,12 +82,12 @@ export function EditorSection({
 function KeyField({
     element,
     siblings,
-    keyPolicy,
+    keys,
     onChange
 }: {
     readonly element: SurveyElement;
     readonly siblings: readonly SurveyElement[];
-    readonly keyPolicy: KeyPolicy;
+    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
@@ -97,7 +96,7 @@ function KeyField({
     const [warning, setWarning] = useState(false);
 
     const id = fieldId(element, "key");
-    const taken = new Set(takenKeys(siblings, element));
+    const taken = new Set(takenKeys(siblings, keys, element));
 
     const error = !QuestionKeySchema.safeParse(element.key).success
         ? tErrors("keyInvalid")
@@ -115,7 +114,7 @@ function KeyField({
             id={id}
             label={t("keyLabel")}
             help={t(
-                keyPolicy === "derive" ? "keyHelp.derive" : "keyHelp.freeze"
+                keys.policy === "derive" ? "keyHelp.derive" : "keyHelp.freeze"
             )}
             {...(error !== undefined && { error })}
         >
@@ -153,7 +152,7 @@ function KeyField({
                         size="icon-sm"
                         aria-label={t("editKey")}
                         onClick={() =>
-                            keyPolicy === "freeze" ? setWarning(true) : edit()
+                            keys.policy === "freeze" ? setWarning(true) : edit()
                         }
                         className="rounded text-muted-foreground"
                     >
@@ -189,7 +188,7 @@ function KeyField({
 export function ElementFields({
     element,
     siblings,
-    keyPolicy,
+    keys,
     onChange,
     titleLabel,
     titlePlaceholder
@@ -197,7 +196,7 @@ export function ElementFields({
     readonly element: SurveyElement;
     /** Every element in the survey, so a derived key can dodge the taken ones. */
     readonly siblings: readonly SurveyElement[];
-    readonly keyPolicy: KeyPolicy;
+    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
     /** A statement is shown rather than asked, so it labels its text field
      *  differently from the eight question types. */
@@ -231,7 +230,7 @@ export function ElementFields({
                         onChange({
                             ...element,
                             title,
-                            key: nextKeyFor(element, title, siblings, keyPolicy)
+                            key: nextKeyFor(element, title, siblings, keys)
                         });
                     }}
                     className="h-[30px] rounded text-xs"
@@ -259,7 +258,7 @@ export function ElementFields({
             <KeyField
                 element={element}
                 siblings={siblings}
-                keyPolicy={keyPolicy}
+                keys={keys}
                 onChange={onChange}
             />
         </>

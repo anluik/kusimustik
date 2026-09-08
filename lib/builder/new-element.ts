@@ -1,5 +1,6 @@
 import { assertNever } from "@/domain/assert-never";
 import { newQuestionId } from "@/domain/ids";
+import { takenKeys, type SurveyKeys } from "@/lib/builder/keys";
 import {
     OTHER_OPTION_VALUE,
     deriveQuestionKey,
@@ -103,22 +104,13 @@ function newOptions(
     }));
 }
 
-/** The keys already spoken for, so a new element cannot collide with one. */
-export function takenKeys(
-    elements: readonly SurveyElement[],
-    except?: SurveyElement
-): readonly string[] {
-    return elements
-        .filter(element => element.id !== except?.id)
-        .map(element => element.key);
-}
-
 export function createElement(
     type: CreatableElementType,
     defaults: ElementDefaults,
-    siblings: readonly SurveyElement[]
+    siblings: readonly SurveyElement[],
+    keys: SurveyKeys
 ): SurveyElement {
-    const taken = takenKeys(siblings);
+    const taken = takenKeys(siblings, keys);
     const question = {
         id: newQuestionId(),
         key: deriveQuestionKey(defaults.title, taken),
@@ -209,11 +201,12 @@ export function createElement(
  */
 export function duplicateElement(
     element: SurveyElement,
-    siblings: readonly SurveyElement[]
+    siblings: readonly SurveyElement[],
+    keys: SurveyKeys
 ): SurveyElement {
     return {
         ...element,
         id: newQuestionId(),
-        key: deriveQuestionKey(element.title, takenKeys(siblings))
+        key: deriveQuestionKey(element.title, takenKeys(siblings, keys))
     };
 }

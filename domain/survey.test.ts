@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { LOCALES, SURVEY_STATUSES, SurveySchema } from "@/domain/survey";
+import {
+    LOCALES,
+    SURVEY_STATUSES,
+    SurveyElementsSchema,
+    SurveySchema
+} from "@/domain/survey";
 import { survey } from "@/domain/test-fixtures";
 
 describe("SurveySchema", () => {
@@ -77,5 +82,37 @@ describe("SurveySchema", () => {
                 elements: []
             }).success
         ).toBe(true);
+    });
+});
+
+describe("SurveyElementsSchema", () => {
+    it("accepts the fixture's elements", () => {
+        expect(SurveyElementsSchema.parse(survey.elements)).toEqual(
+            survey.elements
+        );
+    });
+
+    it("rejects two elements on one key, so the builder can gate its save", () => {
+        const [first, second] = survey.elements;
+        if (!first || !second) return;
+        expect(
+            SurveyElementsSchema.safeParse([
+                first,
+                { ...second, key: first.key }
+            ]).success
+        ).toBe(false);
+    });
+
+    it("rejects two elements on one id", () => {
+        const [first, second] = survey.elements;
+        if (!first || !second) return;
+        expect(
+            SurveyElementsSchema.safeParse([first, { ...second, id: first.id }])
+                .success
+        ).toBe(false);
+    });
+
+    it("accepts an empty document", () => {
+        expect(SurveyElementsSchema.parse([])).toEqual([]);
     });
 });

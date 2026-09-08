@@ -8,6 +8,7 @@ import { MESSAGES, renderWithIntl } from "@/components/test-support";
 import type { SurveyElement } from "@/domain/question";
 import type { CreatableElementType } from "@/lib/builder/new-element";
 import { createElement } from "@/lib/builder/new-element";
+import type { SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * The builder's editor panel, rendered.
@@ -26,6 +27,8 @@ import { createElement } from "@/lib/builder/new-element";
  */
 
 const copy = MESSAGES.app.Builder;
+
+const KEYS: SurveyKeys = { policy: "derive", reserved: [] };
 
 const defaults = {
     title: copy.defaults.questionTitle,
@@ -69,7 +72,7 @@ function StatefulPanel({
             <EditorPanel
                 selected={element}
                 elements={[element]}
-                keyPolicy="derive"
+                keys={{ policy: "derive", reserved: [] }}
                 onChange={setElement}
                 onDuplicate={() => {}}
                 onDelete={onDelete}
@@ -83,7 +86,7 @@ function renderPanel(
     onDelete?: () => void,
     collected = 0
 ) {
-    const element = createElement(type, defaults, []);
+    const element = createElement(type, defaults, [], KEYS);
     return renderWithIntl(
         <StatefulPanel
             initial={element}

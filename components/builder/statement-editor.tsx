@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 
 import { ElementFields } from "@/components/builder/element-fields";
 import type { StatementElement, SurveyElement } from "@/domain/question";
-import type { KeyPolicy } from "@/lib/builder/keys";
+import type { SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * A statement is shown, not asked (connect.ee's "väite tekst"), so it has no
@@ -17,12 +17,12 @@ import type { KeyPolicy } from "@/lib/builder/keys";
 export function StatementEditor({
     element,
     siblings,
-    keyPolicy,
+    keys,
     onChange
 }: {
     readonly element: StatementElement;
     readonly siblings: readonly SurveyElement[];
-    readonly keyPolicy: KeyPolicy;
+    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
@@ -32,7 +32,7 @@ export function StatementEditor({
             <ElementFields
                 element={element}
                 siblings={siblings}
-                keyPolicy={keyPolicy}
+                keys={keys}
                 onChange={onChange}
                 titleLabel={t("statementLabel")}
                 titlePlaceholder={t("statementPlaceholder")}

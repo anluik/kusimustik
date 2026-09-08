@@ -1,14 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState
+} from "react";
 
 import type { QuestionId, SurveyId } from "@/domain/ids";
-import { SurveyElementSchema, type SurveyElement } from "@/domain/question";
+import type { SurveyElement } from "@/domain/question";
+import { SurveyElementsSchema } from "@/domain/survey";
 import {
     documentReducer,
     findElement,
     initialDocument
 } from "@/lib/builder/document";
+import type { SurveyKeys } from "@/lib/builder/keys";
 import type { SurveyActionError } from "@/lib/surveys/errors";
 import { saveSurveyElementsAction } from "@/lib/surveys/actions";
 
@@ -64,16 +73,24 @@ export type SurveyBuilder = {
     readonly syncVersion: (version: number) => void;
     /** Clears a failed save so the effect below picks the document up again. */
     readonly retry: () => void;
+    /**
+     * The key rules, with everything this session has retired folded in. Use
+     * this rather than the `keys` passed in — see `retired` below.
+     */
+    readonly keys: SurveyKeys;
 };
 
 export function useSurveyBuilder({
     surveyId,
     initialElements,
-    initialVersion
+    initialVersion,
+    keys
 }: {
     readonly surveyId: SurveyId;
     readonly initialElements: readonly SurveyElement[];
     readonly initialVersion: number;
+    /** As the page read them; the hook adds what this session retires. */
+    readonly keys: SurveyKeys;
 }): SurveyBuilder {
     const [doc, dispatch] = useReducer(
         documentReducer,
@@ -88,16 +105,62 @@ export function useSurveyBuilder({
     const { elements, revision } = doc;
     const dirty = revision !== savedRevision;
 
-    // An element the schema rejects — an emptied option label, say — would come
+    // A document the schema rejects — an emptied option label, say — would come
     // back from the server as `invalidInput`, so it is held here instead: the
     // owner keeps typing, and the save resumes the moment the document is
     // whole again.
+    //
+    // `SurveyElementsSchema`, not a per-element parse: a key two questions
+    // both claim is invalid without either element being invalid on its own,
+    // and holding the save is the whole point — a save that goes out and
+    // fails leaves a "save failed" the owner cannot retry out of, on top of
+    // the field error that already explained the problem.
     const valid = useMemo(
-        () =>
-            elements.every(
-                element => SurveyElementSchema.safeParse(element).success
-            ),
+        () => SurveyElementsSchema.safeParse(elements).success,
         [elements]
+    );
+
+    // Keys this session has retired: an element that leaves the document takes
+    // its key out of circulation for as long as the builder is open.
+    //
+    // The page's own list is a snapshot from load, and a question deleted
+    // *here* is tombstoned by the save that follows — so without this the very
+    // next question would derive the key that tombstone is now holding and the
+    // save would be refused. Reserving on removal rather than on tombstoning
+    // is deliberately conservative: the builder cannot know whether a question
+    // was answered, and recycling a key a moment after discarding it buys
+    // nothing worth a failed save.
+    //
+    // Keyed on the element leaving, never on its key changing, so retitling a
+    // question under `derive` and then undoing the retitle still lands back on
+    // the key it started with.
+    const [retired, setRetired] = useState<readonly string[]>([]);
+    const previous = useRef(elements);
+
+    useEffect(() => {
+        const present = new Set(elements.map(element => element.id));
+        const gone = previous.current
+            .filter(element => !present.has(element.id))
+            .map(element => element.key);
+        previous.current = elements;
+
+        if (gone.length > 0) {
+            setRetired(before => [
+                ...before,
+                ...gone.filter(key => !before.includes(key))
+            ]);
+        }
+    }, [elements]);
+
+    const surveyKeys = useMemo(
+        (): SurveyKeys => ({
+            policy: keys.policy,
+            reserved: [
+                ...keys.reserved,
+                ...retired.filter(key => !keys.reserved.includes(key))
+            ]
+        }),
+        [keys.policy, keys.reserved, retired]
     );
 
     // The version is a parameter rather than something this closes over, so a
@@ -167,6 +230,7 @@ export function useSurveyBuilder({
 
     return {
         elements,
+        keys: surveyKeys,
         selectedId: doc.selectedId,
         selected: findElement(elements, doc.selectedId),
         status,

@@ -35,6 +35,43 @@ export const SurveySlugSchema = z
         error: "must be lowercase words separated by single hyphens"
     });
 
+const duplicate = <T>(items: readonly T[]): readonly T[] => {
+    const seen = new Set<T>();
+    return items.filter(item =>
+        seen.has(item) ? true : (seen.add(item), false)
+    );
+};
+
+/**
+ * A survey's elements, including the two invariants that hold *between* them
+ * rather than within any one: no two elements share a `key`, and no two share
+ * an `id`.
+ *
+ * Split out of `SurveySchema` so the builder can run it. The autosave gate
+ * used to parse each element on its own, which no per-element schema can
+ * catch a collision with — so a document with two questions on one key was
+ * held to be valid, sent, and rejected by the server, leaving the builder in
+ * a save-failed state it could not retry out of. The gate now parses this.
+ */
+export const SurveyElementsSchema = z.array(SurveyElementSchema).check(ctx => {
+    const elements = ctx.value;
+
+    for (const key of duplicate(elements.map(element => element.key))) {
+        ctx.issues.push({
+            code: "custom",
+            input: elements,
+            message: `duplicate question key "${key}"`
+        });
+    }
+    for (const id of duplicate(elements.map(element => element.id))) {
+        ctx.issues.push({
+            code: "custom",
+            input: elements,
+            message: `duplicate question id "${id}"`
+        });
+    }
+});
+
 export const SurveySchema = z
     .object({
         id: SurveyIdSchema,
@@ -48,10 +85,10 @@ export const SurveySchema = z
         waveGroupId: WaveGroupIdSchema,
         /** Free text ("2026", "Q1") used as the series label in comparisons. */
         waveLabel: WaveLabelSchema.optional(),
-        elements: z.array(SurveyElementSchema)
+        elements: SurveyElementsSchema
     })
     .check(ctx => {
-        const { status, slug, elements } = ctx.value;
+        const { status, slug } = ctx.value;
 
         if (status === "published" && slug === null) {
             ctx.issues.push({
@@ -59,30 +96,6 @@ export const SurveySchema = z
                 input: ctx.value,
                 path: ["slug"],
                 message: "a published survey needs a slug"
-            });
-        }
-
-        const duplicate = <T>(items: readonly T[]) => {
-            const seen = new Set<T>();
-            return items.filter(item =>
-                seen.has(item) ? true : (seen.add(item), false)
-            );
-        };
-
-        for (const key of duplicate(elements.map(element => element.key))) {
-            ctx.issues.push({
-                code: "custom",
-                input: ctx.value,
-                path: ["elements"],
-                message: `duplicate question key "${key}"`
-            });
-        }
-        for (const id of duplicate(elements.map(element => element.id))) {
-            ctx.issues.push({
-                code: "custom",
-                input: ctx.value,
-                path: ["elements"],
-                message: `duplicate question id "${id}"`
             });
         }
     });

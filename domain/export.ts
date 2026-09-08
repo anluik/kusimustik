@@ -168,6 +168,45 @@ export function toCsvCells(
     }
 }
 
+/**
+ * The same columns, with any header that is not unique qualified by the column
+ * id until it is.
+ *
+ * Two questions are allowed to carry the same title — an author writing a
+ * grid of "Kui rahul oled?" per department is doing nothing wrong, and the
+ * builder keeps their *keys* apart (`uus_kusimus`, `uus_kusimus_2`). The file
+ * only carries headers, though, so without this a spreadsheet gets two columns
+ * with one name and no way to tell which question either belongs to.
+ *
+ * Only the colliding headers are touched: a file whose questions have distinct
+ * titles reads exactly as it did. The column `id` is what gets appended
+ * because it is the identity the rest of the pipeline already uses — the same
+ * string a wave comparison joins on — and a trailing counter guarantees
+ * termination even if two columns somehow shared one id.
+ */
+export function withUniqueHeaders(
+    columns: readonly CsvColumn[]
+): readonly CsvColumn[] {
+    const seen = new Map<string, number>();
+    for (const column of columns) {
+        seen.set(column.header, (seen.get(column.header) ?? 0) + 1);
+    }
+
+    const used = new Set<string>();
+    return columns.map(column => {
+        if (seen.get(column.header) === 1) {
+            used.add(column.header);
+            return column;
+        }
+        let header = qualify(column.header, column.id);
+        for (let n = 2; used.has(header); n += 1) {
+            header = qualify(column.header, `${column.id} ${n}`);
+        }
+        used.add(header);
+        return { ...column, header };
+    });
+}
+
 /** `"Rate the team [Speed]"` — the header for one fanned-out column. */
 function qualify(title: string, part: string): string {
     return `${title} [${part}]`;

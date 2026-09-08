@@ -469,6 +469,30 @@ export async function listSurveyQuestions(
     );
 }
 
+/**
+ * The keys this survey has spent but no longer shows: questions removed from
+ * the definition that kept their answers, and therefore kept their key.
+ *
+ * The builder needs them to mint the next key. `survey_questions_survey_key_idx`
+ * is what makes a clash an error rather than a silently merged CSV column, so
+ * without this read the builder would cheerfully compose a document the
+ * database refuses (see the 20260908120000 migration).
+ */
+export async function listReservedQuestionKeys(
+    db: Db,
+    surveyId: SurveyId
+): Promise<readonly string[]> {
+    const rows = unwrap(
+        `listReservedQuestionKeys(${surveyId})`,
+        await db
+            .from("survey_questions")
+            .select("key")
+            .eq("survey_id", surveyId)
+            .not("removed_at", "is", null)
+    );
+    return rows.map(row => row.key);
+}
+
 /** Per-survey counts for the list; see the `survey_stats` migration. */
 export const SurveyStatsSchema = z.object({
     surveyId: SurveyIdSchema,

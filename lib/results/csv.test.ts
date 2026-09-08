@@ -123,6 +123,32 @@ describe("buildCsvTable", () => {
         );
         expect(table[1]?.[2]).toBe("");
     });
+    it("keeps the columns of two same-titled questions apart", () => {
+        // The builder allows two questions to carry one title and keeps their
+        // keys distinct; the file carries only headers, so it has to say which
+        // is which.
+        const twin = { ...shortText, id: Q.city, key: "city_2" };
+        const [header] = buildCsvTable([shortText, twin], [], LABELS);
+        const columns = header?.slice(4) ?? [];
+
+        expect(new Set(columns).size).toBe(columns.length);
+        expect(columns).toEqual([
+            `${shortText.title} [${shortText.key}]`,
+            `${shortText.title} [city_2]`
+        ]);
+    });
+
+    it("stays rectangular when headers are disambiguated", () => {
+        const twin = { ...shortText, id: Q.city, key: "city_2" };
+        const table = buildCsvTable(
+            [shortText, twin],
+            [response({ answers: {} })],
+            LABELS
+        );
+
+        for (const row of table)
+            expect(row).toHaveLength(table[0]?.length ?? 0);
+    });
 });
 
 describe("serialiseCsv", () => {

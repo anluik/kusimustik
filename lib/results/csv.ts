@@ -1,4 +1,4 @@
-import { toCsvCells, toCsvColumns } from "@/domain/export";
+import { toCsvCells, toCsvColumns, withUniqueHeaders } from "@/domain/export";
 import { slugifyTitle } from "@/domain/slug";
 import type { SurveyElement } from "@/domain/question";
 import type { ResponseRecord } from "@/lib/db/responses";
@@ -59,11 +59,16 @@ export function buildCsvTable(
 ): readonly (readonly string[])[] {
     const questions = tableQuestions(elements);
 
+    // Headers are the author's titles, and two questions may share one; the
+    // cells below stay aligned because `withUniqueHeaders` renames columns
+    // without reordering or dropping any.
+    const columns = withUniqueHeaders(
+        questions.flatMap(question => toCsvColumns(question))
+    );
+
     const header = [
         ...CSV_META_COLUMNS.map(column => labels[column]),
-        ...questions.flatMap(question =>
-            toCsvColumns(question).map(column => column.header)
-        )
+        ...columns.map(column => column.header)
     ];
 
     const rows = responses.map(response => [

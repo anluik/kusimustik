@@ -7,7 +7,11 @@ import { SurveyIdSchema } from "@/domain/ids";
 import { requireSessionUser } from "@/lib/auth/session";
 import { keyPolicyFor } from "@/lib/builder/keys";
 import { countResponses } from "@/lib/db/responses";
-import { getSurvey, listSurveysInWaveGroup } from "@/lib/db/surveys";
+import {
+    getSurvey,
+    listReservedQuestionKeys,
+    listSurveysInWaveGroup
+} from "@/lib/db/surveys";
 import { createServerDb } from "@/lib/supabase/server";
 
 /**
@@ -21,6 +25,10 @@ import { createServerDb } from "@/lib/supabase/server";
  * The wave group is counted here rather than in the client, because it decides
  * whether question keys may still follow their titles: a survey with a sibling
  * wave is already being joined on its keys. See `keyPolicyFor`.
+ *
+ * The reserved keys are read for the same reason and at the same time: a key
+ * a removed-but-answered question still holds is not the builder's to give
+ * away, and the builder cannot see tombstones from the document alone.
  */
 const loadSurvey = cache(async (raw: string) => {
     const id = SurveyIdSchema.safeParse(raw);
@@ -36,7 +44,8 @@ const loadSurvey = cache(async (raw: string) => {
     // a choice out of a question that has been answered leaves those answers
     // with nothing on a chart to belong to (`aggregate`'s `unshownCount`).
     const responseCount = await countResponses(db, id.data);
-    return { record, waveCount: waves.length, responseCount };
+    const reservedKeys = await listReservedQuestionKeys(db, id.data);
+    return { record, waveCount: waves.length, responseCount, reservedKeys };
 });
 
 export async function generateMetadata({
@@ -56,7 +65,7 @@ export default async function BuilderPage({
     const found = await loadSurvey(surveyId);
     if (found === null) notFound();
 
-    const { record, waveCount, responseCount } = found;
+    const { record, waveCount, responseCount, reservedKeys } = found;
 
     return (
         <BuilderScreen
@@ -69,10 +78,13 @@ export default async function BuilderPage({
             }}
             initialElements={record.survey.elements}
             initialVersion={record.version}
-            keyPolicy={keyPolicyFor({
-                publishedVersion: record.publishedVersion,
-                waveCount
-            })}
+            keys={{
+                policy: keyPolicyFor({
+                    publishedVersion: record.publishedVersion,
+                    waveCount
+                }),
+                reserved: reservedKeys
+            }}
             // A survey that has never been published has collected nothing and
             // emitted nothing, so its results page would be three empty states.
             hasResults={record.survey.slug !== null}

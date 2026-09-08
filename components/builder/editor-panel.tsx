@@ -32,7 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { assertNever } from "@/domain/assert-never";
 import type { SurveyElement } from "@/domain/question";
-import type { KeyPolicy } from "@/lib/builder/keys";
+import type { SurveyKeys } from "@/lib/builder/keys";
 import { cn } from "@/lib/utils";
 
 /**
@@ -59,15 +59,15 @@ import { cn } from "@/lib/utils";
 function ElementEditor({
     element,
     siblings,
-    keyPolicy,
+    keys,
     onChange
 }: {
     readonly element: SurveyElement;
     readonly siblings: readonly SurveyElement[];
-    readonly keyPolicy: KeyPolicy;
+    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
-    const shared = { siblings, keyPolicy, onChange };
+    const shared = { siblings, keys, onChange };
 
     switch (element.type) {
         case "statement":
@@ -96,7 +96,7 @@ function ElementEditor({
 export function EditorPanel({
     selected,
     elements,
-    keyPolicy,
+    keys,
     onChange,
     onDuplicate,
     onDelete,
@@ -105,7 +105,7 @@ export function EditorPanel({
 }: {
     readonly selected: SurveyElement | null;
     readonly elements: readonly SurveyElement[];
-    readonly keyPolicy: KeyPolicy;
+    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
     readonly onDuplicate: () => void;
     readonly onDelete: () => void;
@@ -174,7 +174,7 @@ export function EditorPanel({
                             key={selected.id}
                             element={selected}
                             siblings={elements}
-                            keyPolicy={keyPolicy}
+                            keys={keys}
                             onChange={onChange}
                         />
                     </div>
