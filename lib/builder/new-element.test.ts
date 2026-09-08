@@ -43,6 +43,37 @@ describe("createElement", () => {
         ]);
     });
 
+    it("starts a written-answer question optional and everything else required", () => {
+        // A required open-ended question is where a phone respondent leaves,
+        // so the two text types default the other way round from the rest.
+        const requiredness = (
+            [
+                "single_choice",
+                "multi_choice",
+                "dropdown",
+                "short_text",
+                "long_text",
+                "opinion_scale",
+                "nps",
+                "matrix_single"
+            ] as const
+        ).map(type => {
+            const element = createElement(type, defaults, []);
+            return [type, element.isAnswerable && element.required] as const;
+        });
+
+        expect(Object.fromEntries(requiredness)).toEqual({
+            single_choice: true,
+            multi_choice: true,
+            dropdown: true,
+            short_text: false,
+            long_text: false,
+            opinion_scale: true,
+            nps: true,
+            matrix_single: true
+        });
+    });
+
     it("gives every element a fresh id", () => {
         const first = createElement("single_choice", defaults, []);
         const second = createElement("single_choice", defaults, [first]);

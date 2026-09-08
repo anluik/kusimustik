@@ -67,6 +67,34 @@ describe("catalogue split", () => {
         expect(overlap).toEqual([]);
     });
 
+    /**
+     * The builder canvas promises, in its own empty state, that it shows "how
+     * the respondent sees this". Any respondent-facing wording it draws
+     * therefore has to be the runner's wording, and the two catalogues are the
+     * one place where that can silently drift — as it did for the NPS
+     * endpoints, which read differently in the preview and at the public link.
+     * Add a pair here whenever the preview borrows respondent copy.
+     */
+    const SHARED_RESPONDENT_COPY = [
+        ["Builder.preview.npsMinLabel", "RunnerQuestion.npsMinLabel"],
+        ["Builder.preview.npsMaxLabel", "RunnerQuestion.npsMaxLabel"]
+    ] as const;
+
+    it.each(UI_LOCALES)(
+        "renders the same respondent copy in preview and runner in %s",
+        locale => {
+            const app = flatten(CATALOGUES.app[locale]);
+            const runner = flatten(CATALOGUES.runner[locale]);
+
+            for (const [appKey, runnerKey] of SHARED_RESPONDENT_COPY) {
+                expect(
+                    { [appKey]: app[appKey] },
+                    `${appKey} must read as ${runnerKey}`
+                ).toEqual({ [appKey]: runner[runnerKey] });
+            }
+        }
+    );
+
     it("keeps owner-only copy out of the runner catalogue", () => {
         const runnerKeys = keyPaths(runnerEt).join(" ");
         expect(runnerKeys).not.toMatch(/Surveys|Settings|Auth|Nav/);

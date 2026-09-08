@@ -187,13 +187,19 @@
         },
         "preview": {
             "dropdownPlaceholder": "Vali üks {count} valikust",
-            "npsMinLabel": "Üldse mitte tõenäoline",
-            "npsMaxLabel": "Väga tõenäoline"
+            "npsMinLabel": "Ei soovitaks üldse",
+            "npsMaxLabel": "Soovitaksin kindlasti"
         },
         "editor": {
             "title": "Seaded",
             "delete": "Kustuta",
             "deleteLabel": "Kustuta element «{title}»",
+            "deleteWarning": {
+                "title": "Kas kustutada element?",
+                "body": "Element «{title}» kaob koos oma valikute, ridade ja siltidega. Seda ei saa tagasi võtta.",
+                "cancel": "Jäta alles",
+                "confirm": "Kustuta element"
+            },
             "keyLabel": "Võti",
             "keyHelp": {
                 "derive": "Tekib pealkirjast, kuni sa seda ise muudad. Võti seob laineid ja annab CSV veergudele nime, seepärast lukustub see avaldamisel.",
@@ -309,6 +315,9 @@
             "body": "Need kehtivad kogu küsitluse kohta, mitte ühe küsimuse kohta.",
             "titleLabel": "Pealkiri",
             "titlePlaceholder": "nt Töötajate rahulolu 2026",
+            "descriptionLabel": "Tutvustus",
+            "descriptionPlaceholder": "Paar lauset, mida vastaja loeb enne esimest küsimust",
+            "descriptionHelp": "Vabatahtlik. Kuvatakse vastajale küsitluse alguses.",
             "localeLabel": "Küsitluse keel",
             "localeHelp": "Keel, milles vastaja küsitlust näeb. Rakenduse keelt see ei muuda.",
             "waveLabel": "Laine",
@@ -444,7 +453,14 @@
             "title": "Konto",
             "email": "E-post",
             "name": "Nimi",
-            "nameMissing": "Määramata"
+            "namePlaceholder": "nt Kadri Kask",
+            "nameHelp": "Nimi, mida näidatakse rakenduses. Vastajad seda ei näe.",
+            "save": "Salvesta nimi",
+            "saved": "Salvestatud",
+            "errors": {
+                "invalidInput": "Nimi peab olema 1–120 tähemärki.",
+                "failed": "Salvestamine ebaõnnestus. Proovi uuesti."
+            }
         }
     },
     "Auth": {

@@ -12,6 +12,7 @@ import { ResponsesTable } from "@/components/results/responses-table";
 import { StatRow } from "@/components/results/stat-row";
 import { AppBar } from "@/components/shell/app-bar";
 import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
+import { PAGE_WIDTH } from "@/components/shell/page-width";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,6 +26,7 @@ import type { QuestionFunnelRow } from "@/lib/db/funnel";
 import { buildResponseRows } from "@/lib/results/response-table";
 import { buildQuestionResults } from "@/lib/results/summary";
 import { ROUTES } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 
 /**
  * The results surface: three tabs over one server render.
@@ -96,6 +98,7 @@ export function ResultsScreen({
     return (
         <>
             <AppBar
+                constrained
                 title={title}
                 meta={t("title")}
                 actions={
@@ -119,7 +122,9 @@ export function ResultsScreen({
                 }
             />
 
-            <div className="flex flex-col gap-3 p-4">
+            {/* A `div`, not a `main`: `SidebarInset` already renders the
+                page's `main`, and nesting one inside it is invalid. */}
+            <div className={cn("flex flex-col gap-3 p-4", PAGE_WIDTH)}>
                 <StatRow
                     surveyId={surveyId}
                     responseCount={responses.length}

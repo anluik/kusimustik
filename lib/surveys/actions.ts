@@ -9,6 +9,7 @@ import type { SurveyId } from "@/domain/ids";
 import { SurveyElementSchema } from "@/domain/question";
 import {
     LOCALES,
+    SurveyDescriptionSchema,
     SurveySchema,
     SurveyTitleSchema,
     WaveLabelSchema
@@ -190,6 +191,8 @@ const SettingsInputSchema = IdInputSchema.extend({
     /** The version the builder last read; see `updateSurveyDefinition`. */
     expectedVersion: z.int().positive(),
     title: SurveyTitleSchema,
+    /** Empty means "no description"; the runner then shows none. */
+    description: SurveyDescriptionSchema.nullable(),
     locale: z.literal(LOCALES),
     /** Empty means "no label"; the survey then simply has none. */
     waveLabel: WaveLabelSchema.nullable()
@@ -208,6 +211,9 @@ export type SaveSurveySettingsInput = z.input<typeof SettingsInputSchema>;
  * `waveLabel` is deliberately not part of the definition: it names a wave for
  * comparison rather than changing what a respondent is asked, so editing it
  * alone leaves the version — and therefore the published snapshot — alone.
+ *
+ * The description *is* part of it: the runner renders it above the first
+ * question, so changing it changes what a respondent reads.
  */
 export async function saveSurveySettingsAction(
     input: SaveSurveySettingsInput
@@ -219,9 +225,15 @@ export async function saveSurveySettingsAction(
         const found = await withSurvey(parsed.data.surveyId);
         if (!found.ok) return failed(found.error);
 
+        // An emptied description is *no* description rather than an empty
+        // string, the same rule `element-patch.ts` follows one level down: the
+        // survey is JSONB read back through `SurveySchema`, where absent and
+        // present-but-empty are different things. Null on the wire, absent in
+        // the document, and `null` in the patch so the column is cleared.
         const candidate = SurveySchema.safeParse({
             ...found.record.survey,
             title: parsed.data.title,
+            description: parsed.data.description ?? undefined,
             locale: parsed.data.locale,
             ...(parsed.data.waveLabel !== null && {
                 waveLabel: parsed.data.waveLabel
@@ -236,6 +248,7 @@ export async function saveSurveySettingsAction(
                 parsed.data.expectedVersion,
                 {
                     title: candidate.data.title,
+                    description: parsed.data.description,
                     locale: candidate.data.locale,
                     waveLabel: parsed.data.waveLabel
                 }

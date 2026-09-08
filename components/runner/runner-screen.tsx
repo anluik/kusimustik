@@ -172,11 +172,13 @@ export function RunnerScreen({
         setStatus({ kind: "failed", error: result.error });
     };
 
-    if (status.kind === "sent") return <RunnerNotice kind="thanks" />;
+    if (status.kind === "sent") {
+        return <RunnerNotice kind="thanks" surveyTitle={survey.title} />;
+    }
     // Closed or deleted between the render and the submit. The answers are
     // gone either way, and there is nothing the respondent can retry.
     if (status.kind === "failed" && status.error === "closed") {
-        return <RunnerNotice kind="closed" />;
+        return <RunnerNotice kind="closed" surveyTitle={survey.title} />;
     }
     if (status.kind === "failed" && status.error === "notFound") {
         return <RunnerNotice kind="notFound" />;

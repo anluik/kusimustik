@@ -1,10 +1,12 @@
 import { getTranslations } from "next-intl/server";
 
+import { PAGE_WIDTH } from "@/components/shell/page-width";
 import {
     AppBarSkeleton,
-    LoadingMain,
+    LoadingRegion,
     SkeletonStatCard
 } from "@/components/shell/page-skeleton";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -18,10 +20,10 @@ export default async function ResultsLoading() {
 
     return (
         <>
-            <AppBarSkeleton actions={2} />
-            <LoadingMain
+            <AppBarSkeleton actions={2} constrained />
+            <LoadingRegion
                 label={t("loading")}
-                className="flex flex-col gap-3 p-4"
+                className={cn("flex flex-col gap-3 p-4", PAGE_WIDTH)}
             >
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     {Array.from({ length: 4 }, (_, index) => (
@@ -36,7 +38,7 @@ export default async function ResultsLoading() {
                         <Skeleton key={index} className="h-56 rounded border" />
                     ))}
                 </div>
-            </LoadingMain>
+            </LoadingRegion>
         </>
     );
 }

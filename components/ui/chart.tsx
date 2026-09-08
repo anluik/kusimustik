@@ -5,6 +5,8 @@ import { cn } from "cn"
 import * as RechartsPrimitive from "recharts"
 import type { TooltipValueType } from "recharts"
 
+import { useElementSize } from "@/hooks/use-element-size"
+
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const
 
@@ -58,9 +60,22 @@ function ChartContainer({
   const uniqueId = React.useId()
   const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`
 
+  // Hand-repair, recorded in docs/DECISIONS.md 020. Recharts' own
+  // `ResponsiveContainer` measures its box once in a mount effect and then
+  // waits for a `ResizeObserver`; a box that is not laid out at that instant
+  // is stored as 0x0, the chart renders nothing at all, and no later resize
+  // ever happens to correct it. We measure the container ourselves — during
+  // render, from the DOM, on every render — and hand Recharts fixed numbers,
+  // which makes it skip its size detector entirely. `initialDimension` is the
+  // pre-measurement fallback, so the server render still draws a chart.
+  const { ref, width, height } = useElementSize()
+  const chartWidth = width > 0 ? width : initialDimension.width
+  const chartHeight = height > 0 ? height : initialDimension.height
+
   return (
     <ChartContext.Provider value={{ config }}>
       <div
+        ref={ref}
         data-slot="chart"
         data-chart={chartId}
         className={cn(
@@ -71,7 +86,8 @@ function ChartContainer({
       >
         <ChartStyle id={chartId} config={config} />
         <RechartsPrimitive.ResponsiveContainer
-          initialDimension={initialDimension}
+          width={chartWidth}
+          height={chartHeight}
         >
           {children}
         </RechartsPrimitive.ResponsiveContainer>

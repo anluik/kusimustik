@@ -16,6 +16,13 @@ export type SurveyLocale = (typeof LOCALES)[number];
  */
 export const SurveyTitleSchema = z.string().trim().min(1).max(300);
 
+/**
+ * The paragraph a respondent reads above the first question. Optional, and
+ * trimmed like the title, so a description of nothing but spaces is no
+ * description rather than an empty line in the runner.
+ */
+export const SurveyDescriptionSchema = z.string().trim().max(2000);
+
 /** Free text ("2026", "Q1") naming one wave of a recurring survey. */
 export const WaveLabelSchema = z.string().trim().min(1).max(100);
 
@@ -32,7 +39,7 @@ export const SurveySchema = z
     .object({
         id: SurveyIdSchema,
         title: SurveyTitleSchema,
-        description: z.string().max(2000).optional(),
+        description: SurveyDescriptionSchema.optional(),
         status: z.literal(SURVEY_STATUSES),
         /** Assigned on publish; null while the survey has never been published. */
         slug: SurveySlugSchema.nullable(),

@@ -8,6 +8,7 @@ import { CreateSurveyDialog } from "@/components/surveys/create-survey-dialog";
 import { SurveyTable } from "@/components/surveys/survey-table";
 import { AppBar } from "@/components/shell/app-bar";
 import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
+import { PAGE_WIDTH } from "@/components/shell/page-width";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,6 +27,7 @@ import {
     type StatusFilter,
     type SurveyListItem
 } from "@/lib/surveys/list";
+import { cn } from "@/lib/utils";
 
 /**
  * The survey list screen.
@@ -47,7 +49,6 @@ export function SurveysScreen({
     readonly nowIso: string;
 }) {
     const t = useTranslations("Surveys");
-    const tFilter = useTranslations("Surveys.filter");
     const format = useFormatter();
 
     const [query, setQuery] = useState("");
@@ -73,6 +74,7 @@ export function SurveysScreen({
     return (
         <>
             <AppBar
+                constrained
                 title={t("title")}
                 meta={
                     <span className="flex items-center gap-1.5">
@@ -89,49 +91,20 @@ export function SurveysScreen({
                 }
                 actions={
                     <>
-                        <div className="relative hidden sm:block">
-                            <Search
-                                aria-hidden
-                                className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground"
-                            />
-                            <Input
-                                type="search"
-                                value={query}
-                                onChange={event =>
-                                    setQuery(event.currentTarget.value)
-                                }
-                                aria-label={t("search.label")}
-                                placeholder={t("search.placeholder")}
-                                className="h-[30px] w-56 rounded pl-7 text-xs"
-                            />
-                        </div>
-                        <Select
+                        {/* The bar is 44px and a phone has no room for these
+                            beside the title, so below `sm` the same two
+                            controls are rendered over the table instead —
+                            hidden, not dropped. */}
+                        <SearchField
+                            value={query}
+                            onChange={setQuery}
+                            className="hidden sm:block"
+                        />
+                        <StatusFilterSelect
                             value={status}
-                            onValueChange={value => {
-                                const next = STATUS_FILTERS.find(
-                                    candidate => candidate === value
-                                );
-                                if (next !== undefined) setStatus(next);
-                            }}
-                        >
-                            <SelectTrigger
-                                aria-label={tFilter("label")}
-                                className="hidden h-[30px]! w-36 rounded text-xs sm:flex"
-                            >
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="rounded">
-                                {STATUS_FILTERS.map(option => (
-                                    <SelectItem
-                                        key={option}
-                                        value={option}
-                                        className="rounded text-xs"
-                                    >
-                                        {tFilter(option)}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            onChange={setStatus}
+                            className="hidden sm:flex"
+                        />
                         <Button
                             size="sm"
                             onClick={() => setCreating(true)}
@@ -143,7 +116,23 @@ export function SurveysScreen({
                 }
             />
 
-            <main className="flex flex-col gap-2 p-4">
+            {/* A `div`: `SidebarInset` is the page's `main`, and a document
+                may not nest one inside another. */}
+            <div className={cn("flex flex-col gap-2 p-4", PAGE_WIDTH)}>
+                {total > 0 && (
+                    <div className="flex items-center gap-2 sm:hidden">
+                        <SearchField
+                            value={query}
+                            onChange={setQuery}
+                            className="flex-1"
+                        />
+                        <StatusFilterSelect
+                            value={status}
+                            onChange={setStatus}
+                        />
+                    </div>
+                )}
+
                 <section className="overflow-hidden rounded border bg-card">
                     {total === 0 ? (
                         <EmptyState
@@ -203,9 +192,84 @@ export function SurveysScreen({
                         <span>{t("footer.sorted")}</span>
                     </footer>
                 )}
-            </main>
+            </div>
 
             <CreateSurveyDialog open={creating} onOpenChange={setCreating} />
         </>
+    );
+}
+
+/**
+ * Search and the status filter, so the app bar and the phone's own row are the
+ * same two controls rather than two copies that drift.
+ */
+function SearchField({
+    value,
+    onChange,
+    className
+}: {
+    readonly value: string;
+    readonly onChange: (value: string) => void;
+    readonly className?: string;
+}) {
+    const t = useTranslations("Surveys.search");
+
+    return (
+        <div className={cn("relative", className)}>
+            <Search
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+                type="search"
+                value={value}
+                onChange={event => onChange(event.currentTarget.value)}
+                aria-label={t("label")}
+                placeholder={t("placeholder")}
+                className="h-[30px] w-full rounded pl-7 text-xs sm:w-56"
+            />
+        </div>
+    );
+}
+
+function StatusFilterSelect({
+    value,
+    onChange,
+    className
+}: {
+    readonly value: StatusFilter;
+    readonly onChange: (value: StatusFilter) => void;
+    readonly className?: string;
+}) {
+    const t = useTranslations("Surveys.filter");
+
+    return (
+        <Select
+            value={value}
+            onValueChange={next => {
+                const chosen = STATUS_FILTERS.find(
+                    candidate => candidate === next
+                );
+                if (chosen !== undefined) onChange(chosen);
+            }}
+        >
+            <SelectTrigger
+                aria-label={t("label")}
+                className={cn("h-[30px]! w-36 rounded text-xs", className)}
+            >
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded">
+                {STATUS_FILTERS.map(option => (
+                    <SelectItem
+                        key={option}
+                        value={option}
+                        className="rounded text-xs"
+                    >
+                        {t(option)}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
     );
 }

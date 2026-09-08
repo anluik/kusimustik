@@ -41,11 +41,21 @@ export function isPublicPath(pathname: string): boolean {
     );
 }
 
+/** `/api/surveys/<id>/export`, the one owner endpoint a browser navigates to. */
+const EXPORT_PATH = /^\/api\/surveys\/([^/]+)\/export$/;
+
 /**
  * Sign-in carries the originally requested path through the email round trip,
  * so it arrives back as attacker-controllable input on a public endpoint. Only
  * same-origin absolute paths survive: `//evil.com` and `https://evil.com` are
  * both rejected, and so is anything that is not an owner route.
+ *
+ * Route handlers are excluded on top of that, because they are not pages. An
+ * owner whose session had expired on the CSV download used to sign in and be
+ * handed a file instead of a screen — the browser would download it and leave
+ * them looking at whatever page they came from. The export is sent to its
+ * survey's results page instead, which is where the download button is; every
+ * other `/api` path falls back to the survey list.
  */
 export function safeReturnPath(candidate: string | null | undefined): string {
     if (typeof candidate !== "string") return ROUTES.surveys;
@@ -53,5 +63,12 @@ export function safeReturnPath(candidate: string | null | undefined): string {
         return ROUTES.surveys;
     }
     if (isPublicPath(candidate)) return ROUTES.surveys;
+
+    const surveyId = EXPORT_PATH.exec(candidate)?.[1];
+    if (surveyId !== undefined) return ROUTES.results(surveyId);
+    if (candidate === "/api" || candidate.startsWith("/api/")) {
+        return ROUTES.surveys;
+    }
+
     return candidate;
 }

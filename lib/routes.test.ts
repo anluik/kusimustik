@@ -54,6 +54,22 @@ describe("safeReturnPath", () => {
         expect(safeReturnPath(candidate)).toBe(ROUTES.surveys);
     });
 
+    it("sends the CSV download back to the page it is downloaded from", () => {
+        // Signing in from an expired session on the export route used to hand
+        // the owner a file rather than a screen.
+        expect(safeReturnPath(ROUTES.export("abc"))).toBe(
+            ROUTES.results("abc")
+        );
+    });
+
+    it("refuses any other route handler", () => {
+        expect(safeReturnPath("/api/events")).toBe(ROUTES.surveys);
+        expect(safeReturnPath("/api/surveys/abc/export/extra")).toBe(
+            ROUTES.surveys
+        );
+        expect(safeReturnPath("/api")).toBe(ROUTES.surveys);
+    });
+
     it("refuses to bounce back to a public page", () => {
         // Returning to /login after signing in would look like a failed login.
         expect(safeReturnPath("/login")).toBe(ROUTES.surveys);

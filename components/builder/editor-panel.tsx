@@ -2,6 +2,7 @@
 
 import { Copy, Trash } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { DropdownEditor } from "@/components/builder/dropdown-editor";
 import { useElementTypeName } from "@/components/builder/element-type";
@@ -17,6 +18,16 @@ import {
     ShortTextEditor
 } from "@/components/builder/text-editor";
 import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { assertNever } from "@/domain/assert-never";
 import type { SurveyElement } from "@/domain/question";
@@ -34,6 +45,14 @@ import { cn } from "@/lib/utils";
  * the types differ in what they *offer* (a written answer, selection bounds, a
  * second list), and a component that branched on `type` internally would be
  * the fallback branch this codebase does not allow, one level down.
+ *
+ * Delete is *not* in the panel header, which is where DESIGN §5 draws it and
+ * where it used to be. Inside the `Sheet` that header lands on the same pixels
+ * as the app bar's "add question" button underneath it, so the most repeated
+ * action in the builder and the most destructive one were one click apart with
+ * nothing between them. It now sits in a footer of its own and goes through an
+ * `AlertDialog` first, the same treatment DESIGN §5 gives deleting a survey.
+ * See docs/DECISIONS.md 020.
  */
 
 function ElementEditor({
@@ -91,51 +110,40 @@ export function EditorPanel({
     readonly onDelete: () => void;
     /**
      * Keeps the header's actions clear of `Sheet`'s own close button, which is
-     * absolutely positioned in the same corner. Without it the sheet's ✕ sits
-     * on top of Delete — one mis-aimed click away from removing an element
-     * that has no undo.
+     * absolutely positioned in the same corner.
      */
     readonly insetHeader?: boolean;
     readonly className?: string;
 }) {
     const t = useTranslations("Builder.editor");
     const typeName = useElementTypeName();
+    const [confirming, setConfirming] = useState(false);
 
     return (
-        <div className={cn("flex min-h-0 flex-col bg-background", className)}>
+        <div
+            className={cn(
+                "flex h-full min-h-0 flex-col bg-background",
+                className
+            )}
+        >
             <PanelHeader
                 title={selected === null ? t("title") : typeName(selected.type)}
-                {...(insetHeader && { className: "pr-11" })}
+                {...(insetHeader && { className: "pr-14" })}
                 {...(selected !== null && {
                     actions: (
-                        <>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={onDuplicate}
-                                aria-label={t("duplicateLabel", {
-                                    title: selected.title
-                                })}
-                                className="h-7 rounded px-1.5 text-xs text-muted-foreground"
-                            >
-                                <Copy aria-hidden />
-                                {t("duplicate")}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={onDelete}
-                                aria-label={t("deleteLabel", {
-                                    title: selected.title
-                                })}
-                                className="h-7 rounded px-1.5 text-xs text-muted-foreground hover:text-destructive"
-                            >
-                                <Trash aria-hidden />
-                                {t("delete")}
-                            </Button>
-                        </>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={onDuplicate}
+                            aria-label={t("duplicateLabel", {
+                                title: selected.title
+                            })}
+                            className="h-7 rounded px-1.5 text-xs text-muted-foreground"
+                        >
+                            <Copy aria-hidden />
+                            {t("duplicate")}
+                        </Button>
                     )
                 })}
             />
@@ -168,6 +176,57 @@ export function EditorPanel({
                     </div>
                 )}
             </div>
+
+            {selected !== null && (
+                <div className="shrink-0 border-t p-3">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirming(true)}
+                        aria-label={t("deleteLabel", { title: selected.title })}
+                        className="h-[30px] w-full justify-start rounded px-1.5 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    >
+                        <Trash aria-hidden />
+                        {t("delete")}
+                    </Button>
+                </div>
+            )}
+
+            {/* Deleting an element is local and synchronous — no action, no
+                error to keep the dialog open for — so `AlertDialogAction`,
+                which closes on click, is right here where
+                `ConfirmActionDialog` could not use it. */}
+            <AlertDialog open={confirming} onOpenChange={setConfirming}>
+                <AlertDialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+                    <AlertDialogHeader className="gap-1">
+                        <AlertDialogTitle className="text-[13px] leading-[1.2] font-semibold">
+                            {t("deleteWarning.title")}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-xs leading-[1.35]">
+                            {t("deleteWarning.body", {
+                                title: selected?.title ?? ""
+                            })}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel
+                            size="sm"
+                            className="h-[30px] rounded text-xs"
+                        >
+                            {t("deleteWarning.cancel")}
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            size="sm"
+                            variant="destructive"
+                            onClick={onDelete}
+                            className="h-[30px] rounded text-xs"
+                        >
+                            {t("deleteWarning.confirm")}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

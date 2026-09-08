@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
+import { DisplayNameForm } from "@/components/settings/display-name-form";
 import { AppBar } from "@/components/shell/app-bar";
 import { LocaleTabs } from "@/components/shell/locale-tabs";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
@@ -19,8 +20,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Phase 3: the account row is read-only. Editing a display name is a mutation
- * and belongs with the rest of the CRUD in Phase 4.
+ * The account card. The email is Supabase's and is shown as it is; the display
+ * name is the owner's to change, which is what `DisplayNameForm` is for — the
+ * repository function and its policy existed from Phase 3, but nothing called
+ * them, so a magic-link signup had no way to be called anything.
  */
 export default async function SettingsPage() {
     const user = await requireSessionUser();
@@ -31,7 +34,9 @@ export default async function SettingsPage() {
     return (
         <>
             <AppBar title={t("title")} />
-            <main className="grid max-w-2xl gap-3 p-4">
+            {/* A `div`: `SidebarInset` is the page's `main`, and a document
+                may not nest one inside another. */}
+            <div className="grid max-w-2xl gap-3 p-4">
                 <Card className="gap-3 rounded py-3">
                     <CardHeader className="px-3.5">
                         <CardTitle className="text-[13px] leading-[1.2] font-semibold">
@@ -47,14 +52,7 @@ export default async function SettingsPage() {
                                 {user.email}
                             </span>
                         </div>
-                        <div className="grid gap-1">
-                            <span className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase">
-                                {t("account.name")}
-                            </span>
-                            <span className="text-[13px] leading-[1.2] font-medium">
-                                {user.displayName ?? t("account.nameMissing")}
-                            </span>
-                        </div>
+                        <DisplayNameForm displayName={user.displayName} />
                     </CardContent>
                 </Card>
 
@@ -85,7 +83,7 @@ export default async function SettingsPage() {
                         <ThemeToggle />
                     </CardContent>
                 </Card>
-            </main>
+            </div>
         </>
     );
 }

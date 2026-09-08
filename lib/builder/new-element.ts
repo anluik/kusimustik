@@ -160,11 +160,16 @@ export function createElement(
                 options: newOptions(INITIAL_OPTION_COUNT, defaults.optionLabel)
             };
 
+        // The two written-answer types start optional. A required open-ended
+        // question is the single most reliable way to lose a respondent — it
+        // cannot be answered by tapping, and on a phone it is where a survey
+        // is abandoned. The author can still make it required; the default is
+        // the one that does not cost them responses.
         case "short_text":
-            return { ...question, type: "short_text" };
+            return { ...question, type: "short_text", required: false };
 
         case "long_text":
-            return { ...question, type: "long_text" };
+            return { ...question, type: "long_text", required: false };
 
         case "opinion_scale":
             return {

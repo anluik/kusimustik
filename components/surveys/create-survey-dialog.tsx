@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { hasLocale, useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { SurveyTitleSchema } from "@/domain/survey";
 import { DEFAULT_LOCALE, UI_LOCALES } from "@/lib/i18n/locales";
+import { ROUTES } from "@/lib/routes";
 import { createSurveyAction } from "@/lib/surveys/actions";
 import type { SurveyActionError } from "@/lib/surveys/errors";
 
@@ -35,6 +37,10 @@ import type { SurveyActionError } from "@/lib/surveys/errors";
  * form rejects and what the action accepts. Client validation is a UX nicety —
  * `createSurveyAction` re-parses this server-side regardless, because a Server
  * Action is a public POST endpoint.
+ *
+ * A successful create navigates to the new survey's builder rather than back
+ * to the list: creating a survey is the first half of an action whose second
+ * half is writing its questions.
  */
 const FormSchema = z.object({
     title: SurveyTitleSchema,
@@ -53,6 +59,7 @@ export function CreateSurveyDialog({
     const tCommon = useTranslations("Common");
     const tLanguage = useTranslations("Language");
     const uiLocale = useLocale();
+    const router = useRouter();
 
     const [pending, startTransition] = useTransition();
     const [error, setError] = useState<SurveyActionError | null>(null);
@@ -85,8 +92,15 @@ export function CreateSurveyDialog({
         setError(null);
         startTransition(async () => {
             const result = await createSurveyAction(values);
-            if (result.ok) close();
-            else setError(result.error);
+            if (!result.ok) {
+                setError(result.error);
+                return;
+            }
+            // Straight into the builder. The dialog says questions come next,
+            // and returning to a list where the only thing to do is find the
+            // row just created and click it made a liar of it.
+            close();
+            router.push(ROUTES.builder(result.data.surveyId));
         });
     }
 

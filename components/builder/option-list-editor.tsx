@@ -22,6 +22,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useCallback, useState } from "react";
 
 import { EditorSection } from "@/components/builder/element-fields";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,7 @@ function OptionRow({
     copy,
     error,
     removable,
+    inputRef,
     onRename,
     onRemove
 }: {
@@ -103,6 +105,8 @@ function OptionRow({
     readonly copy: ChoiceListCopy;
     readonly error: string | undefined;
     readonly removable: boolean;
+    /** Set only on a row that was just added, to put the caret in it. */
+    readonly inputRef?: (node: HTMLInputElement | null) => void;
     readonly onRename: (label: string) => void;
     readonly onRemove: () => void;
 }) {
@@ -139,6 +143,7 @@ function OptionRow({
                 </button>
 
                 <Input
+                    {...(inputRef !== undefined && { ref: inputRef })}
                     value={option.label}
                     aria-label={copy.item(index + 1)}
                     placeholder={copy.placeholder}
@@ -190,6 +195,24 @@ export function OptionListEditor({
 }) {
     const tErrors = useTranslations("Builder.errors");
 
+    /**
+     * Adding an option and then having to aim at the row it created is the
+     * most repeated piece of friction in the builder: five options were
+     * fifteen actions, and the typing that followed the click went nowhere.
+     * The row to focus is named by the click that created it, and the focusing
+     * itself happens in a callback ref, which React runs when that row's input
+     * mounts — no effect, and nothing to keep in sync with the document. The
+     * callback is stable, so the row is focused once, when it appears, and not
+     * again on every later render. The default label is selected rather than
+     * merely focused, so typing replaces "Valik 3" instead of appending to it.
+     */
+    const [addedValue, setAddedValue] = useState<string | null>(null);
+    const focusOnMount = useCallback((node: HTMLInputElement | null) => {
+        if (node === null) return;
+        node.focus();
+        node.select();
+    }, []);
+
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
         useSensor(KeyboardSensor, {
@@ -234,6 +257,9 @@ export function OptionListEditor({
                                         : undefined
                                 }
                                 removable={options.length > minimum}
+                                {...(option.value === addedValue && {
+                                    inputRef: focusOnMount
+                                })}
                                 onRename={label =>
                                     onChange(
                                         options.map((current, position) =>
@@ -260,9 +286,11 @@ export function OptionListEditor({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                    onChange([...options, newOption(options, copy.item)])
-                }
+                onClick={() => {
+                    const added = newOption(options, copy.item);
+                    setAddedValue(added.value);
+                    onChange([...options, added]);
+                }}
                 className="h-[30px] w-full rounded text-xs"
             >
                 <Plus aria-hidden />

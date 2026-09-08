@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
     Select,
     SelectContent,
@@ -26,15 +27,19 @@ import {
     SelectValue
 } from "@/components/ui/select";
 import type { SurveyId } from "@/domain/ids";
-import { SurveyTitleSchema, WaveLabelSchema } from "@/domain/survey";
+import {
+    SurveyDescriptionSchema,
+    SurveyTitleSchema,
+    WaveLabelSchema
+} from "@/domain/survey";
 import { UI_LOCALES } from "@/lib/i18n/locales";
 import { saveSurveySettingsAction } from "@/lib/surveys/actions";
 import type { SurveyActionError } from "@/lib/surveys/errors";
 
 /**
  * The settings that belong to the survey rather than to any one element: its
- * title, the language the runner renders it in, and which wave of its group it
- * is.
+ * title, the paragraph shown above the first question, the language the runner
+ * renders it in, and which wave of its group it is.
  *
  * A dialog with an explicit submit rather than the panel's keystroke-by-
  * keystroke autosave, because two of the three change what a respondent sees
@@ -47,6 +52,7 @@ import type { SurveyActionError } from "@/lib/surveys/errors";
  */
 const FormSchema = z.object({
     title: SurveyTitleSchema,
+    description: SurveyDescriptionSchema,
     locale: z.literal(UI_LOCALES),
     waveLabel: z.union([WaveLabelSchema, z.literal("")])
 });
@@ -54,6 +60,7 @@ type FormValues = z.infer<typeof FormSchema>;
 
 export type SurveySettings = {
     readonly title: string;
+    readonly description: string | undefined;
     readonly locale: FormValues["locale"];
     readonly waveLabel: string | undefined;
 };
@@ -84,6 +91,7 @@ export function SurveySettingsDialog({
 
     const current: FormValues = {
         title: settings.title,
+        description: settings.description ?? "",
         locale: settings.locale,
         waveLabel: settings.waveLabel ?? ""
     };
@@ -108,12 +116,16 @@ export function SurveySettingsDialog({
     function onSubmit(values: FormValues) {
         setError(null);
         const waveLabel = values.waveLabel === "" ? null : values.waveLabel;
+        // Empty is *no* description, not an empty paragraph in the runner.
+        const description =
+            values.description.trim() === "" ? null : values.description;
 
         startTransition(async () => {
             const result = await saveSurveySettingsAction({
                 surveyId,
                 expectedVersion: version,
                 title: values.title,
+                description,
                 locale: values.locale,
                 waveLabel
             });
@@ -126,6 +138,7 @@ export function SurveySettingsDialog({
             onSaved(
                 {
                     title: values.title,
+                    description: description ?? undefined,
                     locale: values.locale,
                     waveLabel: waveLabel ?? undefined
                 },
@@ -182,6 +195,26 @@ export function SurveySettingsDialog({
                             className="h-[30px] rounded text-xs"
                             {...form.register("title")}
                         />
+                    </div>
+
+                    <div className="grid gap-1.5">
+                        {label(
+                            "survey-settings-description",
+                            t("descriptionLabel")
+                        )}
+                        <Textarea
+                            id="survey-settings-description"
+                            rows={3}
+                            placeholder={t("descriptionPlaceholder")}
+                            aria-invalid={
+                                form.formState.errors.description !== undefined
+                            }
+                            className="min-h-16 rounded py-1.5 text-xs"
+                            {...form.register("description")}
+                        />
+                        <p className="text-[11px] leading-[1.35] text-muted-foreground">
+                            {t("descriptionHelp")}
+                        </p>
                     </div>
 
                     <div className="grid gap-1.5">

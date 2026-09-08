@@ -48,7 +48,7 @@ export default async function RunnerPage({ params }: PageProps<"/k/[slug]">) {
 
     if (found === null) notFound();
     if (found.survey.status !== "published") {
-        return <RunnerNotice kind="closed" />;
+        return <RunnerNotice kind="closed" surveyTitle={found.survey.title} />;
     }
 
     return (

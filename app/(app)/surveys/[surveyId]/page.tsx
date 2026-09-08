@@ -58,6 +58,7 @@ export default async function BuilderPage({
             surveyId={record.survey.id}
             initialSettings={{
                 title: record.survey.title,
+                description: record.survey.description,
                 locale: record.survey.locale,
                 waveLabel: record.survey.waveLabel
             }}

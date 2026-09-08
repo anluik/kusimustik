@@ -194,6 +194,12 @@
             "title": "Settings",
             "delete": "Delete",
             "deleteLabel": "Delete element “{title}”",
+            "deleteWarning": {
+                "title": "Delete this element?",
+                "body": "Element “{title}” goes, along with its options, rows and labels. This cannot be undone.",
+                "cancel": "Keep it",
+                "confirm": "Delete element"
+            },
             "keyLabel": "Key",
             "keyHelp": {
                 "derive": "Derived from the title until you edit it. The key joins waves and names the CSV columns, so it locks when you publish.",
@@ -309,6 +315,9 @@
             "body": "These apply to the whole survey rather than to one question.",
             "titleLabel": "Title",
             "titlePlaceholder": "e.g. Employee satisfaction 2026",
+            "descriptionLabel": "Intro",
+            "descriptionPlaceholder": "A sentence or two the respondent reads before the first question",
+            "descriptionHelp": "Optional. Shown to the respondent at the top of the survey.",
             "localeLabel": "Survey language",
             "localeHelp": "The language a respondent sees the survey in. It does not change the app's language.",
             "waveLabel": "Wave",
@@ -444,7 +453,14 @@
             "title": "Account",
             "email": "Email",
             "name": "Name",
-            "nameMissing": "Not set"
+            "namePlaceholder": "e.g. Kadri Kask",
+            "nameHelp": "The name shown inside the app. Respondents never see it.",
+            "save": "Save name",
+            "saved": "Saved",
+            "errors": {
+                "invalidInput": "A name must be 1–120 characters.",
+                "failed": "Saving failed. Please try again."
+            }
         }
     },
     "Auth": {

@@ -1,10 +1,12 @@
 import { getTranslations } from "next-intl/server";
 
+import { PAGE_WIDTH } from "@/components/shell/page-width";
 import {
     AppBarSkeleton,
-    LoadingMain,
+    LoadingRegion,
     SkeletonRows
 } from "@/components/shell/page-skeleton";
+import { cn } from "@/lib/utils";
 
 /**
  * The survey list while its two queries are in flight. DESIGN §6: the rows
@@ -16,15 +18,15 @@ export default async function SurveysLoading() {
 
     return (
         <>
-            <AppBarSkeleton actions={3} />
-            <LoadingMain
+            <AppBarSkeleton actions={3} constrained />
+            <LoadingRegion
                 label={t("loading")}
-                className="flex flex-col gap-2 p-4"
+                className={cn("flex flex-col gap-2 p-4", PAGE_WIDTH)}
             >
                 <section className="overflow-hidden rounded border bg-card">
                     <SkeletonRows count={6} height="h-[46px]" />
                 </section>
-            </LoadingMain>
+            </LoadingRegion>
         </>
     );
 }

@@ -1,6 +1,9 @@
 import { getTranslations } from "next-intl/server";
 
-import { AppBarSkeleton, LoadingMain } from "@/components/shell/page-skeleton";
+import {
+    AppBarSkeleton,
+    LoadingRegion
+} from "@/components/shell/page-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -15,7 +18,7 @@ export default async function BuilderLoading() {
     return (
         <>
             <AppBarSkeleton actions={3} />
-            <LoadingMain
+            <LoadingRegion
                 label={t("loading")}
                 className="h-[calc(100svh-2.75rem)] min-h-0"
             >
@@ -42,7 +45,7 @@ export default async function BuilderLoading() {
                         ))}
                     </div>
                 </div>
-            </LoadingMain>
+            </LoadingRegion>
         </>
     );
 }

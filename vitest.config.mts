@@ -7,6 +7,8 @@ export default defineConfig({
     resolve: { tsconfigPaths: true },
     test: {
         environment: "jsdom",
+        // Unmounts rendered components between tests; see the file.
+        setupFiles: ["./vitest.setup.ts"],
         include: ["**/*.test.{ts,tsx}"],
         // e2e/ belongs to Playwright; .next and supabase/ hold generated
         // output; *.db.test.ts needs a running database, see vitest.config.db.mts.

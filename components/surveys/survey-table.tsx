@@ -33,7 +33,16 @@ import { cn } from "@/lib/utils";
  * therefore conditional rows behind a disclosure button carrying
  * `aria-expanded`, which is what `CollapsibleTrigger` would have rendered
  * anyway. See docs/DECISIONS.md 013.
+ *
+ * Below `sm` the status and date columns are dropped and restated inside the
+ * first cell instead. Five columns on a 380px screen meant a horizontal
+ * scroll that pushed status, response count and date off the edge — and "how
+ * many responses do I have" is the one thing an owner checks from a phone.
+ * The response count keeps its column at every width for that reason.
  */
+
+/** Columns that give way to the restatement inside the first cell. */
+const WIDE_ONLY = "hidden sm:table-cell";
 
 const MONO_META = "font-mono text-[11px] leading-none text-muted-foreground";
 
@@ -145,6 +154,33 @@ function SurveyMeta({ survey }: { readonly survey: SurveyListItem }) {
     return <MetaLine parts={[questions, t("notShared")]} />;
 }
 
+/**
+ * The status badge and the "updated" timestamp, shown inside the first cell on
+ * a screen too narrow for their own columns. `aria-hidden` is deliberately not
+ * used: below `sm` this is the only place either value appears, and the
+ * columns it stands in for are not in the accessibility tree either.
+ */
+function RowMetaOnNarrow({
+    status,
+    iso,
+    now,
+    className
+}: {
+    readonly status: SurveyListItem["status"];
+    readonly iso: string;
+    readonly now: Date;
+    readonly className?: string;
+}) {
+    return (
+        <div className={cn("flex items-center gap-2 sm:hidden", className)}>
+            <SurveyStatusBadge status={status} />
+            <span className={cn(MONO_META, "truncate")}>
+                <UpdatedAt iso={iso} now={now} />
+            </span>
+        </div>
+    );
+}
+
 function StandaloneRow({
     survey,
     now
@@ -172,15 +208,20 @@ function StandaloneRow({
                             )}
                     </div>
                     <SurveyMeta survey={survey} />
+                    <RowMetaOnNarrow
+                        status={survey.status}
+                        iso={survey.updatedAt}
+                        now={now}
+                    />
                 </div>
             </TableCell>
-            <TableCell className="px-3">
+            <TableCell className={cn("px-3", WIDE_ONLY)}>
                 <SurveyStatusBadge status={survey.status} />
             </TableCell>
             <TableCell className="px-3 text-right">
                 <ResponseCount survey={survey} />
             </TableCell>
-            <TableCell className={cn("px-3", MONO_META)}>
+            <TableCell className={cn("px-3", MONO_META, WIDE_ONLY)}>
                 <UpdatedAt iso={survey.updatedAt} now={now} />
             </TableCell>
             <TableCell className="px-2 text-right">
@@ -206,38 +247,47 @@ function WaveRow({
                 indent carried by a border-l rule, so the nesting is structural
                 rather than a guessed margin. */}
             <TableCell className="py-1.5 pr-2 pl-3">
-                <div className="ml-3 flex min-w-0 items-center gap-2 border-l pl-3">
-                    <Link
-                        href={ROUTES.builder(wave.id)}
-                        className={cn(
-                            TITLE_LINK,
-                            "w-[8ch] shrink-0 font-mono text-[11px] leading-none"
+                <div className="ml-3 flex min-w-0 flex-col gap-1 border-l pl-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                        <Link
+                            href={ROUTES.builder(wave.id)}
+                            className={cn(
+                                TITLE_LINK,
+                                "w-[8ch] shrink-0 font-mono text-[11px] leading-none"
+                            )}
+                        >
+                            {wave.waveLabel ?? t("unlabelledWave")}
+                        </Link>
+                        {wave.status === "published" && wave.slug !== null ? (
+                            <ShareLink slug={wave.slug} />
+                        ) : wave.status === "closed" ? (
+                            <MetaLine
+                                parts={[
+                                    t("linkClosed"),
+                                    t("responsesArchived", {
+                                        count: wave.responseCount
+                                    })
+                                ]}
+                            />
+                        ) : (
+                            <MetaLine
+                                parts={[
+                                    t("questions", {
+                                        count: wave.questionCount
+                                    }),
+                                    t("notShared")
+                                ]}
+                            />
                         )}
-                    >
-                        {wave.waveLabel ?? t("unlabelledWave")}
-                    </Link>
-                    {wave.status === "published" && wave.slug !== null ? (
-                        <ShareLink slug={wave.slug} />
-                    ) : wave.status === "closed" ? (
-                        <MetaLine
-                            parts={[
-                                t("linkClosed"),
-                                t("responsesArchived", {
-                                    count: wave.responseCount
-                                })
-                            ]}
-                        />
-                    ) : (
-                        <MetaLine
-                            parts={[
-                                t("questions", { count: wave.questionCount }),
-                                t("notShared")
-                            ]}
-                        />
-                    )}
+                    </div>
+                    <RowMetaOnNarrow
+                        status={wave.status}
+                        iso={wave.updatedAt}
+                        now={now}
+                    />
                 </div>
             </TableCell>
-            <TableCell className="px-3">
+            <TableCell className={cn("px-3", WIDE_ONLY)}>
                 <SurveyStatusBadge status={wave.status} />
             </TableCell>
             <TableCell className="px-3 text-right">
@@ -245,7 +295,7 @@ function WaveRow({
                     {format.number(wave.responseCount)}
                 </span>
             </TableCell>
-            <TableCell className={cn("px-3", MONO_META)}>
+            <TableCell className={cn("px-3", MONO_META, WIDE_ONLY)}>
                 <UpdatedAt iso={wave.updatedAt} now={now} />
             </TableCell>
             <TableCell className="px-2 text-right">
@@ -319,10 +369,17 @@ function GroupRow({
                                 t("questions", { count: row.questionCount })
                             ]}
                         />
+                        {/* A series has no badge to restate, so its status
+                            column's wording comes down here instead. */}
+                        <span className={cn(MONO_META, "sm:hidden")}>
+                            {row.openCount > 0
+                                ? t("open", { count: row.openCount })
+                                : t("allClosed")}
+                        </span>
                     </div>
                 </div>
             </TableCell>
-            <TableCell className={cn("px-3", MONO_META)}>
+            <TableCell className={cn("px-3", MONO_META, WIDE_ONLY)}>
                 {/* Plain text, not a badge: a series has no single status, and
                     a badge here would read as one. */}
                 {row.openCount > 0
@@ -334,7 +391,7 @@ function GroupRow({
                     {format.number(row.responseCount)}
                 </span>
             </TableCell>
-            <TableCell className="px-3" />
+            <TableCell className={cn("px-3", WIDE_ONLY)} />
             <TableCell className="px-2 text-right">
                 {/* The menu acts on the newest wave — the live one, and the one
                     "new wave" has to copy for the keys to line up. */}
@@ -369,7 +426,13 @@ export function SurveyTable({
                     <TableHead className={cn(COLUMN_LABEL, "px-3")}>
                         {t("survey")}
                     </TableHead>
-                    <TableHead className={cn(COLUMN_LABEL, "w-[132px] px-3")}>
+                    <TableHead
+                        className={cn(
+                            COLUMN_LABEL,
+                            "w-[132px] px-3",
+                            WIDE_ONLY
+                        )}
+                    >
                         {t("status")}
                     </TableHead>
                     <TableHead
@@ -380,7 +443,13 @@ export function SurveyTable({
                     >
                         {t("responses")}
                     </TableHead>
-                    <TableHead className={cn(COLUMN_LABEL, "w-[136px] px-3")}>
+                    <TableHead
+                        className={cn(
+                            COLUMN_LABEL,
+                            "w-[136px] px-3",
+                            WIDE_ONLY
+                        )}
+                    >
                         {t("updated")}
                     </TableHead>
                     <TableHead className={cn(COLUMN_LABEL, "w-[52px] px-2")}>

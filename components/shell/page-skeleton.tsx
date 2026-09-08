@@ -15,9 +15,17 @@ import { cn } from "@/lib/utils";
  */
 
 /** A bar of the right height, with placeholders where its buttons will be. */
-export function AppBarSkeleton({ actions = 1 }: { readonly actions?: number }) {
+export function AppBarSkeleton({
+    actions = 1,
+    constrained = false
+}: {
+    readonly actions?: number;
+    /** Matches the page below it, so the bar does not shift on arrival. */
+    readonly constrained?: boolean;
+}) {
     return (
         <AppBarFrame
+            constrained={constrained}
             actions={Array.from({ length: actions }, (_, index) => (
                 <Skeleton key={index} className="h-[30px] w-24 rounded" />
             ))}
@@ -31,8 +39,13 @@ export function AppBarSkeleton({ actions = 1 }: { readonly actions?: number }) {
  * The region the skeleton hangs in. `aria-busy` with a single polite label,
  * because a screen reader announcing forty placeholder blocks is worse than
  * one that says the page is loading.
+ *
+ * A `div`, and named for a region rather than for `main`: `SidebarInset`
+ * already renders the page's `main` and a document may not nest one inside
+ * another. Nothing is lost — `aria-busy` and `aria-live` belong to the element
+ * that is busy, not to a landmark.
  */
-export function LoadingMain({
+export function LoadingRegion({
     label,
     className,
     children
@@ -42,10 +55,10 @@ export function LoadingMain({
     readonly children: ReactNode;
 }) {
     return (
-        <main aria-busy="true" aria-live="polite" className={className}>
+        <div aria-busy="true" aria-live="polite" className={className}>
             <span className="sr-only">{label}</span>
             <div aria-hidden>{children}</div>
-        </main>
+        </div>
     );
 }
 

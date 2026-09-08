@@ -227,3 +227,52 @@ describe("funnel access control", () => {
         expect(answered?.medianDwellMs).toBe(1200);
     });
 });
+
+/**
+ * A phone respondent who switches apps mid-survey files an `abandon`, comes
+ * back to the same `sessionStorage` session and finishes. Both events are then
+ * real and both are in the log; only the session's *outcome* is a question,
+ * and it is answered here rather than by the client that wrote the rows.
+ */
+describe("a session that abandoned and then submitted", () => {
+    let owner: TestUser;
+    let surveyId: SurveyId;
+    const returning = crypto.randomUUID();
+    const lost = crypto.randomUUID();
+
+    beforeAll(async () => {
+        owner = await createTestUser("funnel-abandon");
+        const created = await createSurvey(owner.db, {
+            ownerId: owner.id,
+            title: "Abandon fixture",
+            elements: [singleChoiceQuestion("q1")]
+        });
+        surveyId = created.survey.id;
+        await publishSurvey(owner.db, surveyId, testSlug("abandon"));
+
+        await insertSurveyEvents(owner.db, [
+            { surveyId, sessionId: returning, type: "view" },
+            { surveyId, sessionId: returning, type: "abandon" },
+            { surveyId, sessionId: returning, type: "start" },
+            { surveyId, sessionId: returning, type: "submit" },
+            { surveyId, sessionId: lost, type: "view" },
+            { surveyId, sessionId: lost, type: "start" },
+            { surveyId, sessionId: lost, type: "abandon" }
+        ]);
+    });
+
+    afterAll(async () => {
+        await deleteTestUser(owner);
+    });
+
+    it("counts only the session that never came back", async () => {
+        const totals = await getFunnelTotals(owner.db, surveyId);
+
+        expect(totals).toEqual({
+            views: 2,
+            starts: 2,
+            submits: 1,
+            abandons: 1
+        });
+    });
+});

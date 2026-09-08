@@ -150,7 +150,16 @@ export function useRunnerAnalytics(surveyId: SurveyId): RunnerAnalytics {
         // the queue goes out with `sendBeacon`, which survives the page.
         const leaving = () => {
             if (document.visibilityState !== "hidden") return;
-            if (!submitted.current && once("abandon")) track("abandon");
+            // `submitted` is read from storage as well as from the ref: the
+            // session id survives a reload and an app switch, so a visit that
+            // has already submitted must not file an abandon from a second
+            // page load under the same id. The funnel excludes such a session
+            // anyway (survey_funnel_totals), because a lost beacon or a second
+            // device is not something a client can guard; this keeps the event
+            // log itself honest.
+            if (!hasSubmitted(surveyId, submitted) && once("abandon")) {
+                track("abandon");
+            }
             flush(true);
         };
         document.addEventListener("visibilitychange", leaving);
@@ -159,7 +168,7 @@ export function useRunnerAnalytics(surveyId: SurveyId): RunnerAnalytics {
             document.removeEventListener("visibilitychange", leaving);
             window.removeEventListener("pagehide", leaving);
         };
-    }, [track, flush, once]);
+    }, [surveyId, track, flush, once]);
 
     const nodes = useRef(new Map<Element, QuestionId>());
     const observer = useRef<IntersectionObserver | null>(null);
@@ -214,11 +223,12 @@ export function useRunnerAnalytics(surveyId: SurveyId): RunnerAnalytics {
             },
             trackSubmit: () => {
                 submitted.current = true;
+                markSubmitted(surveyId);
                 if (once("submit")) track("submit", { immediate: true });
             },
             observe
         }),
-        [track, once, observe]
+        [surveyId, track, once, observe]
     );
 }
 
@@ -248,6 +258,38 @@ function visitSessionId(): string | null {
         // Analytics is the thing that gives way, never the survey.
         return null;
     }
+}
+
+/**
+ * Whether this visit has already submitted, in memory or in storage.
+ *
+ * The ref answers within one page load; storage answers across the reload or
+ * app switch that `sessionStorage` — and therefore the session id — survives.
+ * No storage means no session id either (`visitSessionId`), so no events are
+ * being sent and the answer does not matter.
+ */
+function hasSubmitted(
+    surveyId: SurveyId,
+    inMemory: { readonly current: boolean }
+): boolean {
+    if (inMemory.current) return true;
+    try {
+        return sessionStorage.getItem(submittedKey(surveyId)) !== null;
+    } catch {
+        return false;
+    }
+}
+
+function markSubmitted(surveyId: SurveyId): void {
+    try {
+        sessionStorage.setItem(submittedKey(surveyId), "1");
+    } catch {
+        // As everywhere here: analytics gives way, the survey never does.
+    }
+}
+
+function submittedKey(surveyId: SurveyId): string {
+    return `kusimustik:submitted:${surveyId}`;
 }
 
 function claimFirstView(surveyId: SurveyId): boolean {
