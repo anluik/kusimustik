@@ -1,4 +1,4 @@
-import { chromium } from "@playwright/test";
+import { chromium, type FullConfig } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 
@@ -13,10 +13,17 @@ import { OWNER_STATE, signInAsOwner } from "./support";
  *
  * It runs after `webServer` has come up, which is what makes `baseURL`
  * reachable here at all.
+ *
+ * The base URL comes from the config rather than being worked out again here.
+ * Deriving it twice is what let the two drift onto different hosts, and a
+ * sign-in that crosses hosts loses its PKCE verifier cookie — see the comment
+ * in playwright.config.ts.
  */
-export default async function globalSetup(): Promise<void> {
-    const baseURL =
-        process.env["PLAYWRIGHT_BASE_URL"] ?? "http://localhost:3000";
+export default async function globalSetup(config: FullConfig): Promise<void> {
+    const baseURL = config.projects[0]?.use.baseURL;
+    if (baseURL === undefined) {
+        throw new Error("globalSetup: no project defines a baseURL");
+    }
 
     const browser = await chromium.launch();
     try {

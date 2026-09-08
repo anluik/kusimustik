@@ -18,7 +18,7 @@ Drop in the audited design tokens as CSS variables in `globals.css` and map them
 >
 > For styling: use @docs/design-tokens.css as the source for globals.css — the `:root` block, the `.dark` block and the `@theme inline` block go in exactly as written. Do not regenerate, round or substitute any value; they have been contrast-audited. Load IBM Plex Sans and IBM Plex Mono via `next/font`, not a CSS `@import`.
 >
-> @docs/DESIGN.md is the visual spec for this and every later phase. Don't invent spacing, type sizes or colours that aren't in it. Several of its sections are marked TODO — if you need something from one of those, ask rather than improvising.
+> @docs/DESIGN.md is the visual spec for this and every later phase. Don't invent spacing, type sizes or colours that aren't in it. If it doesn't cover something you need, ask rather than improvising.
 >
 > Add one trivial passing test so I can see the loop work. Do not create any application code, routes, or tables.
 
@@ -185,20 +185,120 @@ Plus a **drop-off funnel** from `survey_events`: views → starts → per-questi
 
 ## After MVP
 
-Roughly in order of value for this market:
+The original ordering of this section was a *value* ordering, and it assumed a running product. It isn't one: there is no hosted Supabase project, no deploy target and no CI, so Phase 8's own instruction — use it for something real and let that tell you what's wrong — cannot be followed. Phases 9 and 10 fix that, and the rest follows in the order DECISIONS 025 argues for.
 
-1. **Skip logic / branching** — Surveer has it, connect.ee doesn't. Model as a `conditions` array on each element, evaluated by a pure function in `domain/`. Needs a cycle check.
-2. **Wave comparison** — the year-over-year view. Pick a `wave_group_id`, join waves on question `key`, render each question's summaries side by side with the wave labels as the series. The schema work is already done in Phases 1–2; this is a query and a screen. Neither connect.ee nor Surveer offers it, and it's the feature that makes an annual customer stay for year two.
-3. **Multilingual surveys** — not just a translated UI but translated *survey content* with a respondent language picker. In Estonia this is table stakes, and it's the reason to have kept all copy in message files from day one.
-4. **Remaining question types** — ranking and image-choice first, since neither competitor's modern option has them; then slider, star rating, matrix_multi, number, date, email, phone, URL.
-5. **Themes and branding** — logo, colours, custom thank-you page.
-6. **Billing** — Stripe. Price against Surveer's caps: their PRO is €24/mo for 1,000 responses and unlimited responses needs €99/mo, which is the obvious place to undercut.
-7. **Multiple collector links** with per-channel source tracking.
-8. **Templates library**, then AI survey generation from a prompt.
-9. **PDF report export** and shareable public results links.
-10. **Teams / organisations** — a real RLS redesign, not a bolt-on. Plan for it before you sell to a university.
-11. **Bot protection and rate limiting** on the public endpoint. Do this before any real launch, not after.
-12. Response quotas, geolocation capture, custom domains, webhooks, public API.
+---
+
+## Phase 9 — Hardening the public endpoint
+
+**Goal:** the runner's two write paths survive contact with the open internet.
+
+This was item 11 of the old list, with the note "do this before any real launch, not after". This is that moment: it is the deploy's other half, not a chore that follows it.
+
+The runner is anonymous-insert by design and nothing throttles it. `submitResponseAction` in `lib/runner/actions.ts` and the beacon handler in `app/api/events/route.ts` have no rate limit, no captcha, no honeypot and no server-side duplicate guard. `hasAnswered` in `lib/runner/visit.ts` is `localStorage` only — it exists to stop an accidental double-submit from one browser (023) and is bypassed by a cleared store, an incognito window or a second device. `get_runner_survey(slug)` protects against *enumeration* (009); once a slug is known — and a slug travels by WhatsApp — both write paths are open to anyone.
+
+**The limiter lives in Postgres.** Not Redis, not in-memory: serverless has no shared memory between invocations, and the database is already the trust boundary every other anonymous write goes through. A `security definer` function in the shape 009 established, its own table, RLS and policy in the same migration as the table.
+
+**Its key is a salted hash of the client IP, in a short-TTL table of its own.** A raw IP is personal data, and 004 was deliberate that analytics must never be joinable back to an individual's answers — a rate-limit table must not become the join that undoes it. The hash never goes on `responses`, and the salt rotates. The IP comes from `x-forwarded-for` through `headers()`, which is Promise-only in Next 16.
+
+**A honeypot and a submission-timing floor come before a captcha.** Both are free and invisible, and they keep a third-party script off a mobile-first runner that DESIGN §10 calls the priority surface. Turnstile is the documented fallback for if real abuse actually appears — it is not in this phase.
+
+> **Prompt:** Phase 9 of docs/PLAN.md. Add the Postgres rate limiter — migration, table, RLS policy and `security definer` function — keyed on a salted hash of the client IP with a rotating salt and a short TTL, and wire it into both `submitResponseAction` and `app/api/events/route.ts`. Add a honeypot field and a submission-timing floor to the runner form, checked server-side before answers are parsed. A blocked submit must fail the way every other runner error does, through `RunnerErrors`, in all three catalogues. Do not add a captcha or any third-party script.
+
+**Done when:** a `.db.test.ts` proves the limiter rejects over-threshold writes and that a different survey and a different IP hash are unaffected, an e2e spec proves an ordinary respondent is never blocked, and `pnpm check` and `pnpm test:db` are green.
+
+---
+
+## Phase 10 — Production deploy and CI
+
+**Goal:** a stranger can answer a survey at a real domain, on their own phone, and the owner sees the response.
+
+Nothing here is hard; it is simply undone. A hosted Supabase project with the migrations pushed, the app on Vercel, a real transactional email sender behind the magic link (Mailpit is local-only), `NEXT_PUBLIC_SITE_URL` and the `auth.site_url` / redirect allow-list pointing at the real origin, and a first `.github/workflows/` running `pnpm check` and `pnpm test:db`.
+
+Some of this is not an agent's to do. Creating the Supabase and Vercel projects, buying the domain and its DNS, and issuing the email provider's API key are the owner's; writing the workflow, the deploy configuration, the environment documentation in `.env.example` and the README's deployment section are the agent's. The phase should say which is which rather than stalling in the middle.
+
+> **Prompt:** Phase 10 of docs/PLAN.md. Write the CI workflow, the deployment configuration and the environment documentation, and list for me — as a numbered checklist I can work through by hand — every step that needs an account, a domain or a key that you cannot create. Do not put any secret in the repository.
+
+**Done when:** the checklist is done, the workflow is green on `master`, and a survey answered from a phone on cellular data lands in the hosted database.
+
+---
+
+## Phase 11 — Wave comparison
+
+**Goal:** pick a wave group, see each question's waves side by side.
+
+This is the feature neither connect.ee nor Surveer offers, and the one that makes an annual customer stay for year two. It is also the cheapest thing on this list, because almost all of it was built during Phases 1–2 and has been earning nothing since:
+
+- `domain/survey.ts` carries `waveGroupId` and `waveLabel`; `domain/duplicate.ts` already produces a new survey with fresh ids, **identical keys** and the same wave group, with tests that say so.
+- `lib/db/surveys.ts` already has `listSurveysInWaveGroup` — summaries only, no responses.
+- `survey_questions.key` is indexed for exactly this join, and 024 made key uniqueness total across tombstones *specifically* so the join can never merge two different questions' answers into one column.
+- `domain/charts.ts` already defines `CHART_DATA_SHAPES` with a `series` member and a `line` kind, and `components/results/question-card.tsx` already has the `line` branches. They are unreachable today. This phase is what turns them on.
+- `domain/aggregate.ts` has no survey concept in it at all: `aggregate(question, answers)` called once per wave gives you the summaries to place beside each other.
+
+So the net new work is one repository function that fetches a wave group's responses aligned on `key`, and one screen. The entry point is the survey list, which already groups by wave group and deliberately offers no compare control (013).
+
+Two things to decide rather than improvise: what a question present in one wave and absent from another renders as, and whether a tombstoned question (008) with answers in an earlier wave still appears. Both are the same question — a column that exists for some waves — and 021's `unshownCount` is the precedent for saying so on the card rather than dropping it silently.
+
+> **Prompt:** Phase 11 of docs/PLAN.md. Start with the repository function and its `.db.test.ts` against the seed's two waves — the alignment on `key` is the load-bearing part and it should be proven before any UI exists. Then the screen. Do not change `aggregate()`; call it once per wave.
+
+**Done when:** the seeded two waves render side by side with their wave labels as the series, a question missing from one wave says so rather than rendering an empty series, and `pnpm test:db` is green.
+
+---
+
+## Phase 12 — Multilingual survey content
+
+**Goal:** an author writes one survey in Estonian, Russian and English; a respondent picks their language.
+
+Table stakes in this market, and the reason all copy has been in message files since Phase 0. It comes before skip logic for one reason that applies to nothing else on this list: **its cost grows with every survey in production.** Every title, description, choice label, `otherLabel`, scale endpoint label and matrix row and column label on all nine element schemas becomes a locale-keyed shape, so the `elements` JSONB document changes shape and every existing document needs a fallback. That is cheap while there are a handful and expensive once real customers' surveys are in there.
+
+The routing seam was left open for it deliberately: `lib/i18n/runner.ts` documents adding a `/k/[slug]/[locale]` segment "with no change below that function", and 011 says the same.
+
+The blast radius is wide but entirely compiler-visible: the nine schemas, the nine builder editors, the runner inputs, the CSV headers in `domain/export.ts`, and `SummaryBase.title` — every place that reads a question's words.
+
+Three sessions, not one:
+
+1. The schema, the fallback migration and the domain tests. Nothing user-visible changes.
+2. The builder's translation surface — how an author moves between the survey's languages without the editor panel doubling in size.
+3. The respondent picker and the `/k/[slug]/[locale]` segment.
+
+> **Prompt:** Phase 12 of docs/PLAN.md, step 1 only: the locale-keyed content shape in `domain/`, the migration that carries every existing `elements` document into it with `survey.locale` as its single entry, and the tests. Do not touch the builder or the runner yet — the fallback should make them compile and behave exactly as they do now.
+
+**Done when:** every existing survey still renders identically, and the domain tests cover a question with a missing translation falling back to the survey's own locale.
+
+---
+
+## Phase 13 — Skip logic / branching
+
+**Goal:** an element can be shown conditionally on earlier answers.
+
+Surveer has it and connect.ee doesn't, so it closes a gap rather than opening one — which is why it moved from the top of this list to the end of its scheduled phases. Pull it forward the moment a real prospect is choosing between us on a feature grid.
+
+The runtime half is cheap and well isolated. The runner is one page: `components/runner/runner-screen.tsx` maps every element unconditionally, so visibility is a predicate applied in that one loop, and in `validateAll` and `answerProgress` in `lib/runner/validation.ts` so a hidden required question cannot block a submit. `buildAnswerSchema` does not change at all — conditional requiredness is a question about which questions are evaluated, one level above it.
+
+`submitResponseAction` must re-derive visibility server-side from the *submitted* answers. A client-sent "this was hidden" flag is not evidence; a Server Action is a public POST endpoint.
+
+The expensive half is authoring, which does not exist in any form — plus the cycle check the original list called out. Both belong to a new pure module, `domain/conditions.ts`.
+
+One thing to settle before building: a hidden question and an abandoned one look identical in `survey_events`, so the Phase 7 funnel needs to know the difference or it will report drop-off that never happened.
+
+> **Prompt:** Phase 13 of docs/PLAN.md, step 1 only: `domain/conditions.ts` — the condition schema, the evaluator, and the cycle check — tests first. No UI, no runner changes.
+
+**Done when:** the evaluator is tested against a chain, a cycle and a condition referencing a deleted question, and nothing else has changed.
+
+---
+
+## Backlog
+
+Unscheduled, roughly in order of value:
+
+1. **Remaining question types** — ranking and image choice first, since neither competitor's modern option has them; then slider, star rating, matrix_multi, number, date, email, phone, URL. **These come after Phase 12, not before:** every new type adds more labels that would otherwise have to be locale-keyed a second time. Each one is a compiler-guided checklist — around eleven `assertNever` switch sites plus a migration widening the `survey_questions.type` CHECK (008).
+2. **Themes and branding** — logo, colours, custom thank-you page. Cheaper than it looks: DESIGN §8's `--survey-*` namespace already exists, so no runner component reads `--primary` directly.
+3. **Billing** — Stripe. Price against Surveer's caps: their PRO is €24/mo for 1,000 responses and unlimited responses needs €99/mo, which is the obvious place to undercut.
+4. **Multiple collector links** with per-channel source tracking.
+5. **Templates library**, then AI survey generation from a prompt.
+6. **PDF report export** and shareable public results links.
+7. **Teams / organisations** — a real RLS redesign, not a bolt-on. Plan for it before you sell to a university.
+8. Response quotas, geolocation capture, custom domains, webhooks, public API.
 
 ---
 

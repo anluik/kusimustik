@@ -10,7 +10,16 @@ import { defineConfig, devices } from "@playwright/test";
 const envFile = join(process.cwd(), ".env.local");
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 
-const baseURL = process.env["PLAYWRIGHT_BASE_URL"] ?? "http://localhost:3000";
+// The magic link points wherever `NEXT_PUBLIC_SITE_URL` says (lib/env.ts), and
+// the PKCE verifier is a cookie on the host that asked for the link. Cookies
+// are keyed by host and `localhost` is not `127.0.0.1`, so a run that browses
+// one and follows a link to the other loses the verifier and the callback
+// answers `?error=wrongBrowser` — correctly. Deriving the base URL from the
+// same variable is what keeps the two on one origin.
+const baseURL =
+    process.env["PLAYWRIGHT_BASE_URL"] ??
+    process.env["NEXT_PUBLIC_SITE_URL"] ??
+    "http://127.0.0.1:3000";
 
 export default defineConfig({
     testDir: "./e2e",
