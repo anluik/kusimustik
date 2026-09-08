@@ -648,3 +648,35 @@ The wedge: `sync_survey_questions()` inserted the arriving projection rows *befo
 - **The server-side duplicate guard is deliberately not built.** Phase 9's context paragraph names it beside the missing rate limit, but the prompt does not ask for it and the phase's own definition of done does not mention it — and it is in direct tension with everything above. Recognising that this submission is from whoever sent the last one means holding an identifier for a respondent across submissions, which is the thing the rotating salt and the one-hour TTL exist to make impossible. What the limiter gives instead is a ceiling on how many submissions one address can make to one survey, which is the honest version of the same protection for an anonymous endpoint. `hasAnswered` (023) remains what it always was: a courtesy against a habitual refresh in `sessionStorage` — not `localStorage`, as the phase text has it — and never a guard.
 
 **Cost accepted.** Two tables and two functions to keep in step, a sweep run probabilistically from the calls themselves rather than from a schedule the local stack does not have, and a limiter whose false-positive threshold is a guess until real traffic argues with it.
+
+---
+
+## 027 — The deploy: what CI proves, what a human does, and why the deployed app holds no secret
+
+**Status:** accepted
+
+**Context.** Phase 10 of `docs/PLAN.md`. The product had no CI, no deployment configuration and no environment documentation, and 025 argued that this is why Phase 8's own instruction — use it for something real and let that tell you what is wrong — could not be followed.
+
+**Decisions.**
+
+- **`pnpm check` runs `next typegen` first.** `PageProps` and `LayoutProps` are generated into `.next/types`, and `next-env.d.ts` — which is gitignored — imports from it, so on a tree that has never run `next dev` or `next build` a bare `tsc --noEmit` reports `Cannot find name 'PageProps'` in every routed file. That tree is every CI run and every fresh clone. `CLAUDE.md` had documented the trap rather than closing it; typegen costs half a second, and a contract that cannot pass on a clean checkout is not a contract. This is the change that makes the workflow possible at all, and it belongs in the script rather than in the workflow, so a new contributor's first `pnpm check` behaves like CI's.
+
+- **Two CI jobs, split exactly where 010 split the commands.** `check` is hermetic — no Docker, no database — and `database` brings up the local stack through the CLI that is already a devDependency, so the stack CI starts is the one a developer starts. 010 accepted that "nothing enforces that `pnpm test:db` was run" and said to wire it into CI rather than into `check` if it started getting skipped; this is that wiring, taken now because the cost of doing it while writing the first workflow is nil.
+
+- **The end-to-end suite is deliberately not in CI yet.** It needs browsers, a dev server and the local mail server the owner's magic link arrives in, and Phase 10's definition of done is a workflow that is *green on master*. A first workflow that is green is worth more than a complete one that is flaky, and a suite that goes red for reasons unrelated to the change is the failure mode 010 exists to prevent. It is on `docs/DEPLOY.md`'s after-it-works section, not forgotten.
+
+- **CI checks that the generated types still match the migrations.** `pnpm db:types` and then `git diff --exit-code` on `lib/db/database.types.ts`, in the job that already has a database. A migration landed without regenerating leaves the repository claiming a shape the database does not have, and nothing notices until something reads the wrong column — Phase 9 added two tables and a function and would have tripped this had the regeneration been forgotten.
+
+- **The deployed app holds no secret, and that is a property to defend.** It runs on three variables: the Supabase URL, the publishable key and the site's own origin. All three are public by nature — two ship to every browser and the third is the address in the address bar. `SUPABASE_SECRET_KEY` bypasses RLS and is read *only* by `lib/db/test-support.ts` and `e2e/support.ts`, both of which need to see what an anonymous submission actually stored; no application code reads it, so it must not be added to the deployment's environment. Anyone tempted to reach for it in a request path should read 016 first, and then this.
+
+- **Migrations are pushed by hand, not from CI.** `supabase db push` against the linked project, before the deploy that needs it. Automating it would mean putting a database password and an access token in GitHub secrets to run an irreversible, un-reviewed statement on every merge — and a schema change and the code that uses it land in the same commit but must not land at the same instant. Which of the two goes first is a judgement about the specific change, and a workflow cannot make it.
+
+- **`supabase/config.toml` is the local stack's configuration and nothing else.** Its `site_url` and `additional_redirect_urls` are `127.0.0.1`, and `supabase config push` would overwrite the hosted project's auth settings with them, pointing every production magic link at a laptop. Production's URLs, SMTP and rate limits are dashboard settings. A warning now sits above `[auth]` in the file, because the command is one an ordinary reading of the CLI's help would suggest.
+
+- **Region is deploy configuration, not a default.** `vercel.json` pins the functions to `arn1` (Stockholm) because Vercel otherwise defaults to Washington, and every page render here is a round trip to Postgres — a US function in front of an EU database pays that latency several times per render. The Supabase project has to be put beside it; the two are one decision made in two dashboards, so the checklist makes it step 2.
+
+- **Preview deployments send their magic links to production.** `NEXT_PUBLIC_SITE_URL` is set per environment and a preview's own URL changes with every push, so a link requested from a preview arrives pointing at the production origin. The alternative is a wildcard in the auth redirect allow-list, which is a much worse trade: `lib/env.ts` reads the origin from configuration rather than from the `Host` header precisely so that a spoofed host cannot decide where a sign-in link sends somebody. Documented as a caveat rather than fixed.
+
+- **The checklist is a document, not a script.** Every step on it needs an account, a card, a registrar login or a key that is shown once. `docs/DEPLOY.md` is ordered so that each step's outputs are the next one's inputs, names dashboard *screens* rather than click paths, because the click paths move, and says plainly which two of its items are decisions rather than chores — the region, and whether email sign-ups stay open, since as deployed `signInWithOtp` creates an account for any address that asks for a link.
+
+**Cost accepted.** A deploy with a manual database step in it, a CI suite that does not yet open a browser, and a checklist that will drift from Supabase's dashboard the first time it is redesigned.

@@ -153,6 +153,11 @@ max_indexes = 5
 
 [auth]
 enabled = true
+# NOTE: this file configures the LOCAL stack. The URLs below are 127.0.0.1 on
+# purpose, and `supabase config push` would overwrite the hosted project's auth
+# settings with them — pointing every production magic link at a laptop.
+# Production's Site URL, redirect allow-list, SMTP and rate limits live in the
+# dashboard; see docs/DEPLOY.md section E.
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
 site_url = "http://127.0.0.1:3000"

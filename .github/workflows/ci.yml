@@ -1,0 +1,93 @@
+# The contract, run on a machine that has never seen this repository.
+#
+# Two jobs, because they need different things. `check` is hermetic: no Docker,
+# no database, no network beyond the registry, and it is what every commit has
+# to pass. `database` brings up the local Supabase stack and runs the
+# integration suite against it — docs/DECISIONS.md 010 split those two commands
+# for exactly this reason, and the split is what keeps the fast one honest.
+#
+# The end-to-end suite is deliberately not here yet. It needs browsers, a dev
+# server and the local mail server the owner's magic link arrives in, and a
+# first workflow that is green is worth more than a complete one that is
+# flaky. Add it once this has run clean for a while.
+name: CI
+
+on:
+    push:
+        branches: [master]
+    pull_request:
+
+# A second push to the same branch makes the first one's answer irrelevant.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    check:
+        name: pnpm check
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+
+            # Reads the version from `packageManager` in package.json, so the
+            # lockfile and the CLI that wrote it can never disagree.
+            - uses: pnpm/action-setup@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: .nvmrc
+                  cache: pnpm
+
+            - run: pnpm install --frozen-lockfile
+
+            # `next typegen` runs first inside `pnpm check`: PageProps and
+            # LayoutProps are generated into .next/types, which a fresh
+            # checkout does not have, and `tsc` fails on their absence rather
+            # than on anything a commit did.
+            - run: pnpm check
+
+    database:
+        name: pnpm test:db
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: .nvmrc
+                  cache: pnpm
+
+            - run: pnpm install --frozen-lockfile
+
+            # The CLI is a devDependency, so the stack CI starts is the one a
+            # developer starts. `start` applies every migration and then
+            # supabase/seed.sql, which the suite asserts the distributions of.
+            - name: Start Supabase
+              run: pnpm exec supabase start
+
+            # Into `.env.local` rather than the job environment: it is the file
+            # vitest.config.db.mts already loads, so CI and a laptop configure
+            # the suite the same way. These are the CLI's fixed local
+            # development keys — the same ones printed in Supabase's own
+            # documentation — and they reach nothing outside this runner.
+            - name: Write the local stack's credentials
+              run: >
+                  pnpm exec supabase status -o env
+                  --override-name api.url=NEXT_PUBLIC_SUPABASE_URL
+                  --override-name auth.publishable_key=NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+                  --override-name auth.secret_key=SUPABASE_SECRET_KEY
+                  > .env.local
+
+            # A migration that changes a table without regenerating
+            # lib/db/database.types.ts leaves the repository claiming a shape
+            # the database no longer has. Nothing else notices until something
+            # reads the wrong column, so the check belongs here, where a
+            # database already exists.
+            - name: Check the generated types match the migrations
+              run: |
+                  pnpm db:types
+                  git diff --exit-code -- lib/db/database.types.ts
+
+            - run: pnpm test:db

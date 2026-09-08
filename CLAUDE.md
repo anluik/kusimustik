@@ -8,7 +8,8 @@ Survey SaaS. Next.js App Router + TypeScript + Supabase.
 
 ```bash
 pnpm dev            # dev server
-pnpm check          # typecheck + lint + unit tests — MUST be green before you say you're done
+pnpm check          # typegen + typecheck + lint + unit tests + format — MUST be
+                    # green before you say you're done. Also what CI runs.
 pnpm test           # vitest
 pnpm test:db        # integration tests against local Supabase — RLS, triggers, repositories.
                     # Needs `supabase start`; not part of `pnpm check`. Run it after
@@ -80,6 +81,8 @@ supabase/seed.sql    one owner, two waves, 30 responses each — `pnpm db:reset`
 docs/PLAN.md         the phased build plan — read the current phase before starting
 docs/DECISIONS.md    settled architecture decisions — read before proposing a schema change
 docs/DESIGN.md       the visual spec — read before writing any UI
+docs/DEPLOY.md       the one-time production setup, as a checklist for a human
+.github/workflows/   CI: `pnpm check` and `pnpm test:db` on every PR and push
 ```
 
 ## Conventions
@@ -103,7 +106,7 @@ Read `AGENTS.md`. These are the version differences that have already caught us 
 - **`revalidateTag` takes two arguments** (`revalidateTag(tag, 'max')`); the one-arg form is a type error. For owner-facing mutations you almost always want `updateTag(tag)` instead — it gives read-your-writes, so the owner sees their edit immediately rather than a stale render. `refresh()` refreshes the client router from an action.
 - **Server Actions dispatch one at a time per client.** `Promise.all` over actions serialises them. Batch into a single action instead. This constrains builder autosave.
 - **Analytics beacons go to a Route Handler in `app/api/`**, not a Server Action — `sendBeacon` needs a plain endpoint, and actions queue behind each other.
-- **`params`, `searchParams`, `cookies()`, `headers()` and `draftMode()` are Promise-only.** Sync access was removed in 16. Type pages with the generated `PageProps<'/k/[slug]'>` / `LayoutProps` / `RouteContext` helpers. They only exist after a `next dev` or `next build` has written `.next/types`, so a bare `tsc --noEmit` on a clean tree reports `Cannot find name 'PageProps'` until you run one.
+- **`params`, `searchParams`, `cookies()`, `headers()` and `draftMode()` are Promise-only.** Sync access was removed in 16. Type pages with the generated `PageProps<'/k/[slug]'>` / `LayoutProps` / `RouteContext` helpers. They only exist once something has written `.next/types`, so a bare `tsc --noEmit` on a clean tree reports `Cannot find name 'PageProps'`. `pnpm check` runs `next typegen` first for exactly this reason — half a second, and it is what lets a fresh clone and CI run the contract at all.
 - `next lint` no longer exists and `next build` does not lint — which is exactly why `pnpm check` runs `eslint` itself.
 - Turbopack is the default for `dev` and `build`. No `--turbopack` flag.
 - `cacheComponents` (the old PPR / `dynamicIO` / `useCache`) is **off** and stays off until someone deliberately adopts it. Turning it on errors on uncached data outside `<Suspense>`; it is not a rename.

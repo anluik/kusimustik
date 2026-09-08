@@ -225,6 +225,10 @@ Some of this is not an agent's to do. Creating the Supabase and Vercel projects,
 
 **Done when:** the checklist is done, the workflow is green on `master`, and a survey answered from a phone on cellular data lands in the hosted database.
 
+**The agent's half is done.** `.github/workflows/ci.yml` (two jobs: `pnpm check`, and `pnpm test:db` against a stack the CLI brings up), `vercel.json`, a rewritten `.env.example`, the README's deployment section, and `docs/DEPLOY.md` — the numbered checklist, twenty-seven steps in seven sections. DECISIONS 027 records what was decided along the way, chiefly that `pnpm check` now runs `next typegen` first (without it the contract cannot pass on a fresh clone, which is every CI run), that migrations are pushed by hand rather than from CI, and that the deployed app holds no secret at all.
+
+**The owner's half is `docs/DEPLOY.md`,** and nothing below is reachable until it is worked through: the Supabase and Vercel projects, the domain and its DNS, the email provider and its keys. Two items on it are decisions rather than chores — which region (it has to match `vercel.json`'s `arn1`), and whether email sign-ups stay open, since as deployed anyone who finds `/login` can create an account.
+
 ---
 
 ## Phase 11 — Wave comparison
