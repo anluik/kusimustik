@@ -16,6 +16,12 @@ const COPIED_FOR_MS = 2000;
  *
  * The displayed link is deliberately host-relative-looking (`…/k/slug`) while
  * what lands on the clipboard is absolute, because the pasted link has to work.
+ *
+ * Below `sm` the field goes and the button stays. It is a 26ch box that cannot
+ * shrink, and inside a survey row it held the title column open wide enough to
+ * push the response count off a phone screen — the one figure DECISIONS 020
+ * says has to survive every width. Reading the slug matters less than sending
+ * it, and sending it is what the button does.
  */
 export function ShareLink({ slug }: { readonly slug: string }) {
     const t = useTranslations("Surveys.share");
@@ -54,7 +60,7 @@ export function ShareLink({ slug }: { readonly slug: string }) {
                 value={path}
                 aria-label={t("label")}
                 onFocus={event => event.currentTarget.select()}
-                className="h-6 w-fit max-w-[26ch] min-w-0 truncate rounded border-transparent bg-muted px-1.5 font-mono text-[11px] leading-none shadow-none"
+                className="hidden h-6 w-fit max-w-[26ch] min-w-0 truncate rounded border-transparent bg-muted px-1.5 font-mono text-[11px] leading-none shadow-none sm:block"
             />
             <Button
                 type="button"

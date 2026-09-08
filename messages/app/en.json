@@ -179,14 +179,15 @@
             "menuLabel": "Question type"
         },
         "canvas": {
-            "required": "required",
+            "required": "Required",
+            "optional": "Optional",
             "empty": {
                 "title": "Nothing to preview",
-                "body": "Add a question and you will see it here the way a respondent does."
+                "body": "Add a question and you will see what the respondent reads."
             }
         },
         "preview": {
-            "dropdownPlaceholder": "Choose one of {count}",
+            "dropdownPlaceholder": "Choose…",
             "npsMinLabel": "Not at all likely",
             "npsMaxLabel": "Extremely likely"
         },
@@ -435,6 +436,7 @@
             "callout": {
                 "title": "Steepest drop: {stage}",
                 "body": "You lost {value} percentage points of respondents here. Check whether the question is too long, too personal, or required without need.",
+                "bodyStage": "You lost {value} percentage points of your respondents here. This step is not a question — look at the survey's introduction, its length, and how the link reaches people.",
                 "action": "Open the question in the builder"
             },
             "medianTime": {

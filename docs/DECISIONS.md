@@ -522,3 +522,35 @@ Append-only. Newest at the bottom. If you deviate from one of these, add a new e
   Also deliberately not done: refusing to publish a question still called "Uus küsimus" with options "Valik 1" and "Valik 2". An empty title is already impossible — `QuestionSchema` requires one — and any check beyond that is a guess about the author's intent, which is not the app's to make.
 
 **Consequence.** `e2e/owner-surfaces.spec.ts` covers all three, and builds the emptied-survey fixture through the service key rather than clicking it into existence: publishing refuses an empty survey, so the only route to that state is removing the last question afterwards, and what is under test is the state rather than the route. It deletes what it creates, the same contract `runner.spec.ts` and `results-live.spec.ts` keep with the seed.
+
+---
+
+## 023 — The second review, part three: a preview that told the truth, a bar that fitted, and work the runner stopped throwing away
+
+**Status:** accepted
+
+**Context.** The remaining findings from the second review. Individually small; together they are the difference between a product that is right and one that is nearly right in eleven places.
+
+**Decisions.**
+
+- **The builder canvas is the runner's numbering, the runner's markers and the runner's words.** It called itself "how the respondent sees it" and then numbered statement blocks, which the runner does not — so a survey opening with one had every question here one ahead of the link, which is worse than useless to an author writing "answer question 3 first" into their intro. It also drew `KOHUSTUSLIK` in mono caps where the runner shows a red `*` and the word only to a screen reader, said nothing at all where the runner says "Valikuline", and put "Vali üks 4 valikust" in a dropdown the respondent meets as "Vali…". All four now come from the runner, and the pairs are in `SHARED_RESPONDENT_COPY` (020) so they cannot drift apart again.
+
+  The matrix still differs — a grid here, stacked there — and stays that way, because the grid is the shape the author is editing (016). What changed instead is the promise: the empty canvas now says the author will see *what the respondent reads*, which is true, rather than *how the respondent sees it*, which the matrix makes false.
+
+- **What gives way in the app bar is the title, and on a phone the meta goes first.** `AppBarFrame`'s actions are `shrink-0` and its title truncates: the actions are the bar's reason to exist and are already as narrow as they go, and without this the builder's four controls pushed the last one past the right edge and took the whole document into horizontal scroll — the thing DESIGN forbids and the runner is tested for at 320px. The meta is `hidden sm:*` unless a caller asks otherwise, which only the builder does: a survey count the page repeats below it is not worth a truncated title, and a save indicator carrying the retry for an edit that has not landed is.
+
+- **`ShareLink` drops its field and keeps its button below `sm`.** It is a 26ch box that cannot shrink, and inside a survey row it held the first column open wide enough to push the response count off a phone — the one figure 020 arranged that layout around. Reading the slug matters less than sending it. In the builder's bar the whole control goes below `sm` instead: the bar already carries four things there, and the survey list a tap away keeps its copy button at every width.
+
+- **`whitespace-nowrap` on a table cell overrides every `min-w-0` inside it.** shadcn's `TableCell` sets it, so the survey list's first column reported its entire contents as its minimum and claimed 273px of a 358px row however many `truncate`s were nested in there. The first column opts out; everything in it truncates on its own account.
+
+- **A respondent who comes back to a link they have answered is told so, and can answer anyway.** The flag was already being written — `lib/runner/analytics.ts` keeps one so an abandon beacon cannot follow a submit — but nothing read it, so a habitual refresh returned a blank form and a second response with it. It is deliberately *not* that flag that gates this: the analytics one is optimistic, set when a submit is attempted, and rendering "thank you" off it would greet a respondent whose submission failed with a page that says their answers are saved. `lib/runner/visit.ts` writes its own on success alone, and the screen is skipped once this page load has tried to submit, so a failure shows the error and the answers rather than a thank-you. The way through — "Vasta uuesti" — is there because a shared phone in a lobby is exactly where this link gets opened twice on purpose.
+
+- **A survey closing mid-answer no longer wipes the screen.** It used to replace the page with a notice, discarding everything the respondent had typed at the one moment they might want to keep it, and leaving `RunnerErrors.closed` and `RunnerErrors.notFound` in three catalogues with nothing able to render them. The form stays, the inline alert says what happened, and the action goes quiet — retrying cannot work, and a button that offers it would be lying.
+
+- **An empty draft is no draft.** Writing one meant every survey a respondent so much as opened left a record behind, which on a shared computer is a list of what its user has been asked. `writeDraft` removes the key instead, which also cleans up after the last answer is cleared. `pruneOtherDraftVersions` removes the keys the version in the storage key (Phase 6) otherwise accumulates one of per republish.
+
+- **Small ones, for the record.** Stat-card hints wrap instead of truncating — two cards to a row on a phone meant every explanation of what a figure *means* ended in an ellipsis. The funnel's steepest-drop advice has a second body for a stage that is not a question: telling an owner whose worst drop is "Vastamist alustatud" to check whether the question is too long is advice about a question that does not exist, and `stage.questionId` already distinguished the two for the button underneath. Russian writes `71,4 %` in the funnel's share, as `Intl` already had it doing on the completion card.
+
+**Not done, deliberately.** The responses table still holds to `PAGE_WIDTH` on a wide monitor and scrolls inside its own container. That is what DESIGN asks of wide content, and 020 exempted the builder because it is a three-panel workspace, not because tables are cramped. The runner progress bar's `aria-valuemax="0"` needed no fix: 022 stopped a survey with no questions rendering a form at all.
+
+**Consequence.** `e2e/runner-recovery.spec.ts` covers the two runner paths. Both it and `results-live.spec.ts` now build a survey of their own through the service key rather than working on the seed: the two Playwright projects run in parallel over one fixture, and the moment two specs both *changed* it — one closing it, one counting its responses exactly — the suite started failing intermittently in ways neither spec was wrong about. `createFixtureSurvey` in `e2e/support.ts` is that pattern, with the project name in the slug so the two runs cannot collide.

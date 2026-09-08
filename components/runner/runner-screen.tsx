@@ -15,9 +15,11 @@ import { useRunnerAnalytics } from "@/lib/runner/analytics";
 import {
     clearDraft,
     draftStorageKey,
+    pruneOtherDraftVersions,
     readDraft,
     writeDraft
 } from "@/lib/runner/draft";
+import { hasAnswered, markAnswered } from "@/lib/runner/visit";
 import type { RunnerActionError } from "@/lib/runner/errors";
 import { submitResponseAction } from "@/lib/runner/actions";
 import type { AnswerDraft, AnswerProblem } from "@/lib/runner/validation";
@@ -81,6 +83,7 @@ export function RunnerScreen({
     const [touched, setTouched] = useState<ReadonlySet<QuestionId>>(new Set());
     const [attempted, setAttempted] = useState(false);
     const [status, setStatus] = useState<Status>({ kind: "editing" });
+    const [answeringAgain, setAnsweringAgain] = useState(false);
 
     const stored = useMemo(
         () => (mounted ? readDraft(survey.elements, storageKey) : {}),
@@ -98,6 +101,11 @@ export function RunnerScreen({
         if (!mounted || status.kind === "sent") return;
         writeDraft(storageKey, draft);
     }, [mounted, draft, storageKey, status.kind]);
+
+    useEffect(() => {
+        if (!mounted) return;
+        pruneOtherDraftVersions(survey.id, version);
+    }, [mounted, survey.id, version]);
 
     const questions = useMemo(
         () => survey.elements.filter(isAnswerableElement),
@@ -166,6 +174,7 @@ export function RunnerScreen({
 
         if (result.ok) {
             clearDraft(storageKey);
+            markAnswered(survey.id);
             setStatus({ kind: "sent" });
             return;
         }
@@ -175,17 +184,51 @@ export function RunnerScreen({
     if (status.kind === "sent") {
         return <RunnerNotice kind="thanks" surveyTitle={survey.title} />;
     }
-    // Closed or deleted between the render and the submit. The answers are
-    // gone either way, and there is nothing the respondent can retry.
-    if (status.kind === "failed" && status.error === "closed") {
-        return <RunnerNotice kind="closed" surveyTitle={survey.title} />;
-    }
-    if (status.kind === "failed" && status.error === "notFound") {
-        return <RunnerNotice kind="notFound" />;
+
+    /**
+     * Answered already, in this browser, and come back to the link.
+     *
+     * A habitual refresh used to return a blank form and take a second
+     * response with it. Four conditions, each carrying its weight: after
+     * hydration, because the server has no session storage; not while the
+     * respondent is answering again on purpose, because a shared phone in a
+     * lobby is exactly where this link is opened twice; not once *this* page
+     * load has tried to submit, or a submission that failed would replace the
+     * error and the answers with a thank-you; and only on `hasAnswered`, which
+     * unlike the analytics flag beside it is written on success alone.
+     */
+    if (mounted && !answeringAgain && !attempted && hasAnswered(survey.id)) {
+        return (
+            <RunnerNotice
+                kind="thanks"
+                surveyTitle={survey.title}
+                action={
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setAnsweringAgain(true)}
+                        className="min-h-11 rounded-survey text-[14px]"
+                    >
+                        {t("answerAgain")}
+                    </Button>
+                }
+            />
+        );
     }
 
     const busy = status.kind === "submitting";
     const blocked = attempted && outstanding.length > 0;
+    /**
+     * Closed, or deleted, between the render and the submit. Retrying cannot
+     * work, so the action goes quiet — but the page stays. It used to be
+     * replaced wholesale by a notice, which threw away everything the
+     * respondent had typed at the one moment they might want to keep it, and
+     * left `RunnerErrors.closed` and `RunnerErrors.notFound` in all three
+     * catalogues with nothing able to render them.
+     */
+    const terminal =
+        status.kind === "failed" &&
+        (status.error === "closed" || status.error === "notFound");
 
     return (
         <div className="flex min-h-svh flex-col">
@@ -241,7 +284,7 @@ export function RunnerScreen({
                     <Button
                         type="button"
                         onClick={() => void submit()}
-                        disabled={busy}
+                        disabled={busy || terminal}
                         className={cn(
                             "min-h-12 w-full rounded-survey text-[15px] font-medium",
                             "bg-survey-primary text-survey-primary-foreground hover:bg-survey-primary/90"
@@ -249,7 +292,7 @@ export function RunnerScreen({
                     >
                         {busy
                             ? t("submitting")
-                            : status.kind === "failed"
+                            : status.kind === "failed" && !terminal
                               ? errors("retry")
                               : t("submit")}
                     </Button>

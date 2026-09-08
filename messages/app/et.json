@@ -179,14 +179,15 @@
             "menuLabel": "Küsimuse tüüp"
         },
         "canvas": {
-            "required": "kohustuslik",
+            "required": "Kohustuslik",
+            "optional": "Valikuline",
             "empty": {
                 "title": "Eelvaade on tühi",
-                "body": "Lisa küsimus ja näed siin, kuidas vastaja seda näeb."
+                "body": "Lisa küsimus ja näed siin, mida vastaja loeb."
             }
         },
         "preview": {
-            "dropdownPlaceholder": "Vali üks {count} valikust",
+            "dropdownPlaceholder": "Vali…",
             "npsMinLabel": "Ei soovitaks üldse",
             "npsMaxLabel": "Soovitaksin kindlasti"
         },
@@ -435,6 +436,7 @@
             "callout": {
                 "title": "Kõige järsem langus: {stage}",
                 "body": "Siin kaotasid {value} protsendipunkti vastajatest. Vaata, kas küsimus on liiga pikk, liiga isiklik või asjatult kohustuslik.",
+                "bodyStage": "Siin kaotasid {value} protsendipunkti vastajatest. See samm ei ole küsimus — vaata üle küsitluse tutvustus, selle pikkus ja see, kuidas link vastajani jõuab.",
                 "action": "Ava küsimus koostajas"
             },
             "medianTime": {

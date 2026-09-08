@@ -27,9 +27,10 @@ import { publishSurveyAction } from "@/lib/surveys/actions";
  *   explain itself and the app bar does not; here the empty canvas already
  *   says that the first question comes next, and a dead button beside the
  *   primary action reads as a fault.
- * - **Published** — the link, ready to copy. Hidden below `sm`, where the bar
- *   has no room for a 26ch field and the survey list a tap away has the same
- *   link in a row built to hold it.
+ * - **Published** — the link, ready to copy, and only from `sm` up. The bar
+ *   already carries four controls on a phone and the title was truncating to
+ *   one letter to fit them; the survey list a tap away keeps its own copy
+ *   button at every width, so nothing is lost by leaving this one out.
  *
  * `answerableCount` is the builder's own live count, not the server's, so a
  * question added a second ago is enough for the button to appear without a

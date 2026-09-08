@@ -221,11 +221,21 @@ function ProblemCallout({
                 {t("callout.title", { stage: name })}
             </p>
             <p className="max-w-prose text-xs leading-[1.35] text-muted-foreground">
-                {t("callout.body", {
-                    value: format.number(stage.dropPp ?? 0, {
-                        maximumFractionDigits: 1
-                    })
-                })}
+                {/* `questionId` is what separates a question from the way
+                    into one. Telling an owner whose steepest drop is
+                    "Vastamist alustatud" to check whether the question is too
+                    long or too personal is advice about a question that does
+                    not exist. */}
+                {t(
+                    stage.questionId === null
+                        ? "callout.bodyStage"
+                        : "callout.body",
+                    {
+                        value: format.number(stage.dropPp ?? 0, {
+                            maximumFractionDigits: 1
+                        })
+                    }
+                )}
             </p>
             {stage.questionId !== null && (
                 <div>

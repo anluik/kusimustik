@@ -6,7 +6,8 @@
         "optional": "Optional",
         "anonymous": "Responses are anonymous.",
         "submit": "Submit answers",
-        "submitting": "Sending…"
+        "submitting": "Sending…",
+        "answerAgain": "Answer again"
     },
     "RunnerQuestion": {
         "otherPlaceholder": "Write your answer",

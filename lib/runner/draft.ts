@@ -105,9 +105,22 @@ export function readDraft(
     }
 }
 
+/**
+ * Stores the draft, or removes it when there is nothing in it.
+ *
+ * A draft with no answers says exactly what no draft says, and writing one
+ * meant every survey a respondent so much as opened left a record behind — on
+ * a shared computer, a list of what its user had been asked. Removing instead
+ * of writing also cleans up after the last answer is cleared.
+ */
 export function writeDraft(key: string, draft: AnswerDraft): void {
     try {
-        localStorage.setItem(key, serialiseDraft(draft, Date.now()));
+        const serialised = serialiseDraft(draft, Date.now());
+        if (!hasAnswers(serialised)) {
+            localStorage.removeItem(key);
+            return;
+        }
+        localStorage.setItem(key, serialised);
     } catch {
         // Quota, or a browser that refuses storage. The answers are still in
         // memory; only the refresh-survives-it promise is lost.
@@ -120,4 +133,35 @@ export function clearDraft(key: string): void {
     } catch {
         // As above — nothing a respondent can do about it, and nothing broken.
     }
+}
+
+/**
+ * Drops this survey's drafts from every version but the one being answered.
+ *
+ * The key carries the version so that a republished survey starts clean
+ * (`draftStorageKey`), which means a respondent who meets three versions of
+ * the same survey leaves three keys behind and only ever reads one. Nothing
+ * removed them, so they accumulated for as long as the browser kept storage.
+ */
+export function pruneOtherDraftVersions(
+    surveyId: SurveyId,
+    version: number
+): void {
+    try {
+        const prefix = `kusimustik:draft:${surveyId}:`;
+        const keep = draftStorageKey(surveyId, version);
+        const stale = Object.keys(localStorage).filter(
+            key => key.startsWith(prefix) && key !== keep
+        );
+        for (const key of stale) localStorage.removeItem(key);
+    } catch {
+        // A browser that refuses storage has nothing to prune.
+    }
+}
+
+/** Whether a serialised draft holds an answer, without re-parsing it. */
+function hasAnswers(serialised: string): boolean {
+    const parsed: unknown = JSON.parse(serialised);
+    const stored = StoredDraftSchema.safeParse(parsed);
+    return stored.success && Object.keys(stored.data.answers).length > 0;
 }

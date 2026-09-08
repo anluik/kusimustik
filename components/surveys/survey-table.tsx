@@ -46,9 +46,22 @@ const WIDE_ONLY = "hidden sm:table-cell";
 
 const MONO_META = "font-mono text-[11px] leading-none text-muted-foreground";
 
+/**
+ * The first column, which absorbs whatever width the others do not need.
+ *
+ * `TableCell` is `whitespace-nowrap`, which makes a cell's minimum its entire
+ * contents and overrides every `min-w-0` inside it — so on a phone this column
+ * claimed 273px of a 358px row and pushed the response count off the screen.
+ * Everything in here truncates on its own, so the cell does not need the rule.
+ */
+const TITLE_CELL = "whitespace-normal";
+
 /** The title is the way into the builder; DESIGN §5 gives the row no other. */
 const TITLE_LINK =
-    "truncate rounded-xs hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none";
+    // `min-w-0` alongside `truncate`: a nowrap flex child reports its whole
+    // text as its minimum unless told otherwise, and a long survey title was
+    // then setting the width of the first column on every screen.
+    "min-w-0 truncate rounded-xs hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none";
 
 /** DESIGN §2: the Label level — Mono 10px, uppercase, wide tracking. */
 const COLUMN_LABEL =
@@ -68,9 +81,9 @@ function MetaLine({ parts }: { readonly parts: readonly ReactNode[] }) {
             {present.map((part, index) => (
                 // The parts are a fixed, ordered set per row kind, so the index
                 // is a stable identity here rather than a placeholder for one.
-                <span key={index} className="flex items-center gap-1.5">
+                <span key={index} className="flex min-w-0 items-center gap-1.5">
                     {index > 0 && <Dot />}
-                    <span className="truncate">{part}</span>
+                    <span className="min-w-0 truncate">{part}</span>
                 </span>
             ))}
         </span>
@@ -172,7 +185,16 @@ function RowMetaOnNarrow({
     readonly className?: string;
 }) {
     return (
-        <div className={cn("flex items-center gap-2 sm:hidden", className)}>
+        <div
+            className={cn(
+                // `min-w-0`: without it this line is the widest thing in the
+                // cell and holds the whole column open, which on a phone put
+                // the response count past the right edge — the one figure this
+                // layout is arranged around.
+                "flex min-w-0 items-center gap-2 sm:hidden",
+                className
+            )}
+        >
             <SurveyStatusBadge status={status} />
             <span className={cn(MONO_META, "truncate")}>
                 <UpdatedAt iso={iso} now={now} />
@@ -190,7 +212,7 @@ function StandaloneRow({
 }) {
     return (
         <TableRow className="h-[46px] hover:bg-muted">
-            <TableCell className="px-3 py-1.5">
+            <TableCell className={cn("px-3 py-1.5", TITLE_CELL)}>
                 <div className="flex min-w-0 flex-col gap-1">
                     <div className="flex min-w-0 items-center gap-2">
                         <Link
@@ -246,7 +268,7 @@ function WaveRow({
             {/* DESIGN §3: a nested wave row is 8px of padding plus a 12px
                 indent carried by a border-l rule, so the nesting is structural
                 rather than a guessed margin. */}
-            <TableCell className="py-1.5 pr-2 pl-3">
+            <TableCell className={cn("py-1.5 pr-2 pl-3", TITLE_CELL)}>
                 <div className="ml-3 flex min-w-0 flex-col gap-1 border-l pl-3">
                     <div className="flex min-w-0 items-center gap-2">
                         <Link
@@ -323,7 +345,7 @@ function GroupRow({
 
     return (
         <TableRow className="h-[46px] bg-muted/40 hover:bg-muted">
-            <TableCell className="py-1.5 pr-3 pl-1">
+            <TableCell className={cn("py-1.5 pr-3 pl-1", TITLE_CELL)}>
                 <div className="flex min-w-0 items-start gap-1">
                     <button
                         type="button"

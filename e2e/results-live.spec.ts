@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-import { OWNER_STATE, SEED_SURVEY_ID, serviceDb } from "./support";
+import {
+    OWNER_STATE,
+    createFixtureSurvey,
+    deleteFixtureSurvey,
+    oneTextQuestion,
+    serviceDb
+} from "./support";
 
 /**
  * The live response count on the results page.
@@ -16,37 +22,37 @@ import { OWNER_STATE, SEED_SURVEY_ID, serviceDb } from "./support";
  * The insert goes in through the secret key rather than through the runner,
  * because the runner's own submission is already covered and this test is
  * about what the *owner's* page does when a row lands.
+ *
+ * On a survey of its own, because the assertion is an exact figure and the
+ * seed is shared: `runner.spec.ts` submits to it from two projects at once,
+ * and a count that jumps from 30 to 32 never shows the 31 this waits for.
  */
 
 test.use({ storageState: OWNER_STATE });
 
-/**
- * Desktop only. The two projects run in parallel against one seeded survey,
- * and this spec asserts the figure reaches exactly one more than it read — two
- * workers inserting at once could take it from 30 to 32 without ever showing
- * 31. The results page is not a phone-specific surface, so the second run
- * would buy nothing to pay for that with.
- */
-test.skip(
-    ({ isMobile }) => isMobile === true,
-    "one project, so the seeded count moves by exactly one"
-);
-
-/** The response this run added, removed again in `afterEach`. */
-let added: string | null = null;
+/** The survey this run built, deleted again with its responses. */
+let surveyId: string | null = null;
 
 test.afterEach(async () => {
-    // `lib/db/seed.db.test.ts` asserts on the seed's exact distributions, so a
-    // run of this spec has to leave it as it found it — the same contract
-    // `runner.spec.ts` keeps.
-    if (added === null) return;
-    await serviceDb().from("responses").delete().eq("id", added);
-    added = null;
+    if (surveyId === null) return;
+    await deleteFixtureSurvey(surveyId);
+    surveyId = null;
 });
 
 test("the response count moves when a submission lands, without a reload", async ({
     page
-}) => {
+}, testInfo) => {
+    surveyId = await createFixtureSurvey({
+        title: "Elav loendur",
+        slug: `elav-loendur-${testInfo.project.name}`,
+        elements: oneTextQuestion()
+    });
+    // One response already in, so the figure has somewhere to count from and
+    // the assertion is about movement rather than about the first row.
+    await serviceDb()
+        .from("responses")
+        .insert({ survey_id: surveyId, survey_version: 1, locale: "et" });
+
     /**
      * The insert has to come *after* the channel is listening, or a pass would
      * mean nothing — and waiting a fixed second or two is a race against a
@@ -66,7 +72,7 @@ test("the response count moves when a submission lands, without a reload", async
         });
     });
 
-    await page.goto(`/surveys/${SEED_SURVEY_ID}/results`);
+    await page.goto(`/surveys/${surveyId}/results`);
 
     // `StatCard` renders label, value and hint as siblings, so the figure is
     // the paragraph that follows the label the response count carries.
@@ -79,17 +85,12 @@ test("the response count moves when a submission lands, without a reload", async
 
     await subscribed;
 
-    const { data, error } = await serviceDb()
-        .from("responses")
-        .insert({
-            survey_id: SEED_SURVEY_ID,
-            survey_version: 1,
-            locale: "et"
-        })
-        .select("id")
-        .single();
+    const { error } = await serviceDb().from("responses").insert({
+        survey_id: surveyId,
+        survey_version: 1,
+        locale: "et"
+    });
     expect(error).toBeNull();
-    added = data?.id ?? null;
 
     // No reload, no navigation: the number has to arrive over the socket.
     await expect(figure).toHaveText(String(before + 1), { timeout: 15_000 });

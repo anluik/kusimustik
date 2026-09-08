@@ -36,7 +36,11 @@ export function StatCard({
                 {badge}
             </div>
             <p className={METRIC}>{value}</p>
-            <p className={cn(META, "truncate text-muted-foreground")}>{hint}</p>
+            {/* Wraps rather than truncates: on a phone the cards are two to a
+                row and every hint ended in an ellipsis, which turned the line
+                that says what the figure *means* into the one thing the owner
+                could not read. */}
+            <p className={cn(META, "text-muted-foreground")}>{hint}</p>
         </Card>
     );
 }

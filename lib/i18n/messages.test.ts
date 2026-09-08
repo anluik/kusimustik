@@ -77,7 +77,13 @@ describe("catalogue split", () => {
      */
     const SHARED_RESPONDENT_COPY = [
         ["Builder.preview.npsMinLabel", "RunnerQuestion.npsMinLabel"],
-        ["Builder.preview.npsMaxLabel", "RunnerQuestion.npsMaxLabel"]
+        ["Builder.preview.npsMaxLabel", "RunnerQuestion.npsMaxLabel"],
+        [
+            "Builder.preview.dropdownPlaceholder",
+            "RunnerQuestion.dropdownPlaceholder"
+        ],
+        ["Builder.canvas.required", "RunnerShell.required"],
+        ["Builder.canvas.optional", "RunnerShell.optional"]
     ] as const;
 
     it.each(UI_LOCALES)(

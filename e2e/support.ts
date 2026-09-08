@@ -101,3 +101,60 @@ export async function signInAsOwner(page: Page): Promise<void> {
     await page.goto(link);
     await page.waitForURL(/\/surveys/, { timeout: 20_000 });
 }
+
+/** The seeded owner, from supabase/seed.sql. */
+export const OWNER_ID = "00000000-0000-4000-8000-000000000001";
+
+/**
+ * A published survey of this run's own, deleted again when the spec is done.
+ *
+ * The seed is a shared, asserted fixture: two Playwright projects run in
+ * parallel over it and `lib/db/*.db.test.ts` pins its distributions. A spec
+ * that needs to *change* a survey — close it, count its responses exactly —
+ * cannot do that to the seed without racing the other project, which is how a
+ * green suite started failing intermittently the moment two specs did.
+ *
+ * `slug` has to be unique per project, so pass the project name in.
+ */
+export async function createFixtureSurvey(fixture: {
+    readonly title: string;
+    readonly slug: string;
+    readonly elements: readonly unknown[];
+}): Promise<string> {
+    const { data, error } = await serviceDb()
+        .from("surveys")
+        .insert({
+            owner_id: OWNER_ID,
+            title: fixture.title,
+            slug: fixture.slug,
+            status: "published",
+            locale: "et",
+            wave_group_id: crypto.randomUUID(),
+            elements: fixture.elements,
+            published_at: new Date().toISOString()
+        })
+        .select("id")
+        .single();
+
+    if (error !== null) throw new Error(`fixture survey: ${error.message}`);
+    return data.id as string;
+}
+
+export async function deleteFixtureSurvey(id: string): Promise<void> {
+    await serviceDb().from("surveys").delete().eq("id", id);
+}
+
+/** One optional written question, which is enough to render a form. */
+export function oneTextQuestion(): readonly unknown[] {
+    return [
+        {
+            id: crypto.randomUUID(),
+            key: "city",
+            type: "short_text",
+            title: "Linn",
+            required: false,
+            maxLength: 100,
+            isAnswerable: true
+        }
+    ];
+}

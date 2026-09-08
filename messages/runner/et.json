@@ -6,7 +6,8 @@
         "optional": "Valikuline",
         "anonymous": "Vastused on anonüümsed.",
         "submit": "Saada vastused",
-        "submitting": "Saadan…"
+        "submitting": "Saadan…",
+        "answerAgain": "Vasta uuesti"
     },
     "RunnerQuestion": {
         "otherPlaceholder": "Kirjuta oma vastus",

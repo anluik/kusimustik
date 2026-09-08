@@ -6,7 +6,8 @@
         "optional": "Необязательный",
         "anonymous": "Ответы анонимны.",
         "submit": "Отправить ответы",
-        "submitting": "Отправляем…"
+        "submitting": "Отправляем…",
+        "answerAgain": "Ответить ещё раз"
     },
     "RunnerQuestion": {
         "otherPlaceholder": "Напишите свой ответ",

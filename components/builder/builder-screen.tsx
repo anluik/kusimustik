@@ -140,6 +140,7 @@ export function BuilderScreen({
         <CollectedAnswersProvider count={responseCount}>
             <AppBar
                 title={settings.title}
+                metaOnNarrow
                 meta={
                     <SaveIndicator
                         status={builder.status}
@@ -172,9 +173,17 @@ export function BuilderScreen({
                                 size="sm"
                                 className="h-[30px] rounded text-xs"
                             >
-                                <Link href={ROUTES.results(surveyId)}>
+                                <Link
+                                    href={ROUTES.results(surveyId)}
+                                    // Icon-only on a phone, where the bar has
+                                    // four controls and no room for a fourth
+                                    // label. The accessible name stays.
+                                    aria-label={tResults("title")}
+                                >
                                     <BarChart3 aria-hidden />
-                                    {tResults("title")}
+                                    <span className="hidden sm:inline">
+                                        {tResults("title")}
+                                    </span>
                                 </Link>
                             </Button>
                         )}

@@ -180,7 +180,7 @@ export function ElementPreview({
             );
 
         case "dropdown":
-            return <DropdownPreview element={element} />;
+            return <DropdownPreview />;
 
         case "short_text":
             return <WritingShape />;
@@ -211,17 +211,19 @@ export function ElementPreview({
     }
 }
 
-function DropdownPreview({
-    element
-}: {
-    readonly element: { readonly options: readonly ChoiceOption[] };
-}) {
+/**
+ * The closed dropdown, which is all a respondent sees before they open one.
+ * It takes no options: the placeholder is the runner's own, so the count that
+ * used to be in it ("Vali üks 4 valikust") both differed from the link and was
+ * already on screen, in the option list this panel sits beside.
+ */
+function DropdownPreview() {
     const t = useTranslations("Builder.preview");
 
     return (
         <div className="flex min-h-11 items-center gap-2.5 rounded-md border px-3 py-2">
             <span className="min-w-0 flex-1 truncate text-[13px] leading-[1.4] text-muted-foreground">
-                {t("dropdownPlaceholder", { count: element.options.length })}
+                {t("dropdownPlaceholder")}
             </span>
             <ChevronsUpDown
                 aria-hidden

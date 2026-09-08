@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import { ElementPreview } from "@/components/builder/element-preview";
 import { useElementTypeName } from "@/components/builder/element-type";
@@ -9,12 +9,26 @@ import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { QuestionId } from "@/domain/ids";
-import type { SurveyElement } from "@/domain/question";
+import { isAnswerableElement, type SurveyElement } from "@/domain/question";
 import { cn } from "@/lib/utils";
 
 /**
  * The centre panel: the survey as the respondent will meet it, and the second
  * way to select an element.
+ *
+ * "As the respondent will meet it" is a promise, and it has to be kept in the
+ * details the author would otherwise take on trust. A question's number is the
+ * runner's number — statements are not counted there, so a survey that opens
+ * with one had every question here one ahead of the link, which is worse than
+ * useless to an author writing "answer question 3 first" into their intro. The
+ * required and optional markers are the runner's markers, and the words come
+ * from the pairs `lib/i18n/messages.test.ts` pins, so the two catalogues
+ * cannot drift apart again (docs/DECISIONS.md 020).
+ *
+ * What it does *not* mirror is the matrix, which the runner stacks and this
+ * draws as a grid — deliberately, because the grid is the shape the author is
+ * editing (docs/DECISIONS.md 016). The empty state says "roughly" for that
+ * reason.
  *
  * The card is a `div` with a transparent button laid over it rather than a
  * `button` wrapping everything, because the preview inside will grow controls
@@ -30,7 +44,8 @@ function CanvasCard({
     onSelect
 }: {
     readonly element: SurveyElement;
-    readonly position: number;
+    /** The runner's own number, or null for a statement, which has none. */
+    readonly position: number | null;
     readonly selected: boolean;
     readonly onSelect: () => void;
 }) {
@@ -52,23 +67,37 @@ function CanvasCard({
                 )}
 
                 <div className="flex flex-col gap-1 px-3">
-                    <div className="flex items-baseline gap-2">
-                        <span className="shrink-0 font-mono text-[10px] leading-none text-muted-foreground tabular-nums">
-                            {position}
-                        </span>
-                        <h3 className="text-[15px] leading-[1.4] font-medium">
-                            {element.title}
-                        </h3>
-                    </div>
+                    <h3 className="text-[15px] leading-[1.4] font-medium">
+                        {position !== null && (
+                            <span className="mr-1.5 font-mono text-muted-foreground tabular-nums">
+                                {position}.
+                            </span>
+                        )}
+                        {element.title}
+                        {element.isAnswerable &&
+                            (element.required ? (
+                                <>
+                                    <span
+                                        aria-hidden
+                                        className="ml-1 text-destructive"
+                                    >
+                                        *
+                                    </span>
+                                    <span className="sr-only">
+                                        {" "}
+                                        {t("required")}
+                                    </span>
+                                </>
+                            ) : (
+                                <span className="ml-1.5 text-[13px] font-normal text-muted-foreground">
+                                    {t("optional")}
+                                </span>
+                            ))}
+                    </h3>
                     {element.description !== undefined && (
                         <p className="text-xs leading-[1.35] text-muted-foreground">
                             {element.description}
                         </p>
-                    )}
-                    {element.isAnswerable && element.required && (
-                        <span className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase">
-                            {t("required")}
-                        </span>
                     )}
                 </div>
 
@@ -102,6 +131,18 @@ export function ElementCanvas({
     const t = useTranslations("Builder.canvas");
     const listRef = useRef<HTMLDivElement>(null);
 
+    // The runner numbers what can be answered and nothing else, so this does
+    // too — see the note above.
+    const positions = useMemo(
+        () =>
+            new Map(
+                elements
+                    .filter(isAnswerableElement)
+                    .map((element, index) => [element.id, index + 1])
+            ),
+        [elements]
+    );
+
     // Selecting happens in the element list as often as here, and a canvas that
     // does not move when it does looks like nothing happened. `nearest` leaves
     // a card that is already on screen exactly where it is.
@@ -132,11 +173,11 @@ export function ElementCanvas({
                 </div>
             ) : (
                 <ul className="mx-auto flex w-full max-w-[640px] flex-col gap-3 p-4">
-                    {elements.map((element, index) => (
+                    {elements.map(element => (
                         <CanvasCard
                             key={element.id}
                             element={element}
-                            position={index + 1}
+                            position={positions.get(element.id) ?? null}
                             selected={element.id === selectedId}
                             onSelect={() => onSelect(element.id)}
                         />
