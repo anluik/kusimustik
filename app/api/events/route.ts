@@ -1,5 +1,6 @@
 import { insertSurveyEvents } from "@/lib/db/events";
 import { EventBatchSchema, stampEvents } from "@/lib/runner/events";
+import { allowsWrite, clientIdentifier } from "@/lib/runner/throttle";
 import { createPublicDb } from "@/lib/supabase/public";
 
 /**
@@ -37,11 +38,22 @@ export async function POST(request: Request): Promise<Response> {
     const batch = EventBatchSchema.safeParse(body);
     if (!batch.success) return new Response(null, { status: 400 });
 
+    const db = createPublicDb();
+
+    // Rate limited after parsing, because the survey is what the count is
+    // scoped to (docs/DECISIONS.md 026) and the batch is where it is named.
+    // A refusal is a plain 429 and nothing else: `sendBeacon` never looks at
+    // the response, the respondent is not told, and no dropped event has ever
+    // cost anyone an answer.
+    const allowed = await allowsWrite(db, {
+        bucket: "events",
+        scope: batch.data.surveyId,
+        client: clientIdentifier(request.headers)
+    });
+    if (!allowed) return new Response(null, { status: 429 });
+
     try {
-        await insertSurveyEvents(
-            createPublicDb(),
-            stampEvents(batch.data, receivedAt)
-        );
+        await insertSurveyEvents(db, stampEvents(batch.data, receivedAt));
     } catch (error) {
         // Best-effort by design: a draft survey, a closed one, or a database
         // that is simply busy. The respondent is not told and is not blocked.

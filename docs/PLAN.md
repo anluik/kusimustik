@@ -207,6 +207,10 @@ The runner is anonymous-insert by design and nothing throttles it. `submitRespon
 
 **Done when:** a `.db.test.ts` proves the limiter rejects over-threshold writes and that a different survey and a different IP hash are unaffected, an e2e spec proves an ordinary respondent is never blocked, and `pnpm check` and `pnpm test:db` are green.
 
+**Done.** `supabase/migrations/20260908130000_rate_limit.sql`, `lib/db/rate-limit.ts`, `lib/runner/honeypot.ts` and `lib/runner/throttle.ts`, with `e2e/runner-hardening.spec.ts` and `lib/db/rate-limit.db.test.ts`. DECISIONS 026 records what was decided along the way — chiefly that the tables carry RLS with *no* policy and no grant rather than a policy, since the only legitimate reader is the definer function; that the bucket and the survey go into the digest rather than staying as columns; and that the server-side duplicate guard named in the paragraph above was deliberately not built, because identifying a repeat respondent is the one thing the hashing exists to make impossible.
+
+Two things this phase left for Phase 10: nothing schedules `prune_rate_limits()` — the sweep runs probabilistically from the calls themselves, which is enough while rows live an hour but is worth a cron once there is a hosted project to put one in — and the thresholds are a guess until real traffic argues with them.
+
 ---
 
 ## Phase 10 — Production deploy and CI

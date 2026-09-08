@@ -19,6 +19,18 @@ export const RUNNER_ACTION_ERRORS = [
      * that did not come from the form.
      */
     "invalidAnswers",
+    /**
+     * The rate limiter refused it (docs/DECISIONS.md 026). A respondent behind
+     * a busy shared address can see this honestly; waiting is the way through.
+     */
+    "rateLimited",
+    /**
+     * The honeypot was filled or the submission followed the form too closely.
+     * A bot will not read the copy for this; the rare human who trips it — a
+     * password manager filling a hidden field — retries and gets through,
+     * because the runner clears the honeypot when it sees this code.
+     */
+    "blocked",
     "failed"
 ] as const;
 

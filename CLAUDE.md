@@ -58,6 +58,9 @@ lib/supabase/        request-scoped clients (server, proxy)
 lib/auth/            session helpers + sign-in/sign-out actions
 lib/actions/         the Server Action result envelope + wrapper
 lib/i18n/            next-intl setup, locale cookie, runner translator
+lib/runner/          the respondent's server side — the submit action and its error
+                     codes, draft storage, analytics batching, and the Phase 9
+                     honeypot and rate-limit throttle
 lib/surveys/         survey actions, error codes, and the pure list shaping
 lib/builder/         the builder's pure parts — document reducer, element factory,
                      key policy, optional-field patches

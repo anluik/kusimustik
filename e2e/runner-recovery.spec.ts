@@ -6,6 +6,7 @@ import {
     createFixtureSurvey,
     deleteFixtureSurvey,
     oneTextQuestion,
+    readLikeARespondent,
     serviceDb
 } from "./support";
 
@@ -59,6 +60,7 @@ test("coming back to a link already answered does not quietly answer it twice", 
 }) => {
     marker = `Tagasitulek ${Date.now()}`;
     await page.goto(`/k/${SEED_SLUG}`);
+    await readLikeARespondent(page);
     await answerEverything(page, marker);
     await page.getByRole("button", { name: "Saada vastused" }).click();
     await expect(
@@ -104,6 +106,7 @@ test("a survey closing mid-answer keeps the answers on screen", async ({
 
     try {
         await page.goto(`/k/${slug}`);
+        await readLikeARespondent(page);
         const typed = `Suletud ${Date.now()}`;
         await page.getByRole("textbox").first().fill(typed);
 

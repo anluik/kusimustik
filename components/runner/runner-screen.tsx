@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import type { AnswerValue } from "@/domain/answer";
@@ -22,6 +22,7 @@ import {
 import { hasAnswered, markAnswered } from "@/lib/runner/visit";
 import type { RunnerActionError } from "@/lib/runner/errors";
 import { submitResponseAction } from "@/lib/runner/actions";
+import { HONEYPOT_FIELD, monotonicNow } from "@/lib/runner/honeypot";
 import type { AnswerDraft, AnswerProblem } from "@/lib/runner/validation";
 import {
     answerProgress,
@@ -47,6 +48,11 @@ import { cn } from "@/lib/utils";
  *   when they have tried to submit.
  * - **Analytics never blocks.** Every call into `useRunnerAnalytics` returns
  *   immediately; nothing on the submit path waits for one.
+ * - **Two of the fields are not answers.** The honeypot and the time since the
+ *   form appeared travel with the submission and are checked server-side
+ *   before anything is parsed (`lib/runner/honeypot.ts`). They are kept out of
+ *   the draft entirely: neither belongs in `localStorage`, and a restored
+ *   honeypot would block a respondent on their next visit.
  */
 
 type Status =
@@ -84,6 +90,21 @@ export function RunnerScreen({
     const [attempted, setAttempted] = useState(false);
     const [status, setStatus] = useState<Status>({ kind: "editing" });
     const [answeringAgain, setAnsweringAgain] = useState(false);
+    /**
+     * The honeypot. Empty unless something that is not a respondent filled it
+     * — including, rarely, a password manager, which is why a `blocked` reply
+     * clears it: the retry then goes through instead of failing forever.
+     */
+    const [honeypot, setHoneypot] = useState("");
+    /**
+     * When the form appeared, on the same monotonic clock the analytics uses.
+     * Set from an effect rather than from a ref initialiser so it is the
+     * browser's mount that is timed and not the server's render.
+     */
+    const shownAt = useRef<number | null>(null);
+    useEffect(() => {
+        shownAt.current = monotonicNow();
+    }, []);
 
     const stored = useMemo(
         () => (mounted ? readDraft(survey.elements, storageKey) : {}),
@@ -169,6 +190,14 @@ export function RunnerScreen({
             slug: survey.slug ?? "",
             answers: Object.fromEntries(
                 Object.entries(draft).filter(([, value]) => value != null)
+            ),
+            hp: honeypot,
+            // A null `shownAt` means the mount effect has not run, which
+            // cannot be true by the time anyone has pressed the button — and
+            // if it somehow were, the server is right to refuse.
+            elapsedMs: Math.max(
+                0,
+                Math.round(monotonicNow() - (shownAt.current ?? 0))
             )
         });
 
@@ -178,6 +207,10 @@ export function RunnerScreen({
             setStatus({ kind: "sent" });
             return;
         }
+        // Whatever filled the honeypot, the respondent did not; letting the
+        // retry carry it again would refuse them for as long as they stay on
+        // the page.
+        if (result.error === "blocked") setHoneypot("");
         setStatus({ kind: "failed", error: result.error });
     };
 
@@ -261,6 +294,8 @@ export function RunnerScreen({
                 <p className="text-[14px] leading-[1.35] text-muted-foreground">
                     {t("anonymous")}
                 </p>
+
+                <Honeypot value={honeypot} onChange={setHoneypot} />
             </main>
 
             <footer className="sticky bottom-0 border-t bg-survey-background/95 backdrop-blur">
@@ -298,6 +333,37 @@ export function RunnerScreen({
                     </Button>
                 </div>
             </footer>
+        </div>
+    );
+}
+
+/**
+ * The honeypot (`lib/runner/honeypot.ts`). Off-screen rather than
+ * `display: none` or `type="hidden"`, because the form-fillers this catches
+ * skip both; `aria-hidden` and `tabIndex={-1}` keep it away from anyone
+ * reading the page with a screen reader or a keyboard, who would otherwise
+ * meet an unexplained field they must leave empty.
+ */
+function Honeypot({
+    value,
+    onChange
+}: {
+    readonly value: string;
+    readonly onChange: (value: string) => void;
+}) {
+    return (
+        <div
+            aria-hidden
+            className="absolute -left-[9999px] h-px w-px overflow-hidden"
+        >
+            <input
+                type="text"
+                name={HONEYPOT_FIELD}
+                value={value}
+                onChange={event => onChange(event.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+            />
         </div>
     );
 }

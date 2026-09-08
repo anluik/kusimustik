@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { SEED_SLUG, SEED_SURVEY_ID, serviceDb } from "./support";
+import {
+    SEED_SLUG,
+    SEED_SURVEY_ID,
+    readLikeARespondent,
+    serviceDb
+} from "./support";
 
 /**
  * The one end-to-end test docs/PLAN.md Phase 6 asks for: open the seeded
@@ -65,6 +70,7 @@ test.describe("the public runner", () => {
         const startedAt = new Date().toISOString();
 
         await page.goto(`/k/${SLUG}`);
+        await readLikeARespondent(page);
 
         await expect(
             page.getByRole("heading", { name: "Teenuse rahulolu-uuring" })

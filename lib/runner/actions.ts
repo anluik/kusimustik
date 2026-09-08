@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
 
 import { buildAnswerSchema } from "@/domain/answer";
@@ -10,6 +11,8 @@ import type { SubmittedAnswer } from "@/lib/db/responses";
 import { submitResponse } from "@/lib/db/responses";
 import { getRunnerSurveyBySlug } from "@/lib/db/surveys";
 import type { RunnerActionResult } from "@/lib/runner/errors";
+import { SubmitGuardSchema, looksAutomated } from "@/lib/runner/honeypot";
+import { allowsWrite, clientIdentifier } from "@/lib/runner/throttle";
 import { createPublicDb } from "@/lib/supabase/public";
 
 /**
@@ -25,9 +28,15 @@ import { createPublicDb } from "@/lib/supabase/public";
  * testing their own link, so the RLS policies exercised are a respondent's.
  * That is also what refuses a submission to a survey that is not published,
  * whatever this code believes.
+ *
+ * Phase 9 put three gates in front of all of that, in cost order: the honeypot
+ * and the timing floor, which are free and answer without touching the
+ * database, then the Postgres rate limiter, which costs one round trip. All
+ * three run before a single answer is parsed — there is no point validating a
+ * submission that is not going to be stored.
  */
 
-const SubmitInputSchema = z.object({
+const SubmitInputSchema = SubmitGuardSchema.extend({
     slug: SurveySlugSchema,
     /**
      * Keyed by question id. Values are `unknown` on purpose — they are parsed
@@ -44,7 +53,23 @@ export async function submitResponseAction(
         const parsed = SubmitInputSchema.safeParse(input);
         if (!parsed.success) return failed("invalidAnswers");
 
+        // Free, and no database behind them. A filled honeypot or a submission
+        // that beat the floor never reaches the limiter, so a script cannot
+        // spend someone else's allowance by failing these.
+        if (looksAutomated(parsed.data)) return failed("blocked");
+
         const db = createPublicDb();
+
+        // Keyed on the slug rather than the survey id: it identifies the same
+        // survey and it is already in hand, so a caller who is over the
+        // threshold is turned away without a read.
+        const allowed = await allowsWrite(db, {
+            bucket: "submit",
+            scope: parsed.data.slug,
+            client: clientIdentifier(await headers())
+        });
+        if (!allowed) return failed("rateLimited");
+
         const found = await getRunnerSurveyBySlug(db, parsed.data.slug);
         if (found === null) return failed("notFound");
         if (found.survey.status !== "published") return failed("closed");

@@ -97,6 +97,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_hits: {
+        Row: {
+          hits: number
+          subject: string
+          window_start: string
+        }
+        Insert: {
+          hits?: number
+          subject: string
+          window_start: string
+        }
+        Update: {
+          hits?: number
+          subject?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      rate_limit_salts: {
+        Row: {
+          period_start: string
+          salt: string
+        }
+        Insert: {
+          period_start: string
+          salt: string
+        }
+        Update: {
+          period_start?: string
+          salt?: string
+        }
+        Relationships: []
+      }
       responses: {
         Row: {
           id: string
@@ -375,6 +408,10 @@ export type Database = {
       }
     }
     Functions: {
+      consume_rate_limit: {
+        Args: { p_bucket: string; p_client: string; p_scope: string }
+        Returns: boolean
+      }
       get_runner_survey: {
         Args: { p_slug: string }
         Returns: {
@@ -392,6 +429,7 @@ export type Database = {
         }[]
       }
       owns_survey: { Args: { p_survey_id: string }; Returns: boolean }
+      prune_rate_limits: { Args: never; Returns: undefined }
       submit_response: {
         Args: {
           p_answers: Json

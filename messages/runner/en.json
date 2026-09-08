@@ -51,6 +51,8 @@
         "notFound": "Survey not found. Check the link.",
         "closed": "The survey closed while you were answering and is no longer collecting responses.",
         "invalidAnswers": "Some answers were not accepted. Please review the marked questions.",
+        "rateLimited": "Too many responses have been sent from this connection in a short time. Wait a moment and try again.",
+        "blocked": "Your response was not accepted. Try again.",
         "failed": "Your answers could not be sent. Try again.",
         "incomplete": "{count, plural, one {One question still needs an answer.} other {# questions still need an answer.}}",
         "retry": "Try again"

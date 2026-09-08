@@ -51,6 +51,8 @@
         "notFound": "Küsitlust ei leitud. Kontrolli linki.",
         "closed": "Küsitlus suleti vastamise ajal ega kogu enam vastuseid.",
         "invalidAnswers": "Mõni vastus ei sobinud. Vaata märgitud küsimused üle.",
+        "rateLimited": "Sellelt ühenduselt on lühikese aja jooksul saadetud liiga palju vastuseid. Oota hetk ja proovi uuesti.",
+        "blocked": "Vastust ei võetud vastu. Proovi uuesti.",
         "failed": "Vastuste saatmine ebaõnnestus. Proovi uuesti.",
         "incomplete": "{count, plural, one {Üks küsimus vajab veel vastust.} other {# küsimust vajavad veel vastust.}}",
         "retry": "Proovi uuesti"

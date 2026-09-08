@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
+import { MIN_SUBMIT_MS } from "@/lib/runner/honeypot";
+
 /**
  * What the e2e specs share: a client that can see what an anonymous
  * respondent's visit stored, and the teardown that puts the seed back.
@@ -157,4 +159,19 @@ export function oneTextQuestion(): readonly unknown[] {
             isAnswerable: true
         }
     ];
+}
+
+/**
+ * The pause a respondent takes before they can have answered anything.
+ *
+ * Phase 9 put a submission-timing floor in front of the runner: a submission
+ * that follows the form appearing by less than `MIN_SUBMIT_MS` is refused
+ * server-side as automated. Playwright fills a survey in about a second, which
+ * is under that and is precisely the behaviour the floor exists to catch — an
+ * automated browser answering that fast *is* the thing being refused. Every
+ * spec that submits waits it out once, so what these tests measure stays the
+ * runner rather than how quickly the machine running them types.
+ */
+export async function readLikeARespondent(page: Page): Promise<void> {
+    await page.waitForTimeout(MIN_SUBMIT_MS);
 }

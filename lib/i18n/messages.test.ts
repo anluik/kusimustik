@@ -8,6 +8,7 @@ import runnerEt from "@/messages/runner/et.json";
 import runnerEn from "@/messages/runner/en.json";
 import runnerRu from "@/messages/runner/ru.json";
 import { UI_LOCALES } from "@/lib/i18n/locales";
+import { RUNNER_ACTION_ERRORS } from "@/lib/runner/errors";
 
 type Catalogue = Record<string, unknown>;
 
@@ -100,6 +101,17 @@ describe("catalogue split", () => {
             }
         }
     );
+
+    it("has copy for every code a submission can fail with", () => {
+        // `RunnerErrors.*` is the one namespace whose keys are a TypeScript
+        // union somewhere else: `submitResponseAction` returns a code and the
+        // runner renders `errors(code)`, so a code added without its copy
+        // renders as its own path on a respondent's phone. Phase 9 added two.
+        const copy = Object.keys(
+            (runnerEt as Catalogue)["RunnerErrors"] as Catalogue
+        );
+        expect(copy).toEqual(expect.arrayContaining([...RUNNER_ACTION_ERRORS]));
+    });
 
     it("keeps owner-only copy out of the runner catalogue", () => {
         const runnerKeys = keyPaths(runnerEt).join(" ");
