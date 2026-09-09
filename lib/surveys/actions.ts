@@ -6,12 +6,12 @@ import { z } from "zod";
 import { duplicateSurvey } from "@/domain/duplicate";
 import { SurveyIdSchema } from "@/domain/ids";
 import type { SurveyId } from "@/domain/ids";
-import { authorElements } from "@/domain/localize";
-import { SurveyElementSchema } from "@/domain/question";
+import { AuthoredElementSchema } from "@/domain/question";
 import {
     AuthoredSurveySchema,
     LOCALES,
     SurveyDescriptionSchema,
+    SurveyLocalesSchema,
     SurveyTitleSchema,
     WaveLabelSchema
 } from "@/domain/survey";
@@ -138,7 +138,7 @@ export async function renameSurveyAction(
 const SaveElementsInputSchema = IdInputSchema.extend({
     /** The version the builder last read; see `updateSurveyDefinition`. */
     expectedVersion: z.int().positive(),
-    elements: z.array(SurveyElementSchema)
+    elements: z.array(AuthoredElementSchema)
 });
 export type SaveSurveyElementsInput = z.input<typeof SaveElementsInputSchema>;
 
@@ -151,13 +151,11 @@ export type SaveSurveyElementsInput = z.input<typeof SaveElementsInputSchema>;
  * survey-level and live on `AuthoredSurveySchema`. A client that skipped the
  * builder entirely gets the same answer as one that used it.
  *
- * The builder sends one language, so what arrives is authored into the
- * survey's own locale before it is stored — and that is a *replacement* of
- * the document's text, not a merge into it. It is safe only for as long as
- * nothing can write a second translation, which is to say until Phase 12
- * step 2 gives the builder its translation surface; that step sends the
- * stored shape and deletes this conversion rather than editing it
- * (docs/DECISIONS.md 030).
+ * What arrives is the *stored* document, every language at once, because the
+ * builder holds it that way and merges each edit into it (docs/DECISIONS.md
+ * 031). It is stored as it arrives: an action that resolved or re-authored it
+ * would be a second place where a translation could be dropped, and this one
+ * is reachable without going through the builder at all.
  *
  * `expectedVersion` is what keeps two open tabs from silently overwriting each
  * other, and the new version comes back so the builder can carry on saving
@@ -177,10 +175,7 @@ export async function saveSurveyElementsAction(
 
         const candidate = AuthoredSurveySchema.safeParse({
             ...found.record.survey,
-            elements: authorElements(
-                parsed.data.elements,
-                found.record.survey.locale
-            )
+            elements: parsed.data.elements
         });
         if (!candidate.success) return failed("invalidInput");
 
@@ -206,14 +201,17 @@ const SettingsInputSchema = IdInputSchema.extend({
     /** Empty means "no description"; the runner then shows none. */
     description: SurveyDescriptionSchema.nullable(),
     locale: z.literal(LOCALES),
+    /** Every language the survey is offered in; always includes `locale`. */
+    locales: SurveyLocalesSchema,
     /** Empty means "no label"; the survey then simply has none. */
     waveLabel: WaveLabelSchema.nullable()
 });
 export type SaveSurveySettingsInput = z.input<typeof SettingsInputSchema>;
 
 /**
- * The survey-level settings the builder owns: its title, the language the
- * runner renders it in, and which wave of its group it is.
+ * The survey-level settings the builder owns: its title, the language it is
+ * written in, the languages it is offered in, and which wave of its group it
+ * is.
  *
  * It carries `expectedVersion` and returns the new one for the same reason
  * the autosave does — the title and the locale are part of the definition, so
@@ -247,11 +245,15 @@ export async function saveSurveySettingsAction(
         // Changing the locale does not re-key the document's text: the words
         // stay where the author put them and `resolveSurvey` falls back to
         // them, so the survey reads exactly as it did before the switch.
+        // Dropping a language does not delete its translations either — the
+        // author can put it back and find their work where they left it, and
+        // the alternative is a switch that silently destroys a week of it.
         const candidate = AuthoredSurveySchema.safeParse({
             ...found.record.survey,
             title: parsed.data.title,
             description: parsed.data.description ?? undefined,
             locale: parsed.data.locale,
+            locales: parsed.data.locales,
             ...(parsed.data.waveLabel !== null && {
                 waveLabel: parsed.data.waveLabel
             })
@@ -267,6 +269,7 @@ export async function saveSurveySettingsAction(
                     title: candidate.data.title,
                     description: parsed.data.description,
                     locale: candidate.data.locale,
+                    locales: candidate.data.locales,
                     waveLabel: parsed.data.waveLabel
                 }
             );
@@ -311,6 +314,7 @@ export async function duplicateSurveyAction(
                 description: copy.description
             }),
             locale: copy.locale,
+            locales: copy.locales,
             waveGroupId: copy.waveGroupId,
             ...(copy.waveLabel !== undefined && { waveLabel: copy.waveLabel }),
             elements: copy.elements

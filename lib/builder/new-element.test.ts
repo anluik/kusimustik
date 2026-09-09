@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { authorElement } from "@/domain/localize";
 import {
+    AuthoredElementSchema,
     ELEMENT_TYPES,
     OTHER_OPTION_VALUE,
     SurveyElementSchema
@@ -136,10 +138,13 @@ describe.each(ELEMENT_TYPES)("a new %s", type => {
     });
 
     it("can be duplicated into a document the domain accepts", () => {
-        const source = createElement(type, defaults, [], KEYS);
-        const copy = duplicateElement(source, [source], KEYS);
+        const source = authorElement(
+            createElement(type, defaults, [], KEYS),
+            "et"
+        );
+        const copy = duplicateElement(source, "et", [source], KEYS);
 
-        expect(SurveyElementSchema.safeParse(copy).success).toBe(true);
+        expect(AuthoredElementSchema.safeParse(copy).success).toBe(true);
         expect(copy.type).toBe(type);
     });
 });
@@ -148,32 +153,66 @@ describe("duplicateElement", () => {
     it("keeps everything the author wrote", () => {
         const source = createElement("multi_choice", defaults, [], KEYS);
         if (source.type !== "multi_choice") throw new Error("wrong type");
-        const edited = {
-            ...source,
-            title: "Millised kanalid?",
-            options: [
-                { value: "option_1", label: "E-post" },
-                { value: "option_2", label: "Telefon" }
-            ],
-            minSelections: 1
-        };
+        const edited = authorElement(
+            {
+                ...source,
+                title: "Millised kanalid?",
+                options: [
+                    { value: "option_1", label: "E-post" },
+                    { value: "option_2", label: "Telefon" }
+                ],
+                minSelections: 1
+            },
+            "et"
+        );
 
-        const copy = duplicateElement(edited, [edited], KEYS);
+        const copy = duplicateElement(edited, "et", [edited], KEYS);
 
         expect(copy).toMatchObject({
             type: "multi_choice",
-            title: "Millised kanalid?",
-            options: edited.options,
+            title: { et: "Millised kanalid?" },
             minSelections: 1
         });
+    });
+
+    it("carries every translation, not just the one on screen", () => {
+        // The copy is made from the stored element, so a question written in
+        // three languages is duplicated in three. Copying one language of it
+        // would lose two translations to a click.
+        const source = createElement("single_choice", defaults, [], KEYS);
+        const translated = {
+            ...authorElement(source, "et"),
+            title: { et: "Roll", en: "Role", ru: "Роль" }
+        };
+
+        const copy = duplicateElement(translated, "et", [translated], KEYS);
+
+        expect(copy.title).toEqual({ et: "Roll", en: "Role", ru: "Роль" });
+    });
+
+    it("derives the key from the survey's own language", () => {
+        // Not from whichever language is on screen: the key names a CSV
+        // column and joins this wave to the next one.
+        const source = createElement("nps", defaults, [], KEYS);
+        const translated = {
+            ...authorElement(source, "et"),
+            title: { et: "Soovitus", ru: "Рекомендация" }
+        };
+
+        expect(duplicateElement(translated, "et", [], KEYS).key).toBe(
+            "soovitus"
+        );
     });
 
     it("takes a fresh id and a fresh key, unlike duplicating a survey", () => {
         // Two questions in one survey may not share a key: SurveySchema
         // rejects it, and the CSV would grow two columns with one header.
         // Preserving keys is a *cross-survey* rule (docs/DECISIONS.md 003).
-        const source = createElement("single_choice", defaults, [], KEYS);
-        const copy = duplicateElement(source, [source], KEYS);
+        const source = authorElement(
+            createElement("single_choice", defaults, [], KEYS),
+            "et"
+        );
+        const copy = duplicateElement(source, "et", [source], KEYS);
 
         expect(copy.id).not.toBe(source.id);
         expect(copy.key).not.toBe(source.key);

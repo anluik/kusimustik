@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { LOCALES } from "@/domain/content";
+import { LOCALES, orderLocales } from "@/domain/content";
+import type { SurveyLocale } from "@/domain/content";
 import { SurveyIdSchema, WaveGroupIdSchema } from "@/domain/ids";
 import { AuthoredElementSchema, SurveyElementSchema } from "@/domain/question";
 
@@ -96,6 +97,32 @@ export const SurveyElementsSchema = elementList(SurveyElementSchema);
 /** The same list as it is stored: every language the author has written. */
 export const AuthoredElementsSchema = elementList(AuthoredElementSchema);
 
+/**
+ * A survey's languages, canonically ordered and without duplicates.
+ *
+ * The order is `LOCALES`', not the author's, so two surveys offered in the
+ * same languages compare equal and every switcher lists them the same way
+ * round. `orderLocales` is what callers normalise with; the database's
+ * `surveys_before_write()` does the same thing on the way in, so a document
+ * assembled outside the builder cannot store a set this rejects.
+ */
+export const SurveyLocalesSchema = z
+    .array(z.literal(LOCALES))
+    .min(1)
+    .check(ctx => {
+        const canonical = orderLocales(ctx.value);
+        if (
+            canonical.length !== ctx.value.length ||
+            canonical.some((locale, index) => locale !== ctx.value[index])
+        ) {
+            ctx.issues.push({
+                code: "custom",
+                input: ctx.value,
+                message: "must be unique and in LOCALES order"
+            });
+        }
+    });
+
 const surveyFields = {
     id: SurveyIdSchema,
     title: SurveyTitleSchema,
@@ -108,10 +135,36 @@ const surveyFields = {
      * its text resolves through when a translation is missing.
      */
     locale: z.literal(LOCALES),
+    /**
+     * Every language the survey is *offered* in — what the builder lets an
+     * author switch between and what the runner will let a respondent pick.
+     *
+     * Always contains `locale`, and never empty: a survey nobody can be shown
+     * is not a state. It is separate from what has actually been written,
+     * because it has to be chosen *before* a word of the translation exists —
+     * and because a language the author has half finished is still a language
+     * the survey is offered in, falling back per field. See DECISIONS 031.
+     */
+    locales: SurveyLocalesSchema,
     /** Shared by every wave of the same recurring survey. See DECISIONS 003. */
     waveGroupId: WaveGroupIdSchema,
     /** Free text ("2026", "Q1") used as the series label in comparisons. */
     waveLabel: WaveLabelSchema.optional()
+};
+
+const localeIsOffered = <
+    T extends { locale: SurveyLocale; locales: readonly SurveyLocale[] }
+>(
+    ctx: z.core.ParsePayload<T>
+): void => {
+    if (!ctx.value.locales.includes(ctx.value.locale)) {
+        ctx.issues.push({
+            code: "custom",
+            input: ctx.value,
+            path: ["locales"],
+            message: "must include the language the survey is authored in"
+        });
+    }
 };
 
 const publishedNeedsSlug = <T extends { status: string; slug: string | null }>(
@@ -130,12 +183,14 @@ const publishedNeedsSlug = <T extends { status: string; slug: string | null }>(
 /** A survey in one language: what a runner renders and a report titles. */
 export const SurveySchema = z
     .object({ ...surveyFields, elements: SurveyElementsSchema })
-    .check(publishedNeedsSlug);
+    .check(publishedNeedsSlug)
+    .check(localeIsOffered);
 
 /** A survey as it is stored, translations and all. */
 export const AuthoredSurveySchema = z
     .object({ ...surveyFields, elements: AuthoredElementsSchema })
-    .check(publishedNeedsSlug);
+    .check(publishedNeedsSlug)
+    .check(localeIsOffered);
 
 export type Survey = z.infer<typeof SurveySchema>;
 export type AuthoredSurvey = z.infer<typeof AuthoredSurveySchema>;

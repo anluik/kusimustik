@@ -1,9 +1,13 @@
 import { assertNever } from "@/domain/assert-never";
+import type { SurveyLocale } from "@/domain/content";
+import type { QuestionId } from "@/domain/ids";
 import { newQuestionId } from "@/domain/ids";
+import { resolveElement } from "@/domain/localize";
 import { takenKeys, type SurveyKeys } from "@/lib/builder/keys";
 import {
     OTHER_OPTION_VALUE,
     deriveQuestionKey,
+    type AuthoredElement,
     type ChoiceOption,
     type ElementType,
     type SurveyElement
@@ -104,10 +108,18 @@ function newOptions(
     }));
 }
 
+/**
+ * A new element, in one language.
+ *
+ * The caller authors it into the survey's own: structure belongs to the
+ * language the survey is written in, so a question added while translating
+ * appears in the translation as one more thing left to translate rather than
+ * as a question the source language is missing.
+ */
 export function createElement(
     type: CreatableElementType,
     defaults: ElementDefaults,
-    siblings: readonly SurveyElement[],
+    siblings: readonly { readonly id: QuestionId; readonly key: string }[],
     keys: SurveyKeys
 ): SurveyElement {
     const taken = takenKeys(siblings, keys);
@@ -198,15 +210,25 @@ export function createElement(
  * where a shared key is a `SurveySchema` violation and would mean two CSV
  * columns claiming one header. Everything the author wrote — options, bounds,
  * labels — is carried over verbatim.
+ *
+ * It copies the *stored* element, so a question translated into three
+ * languages is duplicated in three. Only the key is derived from one language,
+ * and it is the survey's own: a key is machine-facing, and deriving it from
+ * whichever language the author happened to be translating in would name the
+ * CSV column in Russian.
  */
 export function duplicateElement(
-    element: SurveyElement,
-    siblings: readonly SurveyElement[],
+    element: AuthoredElement,
+    source: SurveyLocale,
+    siblings: readonly AuthoredElement[],
     keys: SurveyKeys
-): SurveyElement {
+): AuthoredElement {
     return {
         ...element,
         id: newQuestionId(),
-        key: deriveQuestionKey(element.title, takenKeys(siblings, keys))
+        key: deriveQuestionKey(
+            resolveElement(element, source).title,
+            takenKeys(siblings, keys)
+        )
     };
 }

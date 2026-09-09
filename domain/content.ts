@@ -94,3 +94,43 @@ function firstWritten(text: LocalizedText): string {
     }
     return "";
 }
+
+/**
+ * The same text with one language rewritten.
+ *
+ * Blank is *absence*, not an empty translation: an author who clears the
+ * Russian title has not translated it into nothing, they have stopped
+ * translating it, and `resolveText` should fall back for them. The result can
+ * therefore be empty, which no schema accepts — that is the builder's signal
+ * that the last language of a required piece of text has just been deleted,
+ * and it holds the save rather than storing a document nobody can read.
+ */
+export function withLocale(
+    text: LocalizedText | undefined,
+    locale: SurveyLocale,
+    value: string
+): LocalizedText {
+    const next: LocalizedText = { ...text };
+    if (value.trim() === "") delete next[locale];
+    else next[locale] = value;
+    return next;
+}
+
+/** Text in no language at all — a document no reader can render. */
+export function isEmptyText(text: LocalizedText): boolean {
+    return writtenLocales(text).length === 0;
+}
+
+/**
+ * A set of languages as a canonically ordered, duplicate-free list.
+ *
+ * `LOCALES` order rather than the order they arrived in, so that two surveys
+ * offered in the same languages compare equal and every switcher lists them
+ * the same way round.
+ */
+export function orderLocales(
+    locales: Iterable<SurveyLocale>
+): readonly SurveyLocale[] {
+    const wanted = new Set(locales);
+    return LOCALES.filter(locale => wanted.has(locale));
+}

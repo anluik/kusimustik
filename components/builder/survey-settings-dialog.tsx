@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { ToggleRow } from "@/components/builder/field";
 import { ActionError } from "@/components/surveys/action-error";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
     Select,
@@ -26,9 +28,12 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select";
+import { orderLocales } from "@/domain/content";
+import type { SurveyLocale } from "@/domain/content";
 import type { SurveyId } from "@/domain/ids";
 import {
     SurveyDescriptionSchema,
+    SurveyLocalesSchema,
     SurveyTitleSchema,
     WaveLabelSchema
 } from "@/domain/survey";
@@ -38,8 +43,9 @@ import type { SurveyActionError } from "@/lib/surveys/errors";
 
 /**
  * The settings that belong to the survey rather than to any one element: its
- * title, the paragraph shown above the first question, the language the runner
- * renders it in, and which wave of its group it is.
+ * title, the paragraph shown above the first question, the language it is
+ * written in, the languages it is offered in, and which wave of its group it
+ * is.
  *
  * A dialog with an explicit submit rather than the panel's keystroke-by-
  * keystroke autosave, because two of the three change what a respondent sees
@@ -49,11 +55,19 @@ import type { SurveyActionError } from "@/lib/surveys/errors";
  * The schemas are the domain's, not copies: the same rules decide what this
  * form rejects and what the action accepts. An empty wave label is *no* label,
  * which is why it is optional here and null on the wire.
+ *
+ * The two language fields are one decision seen from two sides, so the form
+ * keeps them consistent rather than validating them against each other after
+ * the fact: the authoring language is always among the offered ones, and it
+ * cannot be switched off. Adding a language here is what makes the builder's
+ * switcher appear; nothing is translated by it, and every field falls back
+ * until the author writes one. See docs/DECISIONS.md 031.
  */
 const FormSchema = z.object({
     title: SurveyTitleSchema,
     description: SurveyDescriptionSchema,
     locale: z.literal(UI_LOCALES),
+    locales: SurveyLocalesSchema,
     waveLabel: z.union([WaveLabelSchema, z.literal("")])
 });
 type FormValues = z.infer<typeof FormSchema>;
@@ -62,6 +76,8 @@ export type SurveySettings = {
     readonly title: string;
     readonly description: string | undefined;
     readonly locale: FormValues["locale"];
+    /** Canonically ordered, and always containing `locale`. */
+    readonly locales: readonly SurveyLocale[];
     readonly waveLabel: string | undefined;
 };
 
@@ -93,6 +109,7 @@ export function SurveySettingsDialog({
         title: settings.title,
         description: settings.description ?? "",
         locale: settings.locale,
+        locales: [...settings.locales],
         waveLabel: settings.waveLabel ?? ""
     };
 
@@ -127,6 +144,7 @@ export function SurveySettingsDialog({
                 title: values.title,
                 description,
                 locale: values.locale,
+                locales: [...values.locales],
                 waveLabel
             });
 
@@ -140,6 +158,7 @@ export function SurveySettingsDialog({
                     title: values.title,
                     description: description ?? undefined,
                     locale: values.locale,
+                    locales: values.locales,
                     waveLabel: waveLabel ?? undefined
                 },
                 result.data.version
@@ -217,48 +236,147 @@ export function SurveySettingsDialog({
                         </p>
                     </div>
 
-                    <div className="grid gap-1.5">
-                        {label("survey-settings-locale", t("localeLabel"))}
-                        {/* `Controller` rather than `watch()`: the latter
-                            returns a function React Compiler cannot memoize,
-                            so it opts the whole component out of compilation. */}
-                        <Controller
-                            control={form.control}
-                            name="locale"
-                            render={({ field }) => (
-                                <Select
-                                    value={field.value}
-                                    onValueChange={value => {
-                                        if (hasLocale(UI_LOCALES, value)) {
-                                            field.onChange(value);
-                                        }
-                                    }}
-                                >
-                                    <SelectTrigger
-                                        id="survey-settings-locale"
-                                        onBlur={field.onBlur}
-                                        className="h-[30px]! rounded text-xs"
+                    {/* `Controller` rather than `watch()`: the latter returns
+                        a function React Compiler cannot memoize, so it opts
+                        the whole component out of compilation. One controller
+                        for both fields, because they are one decision: which
+                        language the survey is written in decides which switch
+                        below it cannot be turned off. */}
+                    <Controller
+                        control={form.control}
+                        name="locale"
+                        render={({ field: source }) => (
+                            <>
+                                <div className="grid gap-1.5">
+                                    {label(
+                                        "survey-settings-locale",
+                                        t("localeLabel")
+                                    )}
+                                    <Select
+                                        value={source.value}
+                                        onValueChange={value => {
+                                            if (!hasLocale(UI_LOCALES, value)) {
+                                                return;
+                                            }
+                                            source.onChange(value);
+                                            // A survey is always offered in
+                                            // the language it is written in,
+                                            // so switching that adds it rather
+                                            // than leaving behind a set the
+                                            // schema rejects.
+                                            form.setValue(
+                                                "locales",
+                                                [
+                                                    ...orderLocales([
+                                                        ...form.getValues(
+                                                            "locales"
+                                                        ),
+                                                        value
+                                                    ])
+                                                ],
+                                                { shouldDirty: true }
+                                            );
+                                        }}
                                     >
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded">
-                                        {UI_LOCALES.map(option => (
-                                            <SelectItem
-                                                key={option}
-                                                value={option}
-                                                className="rounded text-xs"
+                                        <SelectTrigger
+                                            id="survey-settings-locale"
+                                            onBlur={source.onBlur}
+                                            className="h-[30px]! rounded text-xs"
+                                        >
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded">
+                                            {UI_LOCALES.map(option => (
+                                                <SelectItem
+                                                    key={option}
+                                                    value={option}
+                                                    className="rounded text-xs"
+                                                >
+                                                    {tLanguage(
+                                                        `name.${option}`
+                                                    )}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-[11px] leading-[1.35] text-muted-foreground">
+                                        {t("localeHelp")}
+                                    </p>
+                                </div>
+
+                                <div className="grid gap-1.5">
+                                    {label(
+                                        "survey-settings-locales",
+                                        t("localesLabel")
+                                    )}
+                                    <Controller
+                                        control={form.control}
+                                        name="locales"
+                                        render={({ field }) => (
+                                            <div
+                                                id="survey-settings-locales"
+                                                className="flex flex-col gap-1"
                                             >
-                                                {tLanguage(`name.${option}`)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                        <p className="text-[11px] leading-[1.35] text-muted-foreground">
-                            {t("localeHelp")}
-                        </p>
-                    </div>
+                                                {UI_LOCALES.map(option => (
+                                                    <ToggleRow
+                                                        key={option}
+                                                        id={`survey-settings-locales-${option}`}
+                                                        label={tLanguage(
+                                                            `name.${option}`
+                                                        )}
+                                                        control={
+                                                            <Switch
+                                                                id={`survey-settings-locales-${option}`}
+                                                                checked={field.value.includes(
+                                                                    option
+                                                                )}
+                                                                // The
+                                                                // authoring
+                                                                // language is
+                                                                // not
+                                                                // optional.
+                                                                // DESIGN §6:
+                                                                // the control
+                                                                // stays and
+                                                                // goes quiet
+                                                                // rather than
+                                                                // disappearing.
+                                                                disabled={
+                                                                    option ===
+                                                                    source.value
+                                                                }
+                                                                onCheckedChange={on =>
+                                                                    field.onChange(
+                                                                        [
+                                                                            ...orderLocales(
+                                                                                on
+                                                                                    ? [
+                                                                                          ...field.value,
+                                                                                          option
+                                                                                      ]
+                                                                                    : field.value.filter(
+                                                                                          locale =>
+                                                                                              locale !==
+                                                                                              option
+                                                                                      )
+                                                                            )
+                                                                        ]
+                                                                    )
+                                                                }
+                                                            />
+                                                        }
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    />
+                                    <p className="text-[11px] leading-[1.35] text-muted-foreground">
+                                        {t("localesHelp")}
+                                    </p>
+                                </div>
+                            </>
+                        )}
+                    />
 
                     <div className="grid gap-1.5">
                         {label("survey-settings-wave", t("waveLabel"))}

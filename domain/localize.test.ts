@@ -4,11 +4,18 @@ import {
     authorElement,
     authorElements,
     authorSurvey,
+    elementTexts,
+    mergeElement,
+    mergeElements,
+    missingTranslationCount,
+    missingTranslations,
+    projectElement,
+    referenceTexts,
     resolveElement,
     resolveElements,
     resolveSurvey
 } from "@/domain/localize";
-import type { AuthoredElement } from "@/domain/question";
+import type { AuthoredChoiceOption, AuthoredElement } from "@/domain/question";
 import { AuthoredElementSchema, SurveyElementSchema } from "@/domain/question";
 import { AuthoredSurveySchema, SurveySchema } from "@/domain/survey";
 import { LOCALES } from "@/domain/content";
@@ -201,6 +208,195 @@ describe("authorSurvey", () => {
     });
 });
 
+describe("projectElement", () => {
+    it("shows only what the author has written in the language asked for", () => {
+        const element = {
+            ...authoredOf("single_choice"),
+            title: { et: "Roll", ru: "Роль" },
+            options: [
+                { value: "dev", label: { et: "Arendaja", ru: "Разработчик" } },
+                { value: "design", label: { et: "Disainer" } },
+                { value: "pm", label: { et: "Tootejuht" } }
+            ]
+        };
+
+        // No fallback anywhere: an untranslated label is a blank field for the
+        // author to fill, not the Estonian they are translating from.
+        expect(projectElement(element, "ru")).toMatchObject({
+            title: "Роль",
+            options: [
+                { value: "dev", label: "Разработчик" },
+                { value: "design", label: "" },
+                { value: "pm", label: "" }
+            ]
+        });
+    });
+
+    it("leaves an untranslated optional field absent rather than blank", () => {
+        const element = {
+            ...authoredOf("statement"),
+            description: { et: "Kolm minutit" }
+        };
+        expect("description" in projectElement(element, "ru")).toBe(false);
+    });
+
+    it("is resolving, for the language the survey was written in", () => {
+        for (const element of authored) {
+            expect(projectElement(element, "et")).toEqual(
+                resolveElement(element, "et")
+            );
+        }
+    });
+});
+
+describe("mergeElement", () => {
+    const stored = {
+        ...authoredOf("single_choice"),
+        title: { et: "Roll", ru: "Роль" },
+        otherLabel: { et: "Muu" },
+        options: [
+            { value: "dev", label: { et: "Arendaja" } },
+            { value: "design", label: { et: "Disainer" } },
+            { value: "pm", label: { et: "Tootejuht" } }
+        ]
+    };
+
+    const editIn = (
+        locale: "et" | "en" | "ru",
+        edit: (one: SurveyElement) => SurveyElement
+    ) => mergeElement(stored, edit(projectElement(stored, locale)), locale);
+
+    it("keeps the languages the edit never saw", () => {
+        const merged = editIn("ru", element => ({
+            ...element,
+            title: "Должность"
+        }));
+
+        expect(merged.title).toEqual({ et: "Roll", ru: "Должность" });
+        // Written in Estonian, never shown to the Russian editor, still there.
+        expect(merged).toMatchObject({ otherLabel: { et: "Muu" } });
+    });
+
+    it("files a translated label under the option's value, not its position", () => {
+        const merged = editIn("ru", element => ({
+            ...element,
+            options: [
+                // Reordered *and* translated in the same edit, which is what
+                // makes matching on position wrong rather than merely fragile.
+                { value: "pm", label: "Продакт-менеджер" },
+                { value: "dev", label: "Разработчик" },
+                { value: "design", label: "" }
+            ]
+        }));
+
+        expect(merged).toMatchObject({
+            options: [
+                {
+                    value: "pm",
+                    label: { et: "Tootejuht", ru: "Продакт-менеджер" }
+                },
+                { value: "dev", label: { et: "Arendaja", ru: "Разработчик" } },
+                { value: "design", label: { et: "Disainer" } }
+            ]
+        });
+    });
+
+    it("treats a cleared field as one language withdrawn, not as empty text", () => {
+        const merged = editIn("ru", element => ({ ...element, title: "" }));
+        expect(merged.title).toEqual({ et: "Roll" });
+    });
+
+    it("lets the last language of a required field go, so the save is held", () => {
+        // The builder shows the field error and stops saving; storing text
+        // nobody can read would be the worse of the two failures.
+        const merged = mergeElement(
+            { ...stored, title: { et: "Roll" } },
+            { ...projectElement(stored, "et"), title: "" },
+            "et"
+        );
+        expect(merged.title).toEqual({});
+        expect(AuthoredElementSchema.safeParse(merged).success).toBe(false);
+    });
+
+    it("gives an option the edit added the language it was typed in", () => {
+        const merged = editIn("ru", element => {
+            if (element.type !== "single_choice") throw new Error("wrong type");
+            return {
+                ...element,
+                options: [
+                    ...element.options,
+                    { value: "option_4", label: "Другое" }
+                ]
+            };
+        });
+
+        expect(merged).toMatchObject({
+            options: [
+                { value: "dev" },
+                { value: "design" },
+                { value: "pm" },
+                { value: "option_4", label: { ru: "Другое" } }
+            ]
+        });
+    });
+
+    it("carries an edit that is not a word across every language", () => {
+        const merged = editIn("ru", element => ({
+            ...element,
+            required: false,
+            key: "amet"
+        }));
+
+        expect(merged.key).toBe("amet");
+        expect(merged).toMatchObject({ required: false });
+        expect(merged.title).toEqual({ et: "Roll", ru: "Роль" });
+    });
+
+    it("is authoring for an element the document has never held", () => {
+        const [element] = mergeElements([], [singleChoice], "ru");
+        expect(element).toEqual(authorElement(singleChoice, "ru"));
+    });
+
+    it("round-trips every element type through the language it was written in", () => {
+        for (const element of authored) {
+            expect(
+                mergeElement(element, projectElement(element, "et"), "et")
+            ).toEqual(element);
+        }
+    });
+});
+
+describe("what the author still has to write", () => {
+    const stored = {
+        ...authoredOf("opinion_scale"),
+        title: { et: "Rahulolu", ru: "Удовлетворённость" },
+        minLabel: { et: "Üldse mitte" },
+        maxLabel: { et: "Väga" }
+    };
+
+    it("addresses every piece of an element's text, and nothing else", () => {
+        expect([...elementTexts(stored).keys()].sort()).toEqual([
+            "maxLabel",
+            "minLabel",
+            "title"
+        ]);
+    });
+
+    it("counts the fields with no text in the language, not the elements", () => {
+        // Two endpoint labels on one question is two pieces of work; counting
+        // the question once would read as "nearly done" when it is not.
+        expect(missingTranslations(stored, "ru")).toBe(2);
+        expect(missingTranslations(stored, "et")).toBe(0);
+        expect(missingTranslationCount([stored, stored], "ru")).toBe(4);
+    });
+
+    it("reads back what each field says today, which is what a placeholder shows", () => {
+        const reference = referenceTexts(stored, "ru", "et");
+        expect(reference.get("title")).toBe("Удовлетворённость");
+        expect(reference.get("minLabel")).toBe("Üldse mitte");
+    });
+});
+
 /**
  * The nine elements with every optional piece of text filled in — which the
  * shared fixtures deliberately are not, since they exist to be aggregated.
@@ -236,7 +432,38 @@ const FULLY_WRITTEN: readonly SurveyElement[] = [
 ];
 
 /** Machine-facing, and therefore the same in every language. */
-const IDENTIFIER_FIELDS = new Set(["id", "key", "type", "value"]);
+const IDENTIFIER_FIELDS = ["id", "key", "type", "value"] as const;
+type IdentifierField = (typeof IDENTIFIER_FIELDS)[number];
+
+/**
+ * The names of every field on `T` that holds a plain string. Distributed over
+ * the union, since `keyof` a union is only what its members have in common.
+ */
+type BareStringFields<T> = T extends unknown
+    ? {
+          [K in keyof T]-?: NonNullable<T[K]> extends string ? K : never;
+      }[keyof T]
+    : never;
+
+/**
+ * Any plain string on a *stored* element that is not an identifier — which is
+ * to say, a piece of respondent-facing text that would reach them in whatever
+ * language it happened to be typed in.
+ *
+ * There must not be any, and the assignment below is a compile error when
+ * there is. The runtime guard further down asks the same question of a
+ * document, and can only see fields the fixtures happen to fill in; this one
+ * sees the type, so a text field added to `SurveyElementSchema` and inherited
+ * by the authored shape — which is how the two variants are built — fails here
+ * without anyone having to remember to extend a fixture.
+ */
+type UntranslatedField =
+    | Exclude<BareStringFields<AuthoredElement>, IdentifierField>
+    | Exclude<BareStringFields<AuthoredChoiceOption>, IdentifierField>;
+
+const noUntranslatedFields: [UntranslatedField] extends [never]
+    ? true
+    : ["untranslated text on the stored element:", UntranslatedField] = true;
 
 /**
  * Every string in an authored document that is neither an identifier nor one
@@ -247,11 +474,12 @@ const IDENTIFIER_FIELDS = new Set(["id", "key", "type", "value"]);
 function untranslatedFields(document: unknown): readonly string[] {
     const found: string[] = [];
     const locales: readonly string[] = LOCALES;
+    const identifiers: readonly string[] = IDENTIFIER_FIELDS;
 
     JSON.stringify(document, (key, value) => {
         if (
             typeof value === "string" &&
-            !IDENTIFIER_FIELDS.has(key) &&
+            !identifiers.includes(key) &&
             !locales.includes(key)
         ) {
             found.push(key);
@@ -263,6 +491,12 @@ function untranslatedFields(document: unknown): readonly string[] {
 }
 
 describe("the two shapes of an element", () => {
+    it("has no plain string on the stored shape but an identifier", () => {
+        // The assertion is the type of `noUntranslatedFields`; this only
+        // keeps it from being dead code.
+        expect(noUntranslatedFields).toBe(true);
+    });
+
     it("agrees that the fully written fixtures are valid to begin with", () => {
         for (const element of FULLY_WRITTEN) {
             expect(SurveyElementSchema.safeParse(element).success).toBe(true);

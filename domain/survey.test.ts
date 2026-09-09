@@ -116,3 +116,41 @@ describe("SurveyElementsSchema", () => {
         expect(SurveyElementsSchema.parse([])).toEqual([]);
     });
 });
+
+describe("the languages a survey is offered in", () => {
+    it("always includes the one it is written in", () => {
+        // Otherwise the fallback resolves through a language the runner does
+        // not offer, and every untranslated field is unreachable.
+        expect(
+            SurveySchema.safeParse({ ...survey, locale: "en" }).success
+        ).toBe(false);
+        expect(
+            SurveySchema.safeParse({
+                ...survey,
+                locale: "en",
+                locales: ["et", "en"]
+            }).success
+        ).toBe(true);
+    });
+
+    it("is never empty: a survey nobody can be shown is not a state", () => {
+        expect(SurveySchema.safeParse({ ...survey, locales: [] }).success).toBe(
+            false
+        );
+    });
+
+    it("is canonically ordered and free of duplicates", () => {
+        // So two surveys offered in the same languages compare equal, and
+        // every switcher lists them the same way round.
+        expect(
+            SurveySchema.safeParse({ ...survey, locales: ["en", "et"] }).success
+        ).toBe(false);
+        expect(
+            SurveySchema.safeParse({ ...survey, locales: ["et", "et"] }).success
+        ).toBe(false);
+        expect(
+            SurveySchema.safeParse({ ...survey, locales: ["et", "en", "ru"] })
+                .success
+        ).toBe(true);
+    });
+});

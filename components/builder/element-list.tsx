@@ -46,11 +46,15 @@ const ROW = "flex h-8 w-full items-center gap-2 rounded pr-2 pl-7 text-left";
 
 function RowContent({
     element,
-    position
+    position,
+    untranslated
 }: {
     readonly element: SurveyElement;
     readonly position: number;
+    /** Something on this element has no text in the language being edited. */
+    readonly untranslated: boolean;
 }) {
+    const t = useTranslations("Builder");
     const Icon = ELEMENT_ICONS[element.type];
 
     return (
@@ -59,6 +63,21 @@ function RowContent({
             <span className="min-w-0 flex-1 truncate text-xs leading-none">
                 {element.title}
             </span>
+            {/* A dot rather than a count: the row is 32px and already carries
+                an icon, a title and a position. The count for the whole
+                language is beside the switcher, where there is room for it.
+                DESIGN §6 — colour is never the only encoding — is why it
+                carries a name for screen readers. */}
+            {untranslated && (
+                <span
+                    title={t("translation.rowUntranslated")}
+                    className="size-1.5 shrink-0 rounded-full bg-primary"
+                >
+                    <span className="sr-only">
+                        {t("translation.rowUntranslated")}
+                    </span>
+                </span>
+            )}
             <span className="shrink-0 font-mono text-[10px] leading-none text-muted-foreground tabular-nums">
                 {position}
             </span>
@@ -84,10 +103,12 @@ function DropRule({ edge }: { readonly edge: "top" | "bottom" }) {
 function ElementRow({
     element,
     selected,
+    untranslated,
     onSelect
 }: {
     readonly element: SurveyElement;
     readonly selected: boolean;
+    readonly untranslated: boolean;
     readonly onSelect: () => void;
 }) {
     const t = useTranslations("Builder");
@@ -144,7 +165,11 @@ function ElementRow({
                     isDragging && "text-input"
                 )}
             >
-                <RowContent element={element} position={index + 1} />
+                <RowContent
+                    element={element}
+                    position={index + 1}
+                    untranslated={untranslated}
+                />
             </button>
         </li>
     );
@@ -153,12 +178,15 @@ function ElementRow({
 export function ElementList({
     elements,
     selectedId,
+    untranslated,
     onSelect,
     onMove,
     className
 }: {
     readonly elements: readonly SurveyElement[];
     readonly selectedId: QuestionId | null;
+    /** Elements with something still to translate; empty unless translating. */
+    readonly untranslated: ReadonlySet<QuestionId>;
     readonly onSelect: (id: QuestionId) => void;
     readonly onMove: (id: QuestionId, to: number) => void;
     readonly className?: string;
@@ -269,6 +297,7 @@ export function ElementList({
                                     key={element.id}
                                     element={element}
                                     selected={element.id === selectedId}
+                                    untranslated={untranslated.has(element.id)}
                                     onSelect={() => onSelect(element.id)}
                                 />
                             ))}
@@ -291,6 +320,7 @@ export function ElementList({
                                                 element.id === dragging.id
                                         ) + 1
                                     }
+                                    untranslated={untranslated.has(dragging.id)}
                                 />
                             </div>
                         )}

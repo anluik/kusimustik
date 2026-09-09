@@ -33,6 +33,8 @@ pnpm db:reset       # reset local DB and replay migrations + seed
 - **`id` and `key` are not interchangeable.** `id` identifies a question within one survey and changes on duplication. `key` is stable across duplication and is what wave comparison joins on. Never key analytics, comparison or export column identity on `id`.
 - **A survey's words are locale-keyed; its identifiers are not.** `surveys.elements` holds the *authored* document — every title, description, label and placeholder is a `LocalizedText` map — and `AuthoredSurveySchema` is what the repository parses. One language of it is a *resolved* survey (`SurveySchema`, plain strings), which is what the runner, the aggregator and the exporter read. `domain/localize.ts` is the only thing that maps between them; never reach into a `LocalizedText` yourself. Keys, ids, option values and slugs are never translated. See docs/DECISIONS.md 030.
 
+  `surveys.locale` is the language a survey is *written* in and everything's fallback; `surveys.locales` is the set it is *offered* in, always containing `locale` and normalised by `surveys_before_write()`. The builder holds the authored document and edits one language of it: `projectElement` for what the panel binds to, `mergeElement` for what comes back. Never author over a stored document — that replaces every other translation. See docs/DECISIONS.md 031.
+
 - **`survey_questions` is derived.** A trigger rebuilds it from `surveys.elements`. Application code never writes to it and never reads a definition from it — definitions come from `surveys.elements` through `SurveySchema`. A question that leaves the document keeps a tombstoned row (`removed_at`) if it has answers; readers filter it out.
 - **Locale is resolved per surface, and there is no locale segment.** The owner app reads the `NEXT_LOCALE` cookie through `lib/i18n/request.ts`; the runner is rendered in `survey.locale`, passed explicitly to `getRunnerTranslations()` and `NextIntlClientProvider`. Never read the locale cookie from `app/(public)/` — it would make every respondent request dynamic. See docs/DECISIONS.md 011.
 - **Analytics never blocks.** `survey_events` writes are best-effort and batched. A failed event write must never surface to a respondent or abort a submission.
@@ -73,9 +75,12 @@ components/ui/       shadcn — do not hand-edit, re-run the CLI (one documented
                      exception: docs/DECISIONS.md 012)
 components/shell/    app shell — sidebar, app bar, empty state, providers
 components/surveys/  the survey list, its row actions and its dialogs
-components/builder/  the three-panel builder — element list, canvas, editor panel
+components/builder/  the three-panel builder — element list, canvas, editor panel;
+                     translation.tsx is the language the panel edits and the
+                     reference text behind its placeholders
 components/          app components
-hooks/               use-survey-builder.ts is the builder's document + autosave;
+hooks/               use-survey-builder.ts is the builder's document, its autosave
+                     and the seam between the stored document and one language of it;
                      use-mobile.ts is shadcn-generated (lint/format-ignored)
 e2e/                 playwright specs
 messages/app/        et.json, en.json, ru.json — owner app

@@ -10,6 +10,7 @@ import {
     fieldId
 } from "@/components/builder/element-fields";
 import { Field } from "@/components/builder/field";
+import { useReferenceText } from "@/components/builder/translation";
 import { Input } from "@/components/ui/input";
 import type {
     LongTextQuestion,
@@ -46,6 +47,7 @@ function TextFields({
     readonly maxLengthCeiling: number;
 }) {
     const t = useTranslations("Builder.editor");
+    const reference = useReferenceText();
 
     return (
         <>
@@ -66,7 +68,10 @@ function TextFields({
                     <Input
                         id={fieldId(question, "placeholder")}
                         value={question.placeholder ?? ""}
-                        placeholder={t("placeholderPlaceholder")}
+                        placeholder={
+                            reference("placeholder") ??
+                            t("placeholderPlaceholder")
+                        }
                         autoComplete="off"
                         onChange={event =>
                             onChange(

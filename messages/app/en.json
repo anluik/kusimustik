@@ -206,7 +206,8 @@
             "keyLabel": "Key",
             "keyHelp": {
                 "derive": "Derived from the title until you edit it. The key joins waves and names the CSV columns, so it locks when you publish.",
-                "freeze": "Locked: answers or other waves already point at this key. You can still change it, through the warning."
+                "freeze": "Locked: answers or other waves already point at this key. You can still change it, through the warning.",
+                "translating": "The key is machine-facing rather than something a respondent reads: it is the same in every language, and you edit it in the survey's own."
             },
             "titleLabel": "Question",
             "titlePlaceholder": "What do you want to ask?",
@@ -336,10 +337,19 @@
             "descriptionHelp": "Optional. Shown to the respondent at the top of the survey.",
             "localeLabel": "Survey language",
             "localeHelp": "The language a respondent sees the survey in. It does not change the app's language.",
+            "localesLabel": "Survey languages",
+            "localesHelp": "The languages a respondent can choose between. The survey's own language cannot be switched off. A new language starts untranslated: every field falls back to the survey's own until you write over it.",
             "waveLabel": "Wave",
             "wavePlaceholder": "e.g. 2026",
             "waveHelp": "Names this round in the comparison against other waves. Leave it empty for an unnamed wave.",
             "submit": "Save"
+        },
+        "translation": {
+            "label": "Survey language being edited",
+            "sourceOption": "{language} — the survey's own language",
+            "missing": "{count, plural, one {# untranslated} other {# untranslated}}",
+            "complete": "Fully translated",
+            "rowUntranslated": "Something here is untranslated in this language"
         }
     },
     "Results": {

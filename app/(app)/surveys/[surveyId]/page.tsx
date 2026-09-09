@@ -4,7 +4,6 @@ import { cache } from "react";
 
 import { BuilderScreen } from "@/components/builder/builder-screen";
 import { SurveyIdSchema } from "@/domain/ids";
-import { resolveElements } from "@/domain/localize";
 import { requireSessionUser } from "@/lib/auth/session";
 import { keyPolicyFor } from "@/lib/builder/keys";
 import { countResponses } from "@/lib/db/responses";
@@ -75,14 +74,13 @@ export default async function BuilderPage({
                 title: record.survey.title,
                 description: record.survey.description,
                 locale: record.survey.locale,
+                locales: record.survey.locales,
                 waveLabel: record.survey.waveLabel
             }}
-            // The builder edits one language: the survey's own, until the
-            // translation surface lands (docs/DECISIONS.md 030).
-            initialElements={resolveElements(
-                record.survey.elements,
-                record.survey.locale
-            )}
+            // The stored document, translations and all: the builder edits one
+            // language of it at a time and merges each edit back, so it is the
+            // only shape it can safely hold (docs/DECISIONS.md 031).
+            initialElements={record.survey.elements}
             initialVersion={record.version}
             keys={{
                 policy: keyPolicyFor({

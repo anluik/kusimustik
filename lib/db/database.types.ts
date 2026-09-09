@@ -275,6 +275,7 @@ export type Database = {
           description: string | null
           elements: Json
           locale: string
+          locales: string[]
           survey_id: string
           title: string
           version: number
@@ -284,6 +285,7 @@ export type Database = {
           description?: string | null
           elements: Json
           locale: string
+          locales?: string[]
           survey_id: string
           title: string
           version: number
@@ -293,6 +295,7 @@ export type Database = {
           description?: string | null
           elements?: Json
           locale?: string
+          locales?: string[]
           survey_id?: string
           title?: string
           version?: number
@@ -322,6 +325,7 @@ export type Database = {
           elements: Json
           id: string
           locale: string
+          locales: string[]
           owner_id: string
           published_at: string | null
           published_version: number | null
@@ -340,6 +344,7 @@ export type Database = {
           elements?: Json
           id?: string
           locale?: string
+          locales?: string[]
           owner_id: string
           published_at?: string | null
           published_version?: number | null
@@ -358,6 +363,7 @@ export type Database = {
           elements?: Json
           id?: string
           locale?: string
+          locales?: string[]
           owner_id?: string
           published_at?: string | null
           published_version?: number | null
@@ -419,6 +425,7 @@ export type Database = {
           elements: Json
           id: string
           locale: string
+          locales: string[]
           published_version: number
           slug: string
           status: string
@@ -427,6 +434,10 @@ export type Database = {
           wave_group_id: string
           wave_label: string
         }[]
+      }
+      localized_text: {
+        Args: { p_locale: string; p_text: Json }
+        Returns: string
       }
       owns_survey: { Args: { p_survey_id: string }; Returns: boolean }
       prune_rate_limits: { Args: never; Returns: undefined }

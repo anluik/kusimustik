@@ -206,7 +206,8 @@
             "keyLabel": "Võti",
             "keyHelp": {
                 "derive": "Tekib pealkirjast, kuni sa seda ise muudad. Võti seob laineid ja annab CSV veergudele nime, seepärast lukustub see avaldamisel.",
-                "freeze": "Lukustatud: sellele võtmele viitavad juba vastused või teised lained. Muuta saab, aga hoiatuse kaudu."
+                "freeze": "Lukustatud: sellele võtmele viitavad juba vastused või teised lained. Muuta saab, aga hoiatuse kaudu.",
+                "translating": "Võti on masinatele, mitte vastajale: see on kõigis keeltes sama ja seda muudad põhikeeles."
             },
             "titleLabel": "Küsimus",
             "titlePlaceholder": "Mida sa vastajalt küsida tahad?",
@@ -336,10 +337,19 @@
             "descriptionHelp": "Vabatahtlik. Kuvatakse vastajale küsitluse alguses.",
             "localeLabel": "Küsitluse keel",
             "localeHelp": "Keel, milles vastaja küsitlust näeb. Rakenduse keelt see ei muuda.",
+            "localesLabel": "Küsitluse keeled",
+            "localesHelp": "Keeled, mille vahel vastaja valida saab. Põhikeelt välja lülitada ei saa. Uus keel algab tõlkimata: iga väli langeb tagasi põhikeelele, kuni sa selle üle kirjutad.",
             "waveLabel": "Laine",
             "wavePlaceholder": "nt 2026",
             "waveHelp": "Nimetab selle vooru lainete võrdluses. Tühi väli tähendab nimeta lainet.",
             "submit": "Salvesta"
+        },
+        "translation": {
+            "label": "Küsitluse keel, mida muudad",
+            "sourceOption": "{language} — küsitluse põhikeel",
+            "missing": "{count, plural, one {# tõlkimata} other {# tõlkimata}}",
+            "complete": "Kõik tõlgitud",
+            "rowUntranslated": "Selles keeles on midagi tõlkimata"
         }
     },
     "Results": {

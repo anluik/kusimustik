@@ -7,6 +7,8 @@ import { useState } from "react";
 
 import { AddElementMenu } from "@/components/builder/add-element-menu";
 import { CollectedAnswersProvider } from "@/components/builder/collected-answers";
+import { LanguageSwitcher } from "@/components/builder/language-switcher";
+import { TranslationProvider } from "@/components/builder/translation";
 import { PublishControl } from "@/components/builder/publish-control";
 import { EditorPanel } from "@/components/builder/editor-panel";
 import { ElementCanvas } from "@/components/builder/element-canvas";
@@ -24,15 +26,19 @@ import {
     SheetHeader,
     SheetTitle
 } from "@/components/ui/sheet";
+import type { SurveyLocale } from "@/domain/content";
 import type { QuestionId, SurveyId } from "@/domain/ids";
-import type { SurveyElement } from "@/domain/question";
+import {
+    missingTranslationCount,
+    missingTranslations
+} from "@/domain/localize";
+import type { AuthoredElement } from "@/domain/question";
 import type { SurveyStatus } from "@/domain/survey";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSurveyBuilder } from "@/hooks/use-survey-builder";
 import type { SurveyKeys } from "@/lib/builder/keys";
 import {
     createElement,
-    duplicateElement,
     type CreatableElementType
 } from "@/lib/builder/new-element";
 import { ROUTES } from "@/lib/routes";
@@ -46,9 +52,14 @@ import { ROUTES } from "@/lib/routes";
  * away below `md` — the canvas is still selectable there, and reordering is a
  * pointer-and-keyboard job on a screen wide enough to see the order.
  *
- * The survey's own settings — title, language, wave — are a dialog rather than
- * a fourth panel: they are read once and changed rarely, and unlike everything
- * else here they are a submit rather than an autosave.
+ * The survey's own settings — title, languages, wave — are a dialog rather
+ * than a fourth panel: they are read once and changed rarely, and unlike
+ * everything else here they are a submit rather than an autosave.
+ *
+ * A survey offered in more than one language adds a fourth control to the app
+ * bar and nothing else: the three panels hold whichever language it names, and
+ * the one being translated from shows through as placeholder text. See
+ * docs/DECISIONS.md 031.
  */
 
 /** DESIGN §4: the editor is a static column from 1280px up, a sheet below. */
@@ -67,7 +78,8 @@ export function BuilderScreen({
 }: {
     readonly surveyId: SurveyId;
     readonly initialSettings: SurveySettings;
-    readonly initialElements: readonly SurveyElement[];
+    /** The stored document — every language, not one of them. */
+    readonly initialElements: readonly AuthoredElement[];
     readonly initialVersion: number;
     /** Which keys are spoken for, and whether a key may still follow its title. */
     readonly keys: SurveyKeys;
@@ -81,19 +93,36 @@ export function BuilderScreen({
 }) {
     const t = useTranslations("Builder");
     const tResults = useTranslations("Results");
-    const builder = useSurveyBuilder({
-        surveyId,
-        initialElements,
-        initialVersion,
-        keys
-    });
-
     const asSheet = useMediaQuery(EDITOR_AS_SHEET);
     const [sheetOpen, setSheetOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     // Held locally so the app bar follows the save immediately; the action
     // refreshes the router too, for the survey list and the runner.
     const [settings, setSettings] = useState(initialSettings);
+    // Which of the survey's languages is being edited. Not derived from the
+    // settings, because it is a view of the document rather than a property of
+    // it — closing the builder forgets it, as it should.
+    const [locale, setLocale] = useState<SurveyLocale>(initialSettings.locale);
+
+    const builder = useSurveyBuilder({
+        surveyId,
+        initialElements,
+        initialVersion,
+        keys,
+        source: settings.locale,
+        locale
+    });
+
+    // Which elements still have something to translate, for the marker on the
+    // element list's rows. Empty while editing the survey's own language: what
+    // a survey is written in is never behind.
+    const untranslated = new Set(
+        locale === settings.locale
+            ? []
+            : builder.stored
+                  .filter(element => missingTranslations(element, locale) > 0)
+                  .map(element => element.id)
+    );
 
     const defaults = {
         title: t("defaults.questionTitle"),
@@ -118,26 +147,28 @@ export function BuilderScreen({
     }
 
     const editor = (
-        <EditorPanel
-            selected={builder.selected}
-            elements={builder.elements}
-            keys={builder.keys}
-            insetHeader={asSheet}
-            onChange={builder.replace}
-            onDuplicate={() => {
-                const source = builder.selected;
-                if (source === null) return;
-                builder.duplicate(
-                    source.id,
-                    duplicateElement(source, builder.elements, builder.keys)
-                );
-            }}
-            onDelete={() => {
-                if (builder.selectedId === null) return;
-                builder.remove(builder.selectedId);
-                setSheetOpen(false);
-            }}
-        />
+        <TranslationProvider
+            locale={locale}
+            source={settings.locale}
+            element={builder.selectedStored}
+        >
+            <EditorPanel
+                selected={builder.selected}
+                elements={builder.elements}
+                keys={builder.keys}
+                insetHeader={asSheet}
+                onChange={builder.replace}
+                onDuplicate={() => {
+                    if (builder.selectedId === null) return;
+                    builder.duplicate(builder.selectedId);
+                }}
+                onDelete={() => {
+                    if (builder.selectedId === null) return;
+                    builder.remove(builder.selectedId);
+                    setSheetOpen(false);
+                }}
+            />
+        </TranslationProvider>
     );
 
     return (
@@ -153,12 +184,22 @@ export function BuilderScreen({
                 }
                 actions={
                     <>
+                        <LanguageSwitcher
+                            locale={locale}
+                            source={settings.locale}
+                            locales={settings.locales}
+                            missing={missingTranslationCount(
+                                builder.stored,
+                                locale
+                            )}
+                            onSelect={setLocale}
+                        />
                         <PublishControl
                             surveyId={surveyId}
                             status={status}
                             slug={slug}
                             answerableCount={
-                                builder.elements.filter(
+                                builder.stored.filter(
                                     element => element.isAnswerable
                                 ).length
                             }
@@ -210,7 +251,8 @@ export function BuilderScreen({
                 scroll: the app bar is 44px and this is the rest of it. */}
             <div className="flex h-[calc(100svh-2.75rem)] min-h-0">
                 <ElementList
-                    elements={builder.elements}
+                    elements={builder.shown}
+                    untranslated={untranslated}
                     selectedId={builder.selectedId}
                     onSelect={select}
                     onMove={builder.move}
@@ -218,7 +260,7 @@ export function BuilderScreen({
                 />
 
                 <ElementCanvas
-                    elements={builder.elements}
+                    elements={builder.shown}
                     selectedId={builder.selectedId}
                     onSelect={select}
                     className="flex-1"
@@ -251,6 +293,12 @@ export function BuilderScreen({
                 onOpenChange={setSettingsOpen}
                 onSaved={(saved, version) => {
                     setSettings(saved);
+                    // The author may have just stopped offering the language
+                    // on screen, or changed which one the survey is written
+                    // in. Either way the panel falls back to the source rather
+                    // than editing a language the survey no longer has.
+                    if (!saved.locales.includes(locale))
+                        setLocale(saved.locale);
                     builder.syncVersion(version);
                 }}
             />

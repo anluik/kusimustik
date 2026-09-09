@@ -10,6 +10,7 @@ import {
     fieldId
 } from "@/components/builder/element-fields";
 import { Field } from "@/components/builder/field";
+import { useReferenceText } from "@/components/builder/translation";
 import { Input } from "@/components/ui/input";
 import {
     Select,
@@ -55,6 +56,7 @@ export function OpinionScaleEditor({
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
+    const reference = useReferenceText();
 
     const endpoint = (which: "minLabel" | "maxLabel") => (
         <Field
@@ -66,7 +68,7 @@ export function OpinionScaleEditor({
             <Input
                 id={fieldId(question, which)}
                 value={question[which] ?? ""}
-                placeholder={t("scaleLabelPlaceholder")}
+                placeholder={reference(which) ?? t("scaleLabelPlaceholder")}
                 autoComplete="off"
                 onChange={event =>
                     onChange(

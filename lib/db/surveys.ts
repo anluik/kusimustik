@@ -10,6 +10,7 @@ import {
     AuthoredSurveySchema,
     LOCALES,
     SURVEY_STATUSES,
+    SurveyLocalesSchema,
     SurveySlugSchema,
     SurveyTitleSchema,
     WaveLabelSchema
@@ -38,12 +39,12 @@ import type { Db } from "@/lib/db/types";
  */
 
 const DEFINITION_COLUMNS =
-    "id, title, description, status, slug, locale, wave_group_id, wave_label, elements";
+    "id, title, description, status, slug, locale, locales, wave_group_id, wave_label, elements";
 
 const RECORD_COLUMNS = `${DEFINITION_COLUMNS}, owner_id, version, published_version, created_at, updated_at, published_at, closed_at`;
 
 const SUMMARY_COLUMNS =
-    "id, title, description, status, slug, locale, wave_group_id, wave_label, owner_id, version, published_version, created_at, updated_at, published_at, closed_at";
+    "id, title, description, status, slug, locale, locales, wave_group_id, wave_label, owner_id, version, published_version, created_at, updated_at, published_at, closed_at";
 
 /** The survey plus the columns the domain deliberately knows nothing about. */
 export const SurveyRecordSchema = z.object({
@@ -69,6 +70,7 @@ export const SurveySummarySchema = SurveyRecordSchema.omit({
     status: z.literal(SURVEY_STATUSES),
     slug: SurveySlugSchema.nullable(),
     locale: z.literal(LOCALES),
+    locales: SurveyLocalesSchema,
     waveGroupId: z.uuid(),
     waveLabel: z.string().nullable()
 });
@@ -93,6 +95,11 @@ export const NewSurveySchema = z.object({
     title: SurveyTitleSchema,
     description: z.string().max(2000).optional(),
     locale: z.literal(LOCALES).default("et"),
+    /**
+     * Omit and the database fills in `[locale]`: a survey is offered in the
+     * language it is written in until its author says otherwise.
+     */
+    locales: SurveyLocalesSchema.optional(),
     /** Omit for a new survey; pass the source's to add a wave to a group. */
     waveGroupId: z.uuid().optional(),
     waveLabel: WaveLabelSchema.optional(),
@@ -108,6 +115,7 @@ type DefinitionColumns = {
     status: string;
     slug: string | null;
     locale: string;
+    locales: string[];
     wave_group_id: string;
     wave_label: string | null;
     elements: unknown;
@@ -133,6 +141,7 @@ function surveyInput(row: DefinitionColumns) {
         status: row.status,
         slug: row.slug,
         locale: row.locale,
+        locales: row.locales,
         waveGroupId: row.wave_group_id,
         ...(row.wave_label !== null && { waveLabel: row.wave_label }),
         elements: row.elements
@@ -170,6 +179,7 @@ function toSummary(row: Omit<RecordColumns, "elements">): SurveySummary {
             status: row.status,
             slug: row.slug,
             locale: row.locale,
+            locales: row.locales,
             waveGroupId: row.wave_group_id,
             waveLabel: row.wave_label,
             ownerId: row.owner_id,
@@ -305,6 +315,9 @@ export async function createSurvey(
                 title: parsed.title,
                 description: parsed.description ?? null,
                 locale: parsed.locale,
+                ...(parsed.locales !== undefined && {
+                    locales: [...parsed.locales]
+                }),
                 ...(parsed.waveGroupId !== undefined && {
                     wave_group_id: parsed.waveGroupId
                 }),
@@ -321,6 +334,8 @@ export type SurveyDefinitionPatch = {
     readonly title?: string;
     readonly description?: string | null;
     readonly locale?: Survey["locale"];
+    /** The languages the survey is offered in; the trigger normalises them. */
+    readonly locales?: readonly Survey["locale"][];
     readonly waveLabel?: string | null;
     /** The stored shape: translations included, never one language of them. */
     readonly elements?: readonly AuthoredElement[];
@@ -349,6 +364,9 @@ export async function updateSurveyDefinition(
                     description: patch.description
                 }),
                 ...(patch.locale !== undefined && { locale: patch.locale }),
+                ...(patch.locales !== undefined && {
+                    locales: [...patch.locales]
+                }),
                 ...(patch.waveLabel !== undefined && {
                     wave_label: patch.waveLabel
                 }),

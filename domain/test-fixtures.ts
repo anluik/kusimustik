@@ -192,6 +192,7 @@ export const survey: Survey = {
     status: "published",
     slug: "product-feedback-2026",
     locale: "et",
+    locales: ["et"],
     waveGroupId: WAVE_GROUP_ID,
     waveLabel: "2026",
     elements: [...ALL_ELEMENTS]

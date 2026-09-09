@@ -50,6 +50,7 @@ export function MatrixSingleEditor({
 
             <OptionListEditor
                 dndId={`rows-${question.id}`}
+                list="rows"
                 options={question.rows}
                 minimum={1}
                 copy={copy.rows}
@@ -58,6 +59,7 @@ export function MatrixSingleEditor({
 
             <OptionListEditor
                 dndId={`columns-${question.id}`}
+                list="columns"
                 options={question.columns}
                 minimum={2}
                 copy={copy.columns}
