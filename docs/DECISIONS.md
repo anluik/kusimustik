@@ -680,3 +680,35 @@ The wedge: `sync_survey_questions()` inserted the arriving projection rows *befo
 - **The checklist is a document, not a script.** Every step on it needs an account, a card, a registrar login or a key that is shown once. `docs/DEPLOY.md` is ordered so that each step's outputs are the next one's inputs, names dashboard *screens* rather than click paths, because the click paths move, and says plainly which two of its items are decisions rather than chores — the region, and whether email sign-ups stay open, since as deployed `signInWithOtp` creates an account for any address that asks for a link.
 
 **Cost accepted.** A deploy with a manual database step in it, a CI suite that does not yet open a browser, and a checklist that will drift from Supabase's dashboard the first time it is redesigned.
+
+---
+
+## 028 — The product will be sold on plans, and nothing built before then may assume otherwise
+
+**Status:** accepted, unbuilt
+
+**Context.** Phase 10 put the product on a real domain, and its checklist ends with a decision — whether email sign-ups stay open. Once they are, and once a transactional sender is behind the magic link, anyone who finds `/login` has an account with no ceiling on it. The product has always been meant to sell — this file's own Phase 10 note and `docs/PLAN.md`'s backlog price it against Surveer's €24/mo for 1,000 responses — but nothing in the codebase knows that. There is no plan, no limit, and no place to put one.
+
+This entry is not a build. It is the decision written down before it is built, because several of the phases still ahead would otherwise settle these questions by accident, one at a time, in whatever way was convenient that afternoon. Phase 14 in `docs/PLAN.md` is where it gets made real.
+
+**Decisions.**
+
+- **There will be a free tier and paid tiers, and every account will have a ceiling.** Free has to be usable enough to evaluate on — a real survey, sent to a real list, with the charts and the CSV at the end of it — and small enough that the first serious use argues for paying. Export is therefore not a thing to gate: an evaluation that cannot get its data out is not an evaluation.
+
+- **When it is built, the tier table belongs in `domain/plan.ts` and will contain no money.** Pure data, `as const` + `satisfies`, so a new plan or a new gated capability is a type error until every plan answers for it. Prices, currencies, trials and proration belong to the payment provider — a price that lives in two places is a price that is wrong in one of them. What the application needs to know is which plan an account is on and what that plan permits.
+
+- **The meters will be surveys owned and responses collected per calendar month, account-wide.** Surveer sells per-month allowances, so a prospect comparing the two is already holding that ruler, and a monthly allowance fails in the better direction: a per-survey lifetime cap strands a survey forever, where a month turns over. Nothing is deleted when an allowance runs out — surveys stop accepting new responses until the period turns or the plan changes.
+
+- **A question-count limit is rejected in advance.** Its only enforcement point is `saveSurveyElementsAction`, which is the builder's autosave, and a limit there turns a keystroke into a save that can fail — the exact failure mode 014 and 023 were spent removing.
+
+- **The two kinds of limit will be enforced in two different places, and the reason is not symmetry.** An owner-facing limit (surveys owned) belongs in the Server Action, where the owner can be told which limit they hit and what to do about it; an owner over it can only inconvenience themselves. A respondent-facing limit (the response allowance) belongs in the database, in the INSERT policy on `responses`, because that path is anonymous and reachable with nothing but the publishable key and a survey id — the same argument 009 and 026 made for the read path and the rate limiter. The action checks it first so a respondent gets a sentence rather than a shrug; the policy is what a hand-rolled POST meets.
+
+- **The runner will be told before it renders a form.** A respondent who answers twenty questions and is refused on submit has been wasted. The application cannot compute this itself — `owner_id` is deliberately not projected to a respondent (009) and will not be — so `get_runner_survey` grows the flag, and it is a distinct state from `closed`: not what the owner chose, and not permanent.
+
+- **A limit that exists in both TypeScript and SQL must be asserted, not just mirrored.** An RLS policy cannot read `domain/plan.ts`, so the numbers will exist in the database too — the mirroring `survey_questions.type` already does of `ELEMENT_TYPES` (008). Unlike that one, this mirror gets a `.db.test.ts` that fails when the two disagree, because the numbers it would drift into are the ones every account is billed against.
+
+- **A plan is billing's to write, never the account's.** `profiles` grants the owner `update (display_name)` and nothing else, and whatever column carries the tier stays outside that grant. Until Stripe exists, a plan change is one `update` from the SQL editor.
+
+- **Phases 11–13 are the paid hooks, and each one wires its own flag when it lands.** Wave comparison (11) is the feature neither competitor offers and the reason an annual customer stays for year two; multilingual content (12) and skip logic (13) are the feature-grid gaps. Deciding once, here, what is free is what stops that being decided three times under deadline.
+
+**Cost accepted.** Every account created between now and Phase 14 is an account that has been using the product with no ceiling, and imposing one on somebody afterwards is a conversation rather than a fact they agreed to at sign-up. That is the price of not building this yet, and it is the reason Phase 14 should not drift far behind opening sign-ups — or that sign-ups should stay closed until it lands (`docs/DEPLOY.md` step 22). The numbers themselves are deliberately not settled here: the shape is what this entry commits to.

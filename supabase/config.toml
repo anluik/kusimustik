@@ -157,7 +157,7 @@ enabled = true
 # purpose, and `supabase config push` would overwrite the hosted project's auth
 # settings with them — pointing every production magic link at a laptop.
 # Production's Site URL, redirect allow-list, SMTP and rate limits live in the
-# dashboard; see docs/DEPLOY.md section E.
+# dashboard; see docs/DEPLOY.md section F.
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
 site_url = "http://127.0.0.1:3000"

@@ -225,7 +225,7 @@ Some of this is not an agent's to do. Creating the Supabase and Vercel projects,
 
 **Done when:** the checklist is done, the workflow is green on `master`, and a survey answered from a phone on cellular data lands in the hosted database.
 
-**The agent's half is done.** `.github/workflows/ci.yml` (two jobs: `pnpm check`, and `pnpm test:db` against a stack the CLI brings up), `vercel.json`, a rewritten `.env.example`, the README's deployment section, and `docs/DEPLOY.md` — the numbered checklist, twenty-seven steps in seven sections. DECISIONS 027 records what was decided along the way, chiefly that `pnpm check` now runs `next typegen` first (without it the contract cannot pass on a fresh clone, which is every CI run), that migrations are pushed by hand rather than from CI, and that the deployed app holds no secret at all.
+**The agent's half is done.** `.github/workflows/ci.yml` (two jobs: `pnpm check`, and `pnpm test:db` against a stack the CLI brings up), `vercel.json`, a rewritten `.env.example`, the README's deployment section, and `docs/DEPLOY.md` — the numbered checklist, thirty steps in eight sections. DECISIONS 027 records what was decided along the way, chiefly that `pnpm check` now runs `next typegen` first (without it the contract cannot pass on a fresh clone, which is every CI run), that migrations are pushed by hand rather than from CI, and that the deployed app holds no secret at all.
 
 **The owner's half is `docs/DEPLOY.md`,** and nothing below is reachable until it is worked through: the Supabase and Vercel projects, the domain and its DNS, the email provider and its keys. Two items on it are decisions rather than chores — which region (it has to match `vercel.json`'s `arn1`), and whether email sign-ups stay open, since as deployed anyone who finds `/login` can create an account.
 
@@ -295,13 +295,36 @@ One thing to settle before building: a hidden question and an abandoned one look
 
 ---
 
+---
+
+## Phase 14 — Plans and billing
+
+**Goal:** a stranger signs up, hits the free tier's ceiling, and can pay their way past it.
+
+Nothing in the codebase knows the product is meant to be sold. There is no plan on an account, no limit on anything, and no place to put one — so as deployed, every address that asks for a magic link gets an account that can build and collect without a ceiling. DECISIONS 028 settles the shape of the answer in advance, because the phases either side of this one would otherwise settle it by accident, one convenient afternoon at a time. Read it before starting: it argues for a free tier and paid tiers, two meters (surveys owned, responses per calendar month), a pure `domain/plan.ts` with no money in it, and — the part that is easy to get wrong — enforcement in *two* places for two different reasons.
+
+The work, in the order it wants doing:
+
+1. **The seam.** `domain/plan.ts` — the tiers as pure data, their limits, and a flag per gated capability, tests first. A plan column on `profiles` that the account itself cannot write. The limits mirrored into a table the RLS policy can read, with the `.db.test.ts` that fails when the mirror and the module disagree. A usage counter for the monthly meter, maintained by a trigger rather than counted on the respondent's hot path.
+2. **The enforcement.** The survey ceiling in `createSurveyAction` and `duplicateSurveyAction`, where the owner can be told what they hit; the response allowance in the INSERT policy on `responses`, because that path is anonymous and reachable with nothing but the publishable key. `get_runner_survey` grows an "is this still collecting" flag so the runner says so before it renders a form rather than after twenty questions, and it is a distinct state from `closed` in all three catalogues.
+3. **Stripe.** Checkout, the customer portal, and a webhook that writes the plan column as the service role. The webhook is a Route Handler in `app/api/`, not a Server Action, for the same reason the analytics beacon is one. Signature verification is not optional and the handler must be idempotent: Stripe retries.
+4. **The surfaces.** A pricing page and an upgrade path in three languages, and the owner's own meter — the survey list already carries response counts and is where "84 of 100 this month" belongs. Until this exists an owner learns about their ceiling from an error message, which is tolerable for weeks and not for longer.
+
+Two things to settle rather than improvise: what happens to a survey still collecting when a subscription lapses (the meter stops it and the responses already in are untouched — but the owner has to be *told*, and email is the only channel that reaches them), and whether a dunning grace period is a plan of its own or a date column beside the plan.
+
+**Ordering.** This does not block Phases 11–13, and they do not block it — but each of those three is a paid hook, so whichever lands second wires its flag rather than inventing a second kind of gate. What *does* press on the timing is sign-ups: every account created before a ceiling exists is one that has been using the product without one, and imposing a limit afterwards is a conversation rather than a fact somebody agreed to. Either this phase follows the opening of sign-ups closely, or sign-ups stay closed until it lands (`docs/DEPLOY.md` step 22).
+
+> **Prompt:** Phase 14 of docs/PLAN.md, step 1 only — the seam, no Stripe and no UI. Read DECISIONS 028 first; it is a decision made in advance, not a suggestion, and this step must not create a second source of truth for what a tier permits. Tests first for `domain/plan.ts`, then the migration, then the mirror test.
+
+**Done when:** a free account is refused its fourth survey with a message that names the limit, a survey whose owner is out of allowance says so on the runner rather than on submit, `lib/db/plans.db.test.ts` proves the database refuses the submission even when the action is bypassed, and `pnpm check` and `pnpm test:db` are green.
+
 ## Backlog
 
 Unscheduled, roughly in order of value:
 
 1. **Remaining question types** — ranking and image choice first, since neither competitor's modern option has them; then slider, star rating, matrix_multi, number, date, email, phone, URL. **These come after Phase 12, not before:** every new type adds more labels that would otherwise have to be locale-keyed a second time. Each one is a compiler-guided checklist — around eleven `assertNever` switch sites plus a migration widening the `survey_questions.type` CHECK (008).
 2. **Themes and branding** — logo, colours, custom thank-you page. Cheaper than it looks: DESIGN §8's `--survey-*` namespace already exists, so no runner component reads `--primary` directly.
-3. **Billing** — Stripe. Price against Surveer's caps: their PRO is €24/mo for 1,000 responses and unlimited responses needs €99/mo, which is the obvious place to undercut.
+3. ~~**Billing** — Stripe.~~ **Promoted to Phase 14**, and its shape is settled in DECISIONS 028. Still price against Surveer's caps: their PRO is €24/mo for 1,000 responses and unlimited responses needs €99/mo, which is the obvious place to undercut — matching their response allowance on the middle tier makes the comparison like-for-like.
 4. **Multiple collector links** with per-channel source tracking.
 5. **Templates library**, then AI survey generation from a prompt.
 6. **PDF report export** and shareable public results links.
