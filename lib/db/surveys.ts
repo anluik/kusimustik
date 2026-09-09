@@ -5,7 +5,7 @@ import { QuestionIdSchema, SurveyIdSchema } from "@/domain/ids";
 import { resolveSurvey } from "@/domain/localize";
 import type { AuthoredElement } from "@/domain/question";
 import { AuthoredElementSchema, ELEMENT_TYPES } from "@/domain/question";
-import type { AuthoredSurvey, Survey } from "@/domain/survey";
+import type { AuthoredSurvey, Survey, SurveyLocale } from "@/domain/survey";
 import {
     AuthoredSurveySchema,
     LOCALES,
@@ -218,6 +218,17 @@ export async function getSurvey(
  */
 export type RunnerSurvey = {
     readonly survey: Survey;
+    /**
+     * The language the document was resolved into — the one asked for when the
+     * survey is offered in it, and the survey's own otherwise.
+     *
+     * It is not `survey.locale`, which stays the language the survey was
+     * *written* in and is still the fallback every untranslated field resolves
+     * through. The two differ exactly when a respondent has picked a language,
+     * and the caller needs both: one to render in, the other to know which URL
+     * is the canonical one.
+     */
+    readonly locale: SurveyLocale;
     readonly publishedVersion: number;
 };
 
@@ -227,22 +238,35 @@ export type RunnerSurvey = {
  * A *closed* survey comes back too, so the runner can say so rather than 404 —
  * the branch is the caller's (docs/DECISIONS.md 016). A draft has no public
  * existence at all and is indistinguishable from a slug that was never used.
+ *
+ * `requested` is the language the respondent asked for, from the URL segment.
+ * A language the survey is not offered in is *not* honoured: resolving it
+ * anyway would serve a page field by field through the fallback, in a language
+ * the author never agreed to offer, and the caller would have no way to tell
+ * that had happened. It comes back in the survey's own language instead, and
+ * `locale` says so. See docs/DECISIONS.md 033.
  */
 export async function getRunnerSurveyBySlug(
     db: Db,
-    slug: string
+    slug: string,
+    requested?: SurveyLocale
 ): Promise<RunnerSurvey | null> {
     const row = unwrap(
         `getRunnerSurveyBySlug(${slug})`,
         await db.rpc("get_runner_survey", { p_slug: slug }).maybeSingle()
     );
     if (row === null) return null;
+    const authored = toSurvey(row);
+    const locale =
+        requested !== undefined && authored.locales.includes(requested)
+            ? requested
+            : authored.locale;
     return {
         // Resolved here rather than by the caller: what the respondent is
         // shown is one language, and every runner surface below this point
-        // reads plain strings. Phase 12 step 3 gives this function the
-        // respondent's own locale; until then it is the survey's.
-        survey: resolveSurvey(toSurvey(row)),
+        // reads plain strings (docs/DECISIONS.md 030).
+        survey: resolveSurvey(authored, locale),
+        locale,
         // Non-null for anything this function can return — only a published or
         // closed survey has a slug — but the generated type cannot say so.
         publishedVersion: row.published_version ?? row.version

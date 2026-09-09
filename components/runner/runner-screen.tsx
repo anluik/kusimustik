@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import type { AnswerValue } from "@/domain/answer";
+import type { SurveyLocale } from "@/domain/content";
 import type { QuestionId } from "@/domain/ids";
 import { isAnswerableElement } from "@/domain/question";
 import type { Survey } from "@/domain/survey";
+import { LanguagePicker } from "@/components/runner/language-picker";
 import { QuestionCard, cardId } from "@/components/runner/question-card";
 import { RunnerNotice } from "@/components/runner/runner-notice";
 import { Button } from "@/components/ui/button";
@@ -63,9 +65,18 @@ type Status =
 
 export function RunnerScreen({
     survey,
+    locale,
     version
 }: {
     readonly survey: Survey;
+    /**
+     * The language this page is being *read* in, which is the URL's and not
+     * necessarily `survey.locale` — that stays the language it was written in
+     * and the fallback each untranslated field resolved through. It travels
+     * with the submission, so the owner can see which language was answered
+     * in, and it is what the picker marks as current.
+     */
+    readonly locale: SurveyLocale;
     /** Part of the draft's storage key, so a republished survey starts fresh. */
     readonly version: number;
 }) {
@@ -191,6 +202,7 @@ export function RunnerScreen({
             answers: Object.fromEntries(
                 Object.entries(draft).filter(([, value]) => value != null)
             ),
+            locale,
             hp: honeypot,
             // A null `shownAt` means the mount effect has not run, which
             // cannot be true by the time anyone has pressed the button — and
@@ -273,6 +285,18 @@ export function RunnerScreen({
             />
 
             <main className="mx-auto flex w-full max-w-[640px] flex-1 flex-col gap-3 px-3.5 py-3.5">
+                {/* Above the description and every question: a respondent who
+                    cannot read the page has to meet this before they meet
+                    anything else. It is in the flow rather than in the pinned
+                    header because the header is 52px with a title and a count
+                    in it already, and a language is chosen once. */}
+                <LanguagePicker
+                    slug={survey.slug ?? ""}
+                    active={locale}
+                    source={survey.locale}
+                    locales={survey.locales}
+                />
+
                 {survey.description !== undefined && (
                     <p className="text-[14px] leading-[1.35] text-muted-foreground">
                         {survey.description}

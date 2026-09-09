@@ -19,8 +19,20 @@ export const ROUTES = {
     settings: "/settings",
     login: "/login",
     authCallback: "/auth/callback",
-    /** The respondent runner; `k` for *küsitlus*. See docs/DECISIONS.md 011. */
+    /**
+     * The respondent runner; `k` for *küsitlus*. See docs/DECISIONS.md 011.
+     *
+     * This is the share link, and it carries no language: it renders the one
+     * the survey is written in, which keeps the URL an owner hands out stable
+     * whatever they translate it into afterwards.
+     */
     runner: (slug: string) => `/k/${slug}`,
+    /**
+     * The same survey read in one of the other languages it is offered in —
+     * what the respondent's picker links to. The survey's own language has no
+     * segment: it is `runner()` above. See docs/DECISIONS.md 033.
+     */
+    runnerInLocale: (slug: string, locale: string) => `/k/${slug}/${locale}`,
     /** The runner's analytics beacon. A Route Handler, not a Server Action. */
     events: "/api/events",
     /**

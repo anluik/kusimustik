@@ -9,6 +9,14 @@
         "submitting": "Отправляем…",
         "answerAgain": "Ответить ещё раз"
     },
+    "RunnerLanguage": {
+        "label": "Язык опроса",
+        "name": {
+            "et": "Eesti keel",
+            "en": "English",
+            "ru": "Русский"
+        }
+    },
     "RunnerQuestion": {
         "otherPlaceholder": "Напишите свой ответ",
         "dropdownPlaceholder": "Выберите…",

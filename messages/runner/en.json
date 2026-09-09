@@ -9,6 +9,14 @@
         "submitting": "Sending…",
         "answerAgain": "Answer again"
     },
+    "RunnerLanguage": {
+        "label": "Survey language",
+        "name": {
+            "et": "Eesti keel",
+            "en": "English",
+            "ru": "Русский"
+        }
+    },
     "RunnerQuestion": {
         "otherPlaceholder": "Write your answer",
         "dropdownPlaceholder": "Choose…",
