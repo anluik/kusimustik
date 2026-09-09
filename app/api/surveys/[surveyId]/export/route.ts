@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { SurveyIdSchema } from "@/domain/ids";
+import { resolveElements } from "@/domain/localize";
 import { requireSessionUser } from "@/lib/auth/session";
 import { listResponses } from "@/lib/db/responses";
 import { getSurvey } from "@/lib/db/surveys";
@@ -55,7 +56,13 @@ export async function GET(
         surveyVersion: t("surveyVersion")
     };
 
-    const file = buildCsvFile(record.survey.elements, responses, labels);
+    // One file, one language: the survey's own. A column header per language
+    // would break the wave-over-wave column identity the export exists for.
+    const file = buildCsvFile(
+        resolveElements(record.survey.elements, record.survey.locale),
+        responses,
+        labels
+    );
     const name = csvFileName(record.survey.title, new Date());
 
     return new Response(file, {

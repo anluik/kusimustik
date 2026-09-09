@@ -265,6 +265,8 @@ The routing seam was left open for it deliberately: `lib/i18n/runner.ts` documen
 
 The blast radius is wide but entirely compiler-visible: the nine schemas, the nine builder editors, the runner inputs, the CSV headers in `domain/export.ts`, and `SummaryBase.title` — every place that reads a question's words.
 
+The author has to specify the language they are using to build a survey. The user can only pick a language that is supported for the survey.
+
 Three sessions, not one:
 
 1. The schema, the fallback migration and the domain tests. Nothing user-visible changes.

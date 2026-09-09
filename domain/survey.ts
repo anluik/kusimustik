@@ -1,18 +1,24 @@
 import { z } from "zod";
 
+import { LOCALES } from "@/domain/content";
 import { SurveyIdSchema, WaveGroupIdSchema } from "@/domain/ids";
-import { SurveyElementSchema } from "@/domain/question";
+import { AuthoredElementSchema, SurveyElementSchema } from "@/domain/question";
 
 export const SURVEY_STATUSES = ["draft", "published", "closed"] as const;
 export type SurveyStatus = (typeof SURVEY_STATUSES)[number];
 
-export const LOCALES = ["et", "en", "ru"] as const;
-export type SurveyLocale = (typeof LOCALES)[number];
+export { LOCALES };
+export type { SurveyLocale } from "@/domain/content";
 
 /**
  * A survey's name. Trimmed before validation, so a title of nothing but spaces
  * is rejected rather than stored — the create and rename forms parse this same
  * schema before they submit.
+ *
+ * The survey's own title and description are columns rather than part of the
+ * `elements` document, and are not translated: they name the survey in the
+ * owner's list and in their browser tab. What a respondent reads is the
+ * document. See docs/DECISIONS.md 030.
  */
 export const SurveyTitleSchema = z.string().trim().min(1).max(300);
 
@@ -43,9 +49,41 @@ const duplicate = <T>(items: readonly T[]): readonly T[] => {
 };
 
 /**
- * A survey's elements, including the two invariants that hold *between* them
- * rather than within any one: no two elements share a `key`, and no two share
- * an `id`.
+ * The invariants that hold *between* elements rather than within any one: no
+ * two share a `key`, and no two share an `id`. Neither is a question about
+ * words, so both shapes of the document are held to it identically.
+ */
+const collisions = (
+    elements: readonly { readonly id: string; readonly key: string }[]
+): readonly string[] => [
+    ...duplicate(elements.map(element => element.key)).map(
+        key => `duplicate question key "${key}"`
+    ),
+    ...duplicate(elements.map(element => element.id)).map(
+        id => `duplicate question id "${id}"`
+    )
+];
+
+const elementList = <
+    Element extends z.core.$ZodType<{
+        readonly id: string;
+        readonly key: string;
+    }>
+>(
+    element: Element
+) =>
+    z.array(element).check(ctx => {
+        for (const message of collisions(ctx.value)) {
+            ctx.issues.push({
+                code: "custom",
+                input: ctx.value,
+                message
+            });
+        }
+    });
+
+/**
+ * A survey's elements in one language.
  *
  * Split out of `SurveySchema` so the builder can run it. The autosave gate
  * used to parse each element on its own, which no per-element schema can
@@ -53,51 +91,51 @@ const duplicate = <T>(items: readonly T[]): readonly T[] => {
  * held to be valid, sent, and rejected by the server, leaving the builder in
  * a save-failed state it could not retry out of. The gate now parses this.
  */
-export const SurveyElementsSchema = z.array(SurveyElementSchema).check(ctx => {
-    const elements = ctx.value;
+export const SurveyElementsSchema = elementList(SurveyElementSchema);
 
-    for (const key of duplicate(elements.map(element => element.key))) {
+/** The same list as it is stored: every language the author has written. */
+export const AuthoredElementsSchema = elementList(AuthoredElementSchema);
+
+const surveyFields = {
+    id: SurveyIdSchema,
+    title: SurveyTitleSchema,
+    description: SurveyDescriptionSchema.optional(),
+    status: z.literal(SURVEY_STATUSES),
+    /** Assigned on publish; null while the survey has never been published. */
+    slug: SurveySlugSchema.nullable(),
+    /**
+     * The language the survey is authored in, and the fallback every piece of
+     * its text resolves through when a translation is missing.
+     */
+    locale: z.literal(LOCALES),
+    /** Shared by every wave of the same recurring survey. See DECISIONS 003. */
+    waveGroupId: WaveGroupIdSchema,
+    /** Free text ("2026", "Q1") used as the series label in comparisons. */
+    waveLabel: WaveLabelSchema.optional()
+};
+
+const publishedNeedsSlug = <T extends { status: string; slug: string | null }>(
+    ctx: z.core.ParsePayload<T>
+): void => {
+    if (ctx.value.status === "published" && ctx.value.slug === null) {
         ctx.issues.push({
             code: "custom",
-            input: elements,
-            message: `duplicate question key "${key}"`
+            input: ctx.value,
+            path: ["slug"],
+            message: "a published survey needs a slug"
         });
     }
-    for (const id of duplicate(elements.map(element => element.id))) {
-        ctx.issues.push({
-            code: "custom",
-            input: elements,
-            message: `duplicate question id "${id}"`
-        });
-    }
-});
+};
 
+/** A survey in one language: what a runner renders and a report titles. */
 export const SurveySchema = z
-    .object({
-        id: SurveyIdSchema,
-        title: SurveyTitleSchema,
-        description: SurveyDescriptionSchema.optional(),
-        status: z.literal(SURVEY_STATUSES),
-        /** Assigned on publish; null while the survey has never been published. */
-        slug: SurveySlugSchema.nullable(),
-        locale: z.literal(LOCALES),
-        /** Shared by every wave of the same recurring survey. See DECISIONS 003. */
-        waveGroupId: WaveGroupIdSchema,
-        /** Free text ("2026", "Q1") used as the series label in comparisons. */
-        waveLabel: WaveLabelSchema.optional(),
-        elements: SurveyElementsSchema
-    })
-    .check(ctx => {
-        const { status, slug } = ctx.value;
+    .object({ ...surveyFields, elements: SurveyElementsSchema })
+    .check(publishedNeedsSlug);
 
-        if (status === "published" && slug === null) {
-            ctx.issues.push({
-                code: "custom",
-                input: ctx.value,
-                path: ["slug"],
-                message: "a published survey needs a slug"
-            });
-        }
-    });
+/** A survey as it is stored, translations and all. */
+export const AuthoredSurveySchema = z
+    .object({ ...surveyFields, elements: AuthoredElementsSchema })
+    .check(publishedNeedsSlug);
 
 export type Survey = z.infer<typeof SurveySchema>;
+export type AuthoredSurvey = z.infer<typeof AuthoredSurveySchema>;

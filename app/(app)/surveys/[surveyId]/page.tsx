@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { BuilderScreen } from "@/components/builder/builder-screen";
 import { SurveyIdSchema } from "@/domain/ids";
+import { resolveElements } from "@/domain/localize";
 import { requireSessionUser } from "@/lib/auth/session";
 import { keyPolicyFor } from "@/lib/builder/keys";
 import { countResponses } from "@/lib/db/responses";
@@ -76,7 +77,12 @@ export default async function BuilderPage({
                 locale: record.survey.locale,
                 waveLabel: record.survey.waveLabel
             }}
-            initialElements={record.survey.elements}
+            // The builder edits one language: the survey's own, until the
+            // translation surface lands (docs/DECISIONS.md 030).
+            initialElements={resolveElements(
+                record.survey.elements,
+                record.survey.locale
+            )}
             initialVersion={record.version}
             keys={{
                 policy: keyPolicyFor({

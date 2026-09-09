@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { surveyId as toSurveyId } from "@/domain/ids";
+import { resolveSurvey } from "@/domain/localize";
 import { listResponses } from "@/lib/db/responses";
 import { getSurvey } from "@/lib/db/surveys";
 import { createTestUser, deleteTestUser, signIn } from "@/lib/db/test-support";
@@ -40,7 +41,7 @@ describe("the seeded survey's export", () => {
 
         const responses = await listResponses(db, SEED_WAVE_ONE);
         const table = buildCsvTable(
-            record?.survey.elements ?? [],
+            record === null ? [] : resolveSurvey(record.survey).elements,
             responses,
             LABELS
         );
@@ -58,7 +59,7 @@ describe("the seeded survey's export", () => {
         const db = await signIn(OWNER_EMAIL, OWNER_PASSWORD);
         const record = await getSurvey(db, SEED_WAVE_ONE);
         const [header] = buildCsvTable(
-            record?.survey.elements ?? [],
+            record === null ? [] : resolveSurvey(record.survey).elements,
             [],
             LABELS
         );
@@ -81,7 +82,7 @@ describe("the seeded survey's export", () => {
         const responses = await listResponses(db, SEED_WAVE_ONE);
 
         const file = buildCsvFile(
-            record?.survey.elements ?? [],
+            record === null ? [] : resolveSurvey(record.survey).elements,
             responses,
             LABELS
         );

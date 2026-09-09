@@ -8,7 +8,8 @@ import {
     npsQuestion,
     shortTextQuestion,
     singleChoiceQuestion,
-    statementElement
+    statementElement,
+    stored
 } from "@/lib/db/test-support";
 import type { TestUser } from "@/lib/db/test-support";
 import { submitResponse } from "@/lib/db/responses";
@@ -49,7 +50,7 @@ async function draft(title: string): Promise<SurveyRecord> {
     return createSurvey(owner.db, {
         ownerId: owner.id,
         title,
-        elements: [npsQuestion("recommend"), shortTextQuestion("city")]
+        elements: stored([npsQuestion("recommend"), shortTextQuestion("city")])
     });
 }
 
@@ -80,7 +81,7 @@ describe("publishing", () => {
         const theirs = await createSurvey(other.db, {
             ownerId: other.id,
             title: "Tööandja maine uuring",
-            elements: [npsQuestion("recommend")]
+            elements: stored([npsQuestion("recommend")])
         });
         const published = await publishSurveyDerivingSlug(other.db, theirs);
 
@@ -132,11 +133,11 @@ describe("survey_stats", () => {
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Loendamine",
-            elements: [
+            elements: stored([
                 statementElement("intro"),
                 npsQuestion("recommend"),
                 singleChoiceQuestion("role")
-            ]
+            ])
         });
 
         const stats = await listSurveyStats(owner.db);
@@ -150,7 +151,7 @@ describe("survey_stats", () => {
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Vastuste loendamine",
-            elements: [recommend, city]
+            elements: stored([recommend, city])
         });
         const published = await publishSurveyDerivingSlug(owner.db, survey);
 
@@ -172,7 +173,7 @@ describe("survey_stats", () => {
             owner.db,
             survey.survey.id,
             published.version,
-            { elements: [recommend] }
+            { elements: stored([recommend]) }
         );
 
         stats = await listSurveyStats(owner.db);
@@ -201,7 +202,7 @@ describe("duplication as the next wave", () => {
             ownerId: owner.id,
             title: "Iga-aastane uuring",
             waveLabel: "2025",
-            elements: [role, recommend]
+            elements: stored([role, recommend])
         });
         const published = await publishSurveyDerivingSlug(owner.db, source);
 
@@ -240,7 +241,7 @@ describe("deletion", () => {
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Kustutatav",
-            elements: [recommend]
+            elements: stored([recommend])
         });
         await publishSurveyDerivingSlug(owner.db, survey);
         await submitResponse(owner.db, {

@@ -6,11 +6,12 @@ import { z } from "zod";
 import { duplicateSurvey } from "@/domain/duplicate";
 import { SurveyIdSchema } from "@/domain/ids";
 import type { SurveyId } from "@/domain/ids";
+import { authorElements } from "@/domain/localize";
 import { SurveyElementSchema } from "@/domain/question";
 import {
+    AuthoredSurveySchema,
     LOCALES,
     SurveyDescriptionSchema,
-    SurveySchema,
     SurveyTitleSchema,
     WaveLabelSchema
 } from "@/domain/survey";
@@ -147,8 +148,16 @@ export type SaveSurveyElementsInput = z.input<typeof SaveElementsInputSchema>;
  * The document is re-parsed twice on purpose: once as an array of elements,
  * and once as the whole survey it would become, because the rules that matter
  * most here — no two questions sharing a `key`, none sharing an `id` — are
- * survey-level and live on `SurveySchema`. A client that skipped the builder
- * entirely gets the same answer as one that used it.
+ * survey-level and live on `AuthoredSurveySchema`. A client that skipped the
+ * builder entirely gets the same answer as one that used it.
+ *
+ * The builder sends one language, so what arrives is authored into the
+ * survey's own locale before it is stored — and that is a *replacement* of
+ * the document's text, not a merge into it. It is safe only for as long as
+ * nothing can write a second translation, which is to say until Phase 12
+ * step 2 gives the builder its translation surface; that step sends the
+ * stored shape and deletes this conversion rather than editing it
+ * (docs/DECISIONS.md 030).
  *
  * `expectedVersion` is what keeps two open tabs from silently overwriting each
  * other, and the new version comes back so the builder can carry on saving
@@ -166,9 +175,12 @@ export async function saveSurveyElementsAction(
         const found = await withSurvey(parsed.data.surveyId);
         if (!found.ok) return failed(found.error);
 
-        const candidate = SurveySchema.safeParse({
+        const candidate = AuthoredSurveySchema.safeParse({
             ...found.record.survey,
-            elements: parsed.data.elements
+            elements: authorElements(
+                parsed.data.elements,
+                found.record.survey.locale
+            )
         });
         if (!candidate.success) return failed("invalidInput");
 
@@ -227,10 +239,15 @@ export async function saveSurveySettingsAction(
 
         // An emptied description is *no* description rather than an empty
         // string, the same rule `element-patch.ts` follows one level down: the
-        // survey is JSONB read back through `SurveySchema`, where absent and
-        // present-but-empty are different things. Null on the wire, absent in
-        // the document, and `null` in the patch so the column is cleared.
-        const candidate = SurveySchema.safeParse({
+        // survey is JSONB read back through `AuthoredSurveySchema`, where
+        // absent and present-but-empty are different things. Null on the wire,
+        // absent in the document, and `null` in the patch so the column is
+        // cleared.
+        //
+        // Changing the locale does not re-key the document's text: the words
+        // stay where the author put them and `resolveSurvey` falls back to
+        // them, so the survey reads exactly as it did before the switch.
+        const candidate = AuthoredSurveySchema.safeParse({
             ...found.record.survey,
             title: parsed.data.title,
             description: parsed.data.description ?? undefined,

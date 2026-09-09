@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { surveyId as toSurveyId } from "@/domain/ids";
+import { resolveSurvey } from "@/domain/localize";
 import type { SurveyId } from "@/domain/ids";
 import { insertSurveyEvents } from "@/lib/db/events";
 import { getFunnelTotals, listQuestionFunnel } from "@/lib/db/funnel";
@@ -11,6 +12,7 @@ import {
     npsQuestion,
     signIn,
     singleChoiceQuestion,
+    stored,
     testSlug
 } from "@/lib/db/test-support";
 import type { TestUser } from "@/lib/db/test-support";
@@ -90,7 +92,11 @@ describe("the seeded funnel", () => {
         const record = await getSurvey(db, SEED_WAVE_TWO);
         if (record === null) throw new Error("seed wave two is missing");
 
-        const funnel = buildFunnel(record.survey.elements, totals, rows);
+        const funnel = buildFunnel(
+            resolveSurvey(record.survey).elements,
+            totals,
+            rows
+        );
 
         expect(funnel.isEmpty).toBe(false);
 
@@ -153,7 +159,7 @@ describe("funnel access control", () => {
         const created = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Funnel fixture",
-            elements: [question, npsQuestion("q2")]
+            elements: stored([question, npsQuestion("q2")])
         });
         surveyId = created.survey.id;
         await publishSurvey(owner.db, surveyId, testSlug("funnel"));
@@ -245,7 +251,7 @@ describe("a session that abandoned and then submitted", () => {
         const created = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Abandon fixture",
-            elements: [singleChoiceQuestion("q1")]
+            elements: stored([singleChoiceQuestion("q1")])
         });
         surveyId = created.survey.id;
         await publishSurvey(owner.db, surveyId, testSlug("abandon"));

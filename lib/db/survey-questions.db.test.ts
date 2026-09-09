@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { authorElement } from "@/domain/localize";
 import type { SurveyElement } from "@/domain/question";
 import {
     anonClient,
@@ -10,6 +11,7 @@ import {
     shortTextQuestion,
     singleChoiceQuestion,
     statementElement,
+    stored,
     testSlug
 } from "@/lib/db/test-support";
 import type { TestUser } from "@/lib/db/test-support";
@@ -46,7 +48,7 @@ async function setElements(elements: readonly SurveyElement[]): Promise<void> {
         survey.survey.id,
         survey.version,
         {
-            elements
+            elements: stored(elements)
         }
     );
 }
@@ -56,7 +58,7 @@ beforeAll(async () => {
     survey = await createSurvey(owner.db, {
         ownerId: owner.id,
         title: "Projection",
-        elements: [intro, role, recommend, city]
+        elements: stored([intro, role, recommend, city])
     });
 });
 
@@ -204,7 +206,7 @@ describe("survey_questions follows the elements column", () => {
         const fresh = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Key handover",
-            elements: [shortTextQuestion("linn")]
+            elements: stored([shortTextQuestion("linn")])
         });
         const replacement = shortTextQuestion("linn");
 
@@ -212,7 +214,7 @@ describe("survey_questions follows the elements column", () => {
             owner.db,
             fresh.survey.id,
             fresh.version,
-            { elements: [replacement] }
+            { elements: stored([replacement]) }
         );
 
         const questions = await listSurveyQuestions(owner.db, saved.survey.id, {
@@ -232,7 +234,7 @@ describe("survey_questions follows the elements column", () => {
         const fresh = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Reserved key",
-            elements: [npsQuestion("recommend")]
+            elements: stored([npsQuestion("recommend")])
         });
         const answered = fresh.survey.elements[0];
         if (answered === undefined) throw new Error("no question");
@@ -255,9 +257,62 @@ describe("survey_questions follows the elements column", () => {
                 owner.db,
                 published.survey.id,
                 published.version,
-                { elements: [usurper] }
+                { elements: stored([usurper]) }
             )
         ).rejects.toBeInstanceOf(DbUniqueViolationError);
+    });
+
+    it("projects the title in the survey's own language", async () => {
+        // The projection carries one string and the trigger resolves it, so
+        // this is the SQL half of `resolveText` — it has to agree with the
+        // TypeScript half or an owner's question list and their builder would
+        // disagree about what a question is called (DECISIONS 030).
+        const question = npsQuestion("recommend");
+        const fresh = await createSurvey(owner.db, {
+            ownerId: owner.id,
+            title: "Translated",
+            locale: "et",
+            elements: [
+                {
+                    ...authorElement(question, "et"),
+                    title: { et: "Kas soovitaksite?", en: "Would you?" }
+                }
+            ]
+        });
+
+        await expect(
+            listSurveyQuestions(owner.db, fresh.survey.id)
+        ).resolves.toMatchObject([{ title: "Kas soovitaksite?" }]);
+
+        // Changing the language changes which title the projection holds, so
+        // the trigger fires on the locale as well as on the document.
+        const switched = await updateSurveyDefinition(
+            owner.db,
+            fresh.survey.id,
+            fresh.version,
+            { locale: "en" }
+        );
+        await expect(
+            listSurveyQuestions(owner.db, switched.survey.id)
+        ).resolves.toMatchObject([{ title: "Would you?" }]);
+    });
+
+    it("falls back when the survey's own language is the one that is missing", async () => {
+        const fresh = await createSurvey(owner.db, {
+            ownerId: owner.id,
+            title: "Untranslated",
+            locale: "ru",
+            elements: [
+                {
+                    ...authorElement(npsQuestion("recommend"), "et"),
+                    title: { et: "Kas soovitaksite?" }
+                }
+            ]
+        });
+
+        await expect(
+            listSurveyQuestions(owner.db, fresh.survey.id)
+        ).resolves.toMatchObject([{ title: "Kas soovitaksite?" }]);
     });
 
     it("cascades away with the survey", async () => {
@@ -265,7 +320,7 @@ describe("survey_questions follows the elements column", () => {
         const doomed = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Doomed",
-            elements: [npsQuestion("recommend")]
+            elements: stored([npsQuestion("recommend")])
         });
         await owner.db.from("surveys").delete().eq("id", doomed.survey.id);
 

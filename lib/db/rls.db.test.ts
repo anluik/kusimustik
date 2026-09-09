@@ -8,6 +8,7 @@ import {
     deleteTestUser,
     npsQuestion,
     singleChoiceQuestion,
+    stored,
     testSlug
 } from "@/lib/db/test-support";
 import type { TestUser } from "@/lib/db/test-support";
@@ -56,7 +57,7 @@ beforeAll(async () => {
     const published = await createSurvey(owner.db, {
         ownerId: owner.id,
         title: "Published survey",
-        elements: [choice, nps]
+        elements: stored([choice, nps])
     });
     publishedSlug = testSlug("published");
     publishedId = (
@@ -66,14 +67,14 @@ beforeAll(async () => {
     const draft = await createSurvey(owner.db, {
         ownerId: owner.id,
         title: "Draft survey",
-        elements: [draftNps]
+        elements: stored([draftNps])
     });
     draftId = draft.survey.id;
 
     const closed = await createSurvey(owner.db, {
         ownerId: owner.id,
         title: "Closed survey",
-        elements: [closedNps]
+        elements: stored([closedNps])
     });
     closedSlug = testSlug("closed");
     await publishSurvey(owner.db, closed.survey.id, closedSlug);

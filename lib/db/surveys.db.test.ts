@@ -6,6 +6,7 @@ import {
     deleteTestUser,
     npsQuestion,
     shortTextQuestion,
+    stored,
     testSlug
 } from "@/lib/db/test-support";
 import type { TestUser } from "@/lib/db/test-support";
@@ -39,7 +40,7 @@ beforeAll(async () => {
     survey = await createSurvey(owner.db, {
         ownerId: owner.id,
         title: "Versioned",
-        elements: [recommend]
+        elements: stored([recommend])
     });
     slug = testSlug("versioned");
 });
@@ -70,7 +71,7 @@ describe("survey versioning", () => {
             owner.db,
             survey.survey.id,
             survey.version,
-            { elements: [recommend, city] }
+            { elements: stored([recommend, city]) }
         );
         expect(survey.version).toBe(2);
     });
@@ -108,7 +109,7 @@ describe("survey versioning", () => {
             owner.db,
             survey.survey.id,
             survey.version,
-            { elements: [recommend] }
+            { elements: stored([recommend]) }
         );
         expect(survey.version).toBe(atPublish + 1);
         expect(survey.publishedVersion).toBe(survey.version);

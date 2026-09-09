@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { duplicateSurvey } from "@/domain/duplicate";
-import { SurveySchema } from "@/domain/survey";
-import { survey } from "@/domain/test-fixtures";
+import { AuthoredSurveySchema } from "@/domain/survey";
+import { authoredSurvey as survey } from "@/domain/test-fixtures";
 
 describe("duplicateSurvey", () => {
     const copy = duplicateSurvey(survey);
 
     it("produces a survey that still parses", () => {
-        expect(SurveySchema.parse(copy)).toEqual(copy);
+        expect(AuthoredSurveySchema.parse(copy)).toEqual(copy);
     });
 
     it("gives the copy a fresh survey id", () => {

@@ -2,13 +2,14 @@ import { z } from "zod";
 
 import type { SurveyId, WaveGroupId } from "@/domain/ids";
 import { QuestionIdSchema, SurveyIdSchema } from "@/domain/ids";
-import type { SurveyElement } from "@/domain/question";
-import { ELEMENT_TYPES, SurveyElementSchema } from "@/domain/question";
-import type { Survey } from "@/domain/survey";
+import { resolveSurvey } from "@/domain/localize";
+import type { AuthoredElement } from "@/domain/question";
+import { AuthoredElementSchema, ELEMENT_TYPES } from "@/domain/question";
+import type { AuthoredSurvey, Survey } from "@/domain/survey";
 import {
+    AuthoredSurveySchema,
     LOCALES,
     SURVEY_STATUSES,
-    SurveySchema,
     SurveySlugSchema,
     SurveyTitleSchema,
     WaveLabelSchema
@@ -25,8 +26,15 @@ import type { Db } from "@/lib/db/types";
 
 /**
  * Surveys. The definition itself is the JSONB `elements` column and is parsed
- * through `SurveySchema` on every read (docs/DECISIONS.md 001), so a document
- * the domain would reject never reaches the builder or the runner.
+ * through `AuthoredSurveySchema` on every read (docs/DECISIONS.md 001), so a
+ * document the domain would reject never reaches the builder or the runner.
+ *
+ * What comes back is the *authored* survey — every language the owner has
+ * written, exactly as stored. Resolving it to one language is the caller's
+ * decision and belongs to whichever surface is rendering it, because the
+ * runner's answer to "which language" will not be the owner app's (DECISIONS
+ * 030). The one exception is `getRunnerSurveyBySlug`, which resolves for the
+ * respondent it is reading on behalf of.
  */
 
 const DEFINITION_COLUMNS =
@@ -39,7 +47,7 @@ const SUMMARY_COLUMNS =
 
 /** The survey plus the columns the domain deliberately knows nothing about. */
 export const SurveyRecordSchema = z.object({
-    survey: SurveySchema,
+    survey: AuthoredSurveySchema,
     ownerId: z.uuid(),
     /** Bumped on every definition change; the optimistic-concurrency token. */
     version: z.int().positive(),
@@ -72,6 +80,7 @@ export const SurveyQuestionSchema = z.object({
     surveyId: SurveyIdSchema,
     key: z.string().min(1),
     type: z.literal(ELEMENT_TYPES),
+    /** Already resolved: the trigger stores the survey's own language. */
     title: z.string().min(1),
     position: z.int().nonnegative(),
     /** Set once the question has left the document but answers still exist. */
@@ -87,7 +96,7 @@ export const NewSurveySchema = z.object({
     /** Omit for a new survey; pass the source's to add a wave to a group. */
     waveGroupId: z.uuid().optional(),
     waveLabel: WaveLabelSchema.optional(),
-    elements: z.array(SurveyElementSchema).default([])
+    elements: z.array(AuthoredElementSchema).default([])
 });
 export type NewSurvey = z.input<typeof NewSurveySchema>;
 
@@ -130,8 +139,8 @@ function surveyInput(row: DefinitionColumns) {
     };
 }
 
-function toSurvey(row: DefinitionColumns): Survey {
-    return parseRow(SurveySchema, surveyInput(row), `survey ${row.id}`);
+function toSurvey(row: DefinitionColumns): AuthoredSurvey {
+    return parseRow(AuthoredSurveySchema, surveyInput(row), `survey ${row.id}`);
 }
 
 function toRecord(row: RecordColumns): SurveyRecord {
@@ -219,7 +228,11 @@ export async function getRunnerSurveyBySlug(
     );
     if (row === null) return null;
     return {
-        survey: toSurvey(row),
+        // Resolved here rather than by the caller: what the respondent is
+        // shown is one language, and every runner surface below this point
+        // reads plain strings. Phase 12 step 3 gives this function the
+        // respondent's own locale; until then it is the survey's.
+        survey: resolveSurvey(toSurvey(row)),
         // Non-null for anything this function can return — only a published or
         // closed survey has a slug — but the generated type cannot say so.
         publishedVersion: row.published_version ?? row.version
@@ -309,7 +322,8 @@ export type SurveyDefinitionPatch = {
     readonly description?: string | null;
     readonly locale?: Survey["locale"];
     readonly waveLabel?: string | null;
-    readonly elements?: readonly SurveyElement[];
+    /** The stored shape: translations included, never one language of them. */
+    readonly elements?: readonly AuthoredElement[];
 };
 
 /**

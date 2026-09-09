@@ -5,8 +5,8 @@ import {
     questionId,
     surveyId
 } from "@/domain/ids";
-import { SurveySchema } from "@/domain/survey";
-import type { Survey } from "@/domain/survey";
+import { AuthoredSurveySchema } from "@/domain/survey";
+import type { AuthoredSurvey } from "@/domain/survey";
 
 export type DuplicateSurveyOptions = {
     /** Defaults to the source title: a new wave is the same survey, run again. */
@@ -34,11 +34,15 @@ export type DuplicateSurveyOptions = {
  *
  * The copy comes back as a draft with no slug, so it cannot take over the
  * source's public link.
+ *
+ * It works on the stored document rather than on one language of it, so a
+ * survey translated into three carries all three into its next wave. Nothing
+ * here touches a word: only ids change.
  */
 export function duplicateSurvey(
-    survey: Survey,
+    survey: AuthoredSurvey,
     options: DuplicateSurveyOptions = {}
-): Survey {
+): AuthoredSurvey {
     const {
         title,
         waveLabel,
@@ -54,7 +58,7 @@ export function duplicateSurvey(
     const label =
         waveLabel === undefined ? survey.waveLabel : (waveLabel ?? undefined);
 
-    return SurveySchema.parse({
+    return AuthoredSurveySchema.parse({
         ...structuredClone(survey),
         id: generateSurveyId ? surveyId(generateSurveyId()) : newSurveyId(),
         title: title ?? survey.title,

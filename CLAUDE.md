@@ -31,6 +31,8 @@ pnpm db:reset       # reset local DB and replay migrations + seed
 - **`domain/` imports nothing.** No React, no Supabase, no Next. It is pure functions and schemas. If you need to reach for a dependency there, stop and ask.
 - **Server-side validation is not optional.** Every mutation re-derives its Zod schema server-side and re-parses. Client validation is a UX nicety only.
 - **`id` and `key` are not interchangeable.** `id` identifies a question within one survey and changes on duplication. `key` is stable across duplication and is what wave comparison joins on. Never key analytics, comparison or export column identity on `id`.
+- **A survey's words are locale-keyed; its identifiers are not.** `surveys.elements` holds the *authored* document — every title, description, label and placeholder is a `LocalizedText` map — and `AuthoredSurveySchema` is what the repository parses. One language of it is a *resolved* survey (`SurveySchema`, plain strings), which is what the runner, the aggregator and the exporter read. `domain/localize.ts` is the only thing that maps between them; never reach into a `LocalizedText` yourself. Keys, ids, option values and slugs are never translated. See docs/DECISIONS.md 030.
+
 - **`survey_questions` is derived.** A trigger rebuilds it from `surveys.elements`. Application code never writes to it and never reads a definition from it — definitions come from `surveys.elements` through `SurveySchema`. A question that leaves the document keeps a tombstoned row (`removed_at`) if it has answers; readers filter it out.
 - **Locale is resolved per surface, and there is no locale segment.** The owner app reads the `NEXT_LOCALE` cookie through `lib/i18n/request.ts`; the runner is rendered in `survey.locale`, passed explicitly to `getRunnerTranslations()` and `NextIntlClientProvider`. Never read the locale cookie from `app/(public)/` — it would make every respondent request dynamic. See docs/DECISIONS.md 011.
 - **Analytics never blocks.** `survey_events` writes are best-effort and batched. A failed event write must never surface to a respondent or abort a submission.
@@ -53,7 +55,9 @@ app/                 App Router — routes only. NO app/layout.tsx: each group
   api/               route handlers (analytics beacons, CSV download)
   global-not-found.tsx  the 404; needed because there are several root layouts
   globals.css        canonical design tokens — see docs/DESIGN.md §1
-domain/              pure schemas + logic (question union, answer validation, aggregation)
+domain/              pure schemas + logic (question union, answer validation, aggregation).
+                     content.ts is LocalizedText and its fallback; localize.ts maps
+                     between the stored document and one language of it
 lib/db/              supabase clients, generated types, repository fns
 lib/supabase/        request-scoped clients (server, proxy)
 lib/auth/            session helpers + sign-in/sign-out actions

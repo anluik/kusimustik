@@ -9,7 +9,8 @@
 import { questionId, responseId, surveyId, waveGroupId } from "@/domain/ids";
 import type { ResponseId } from "@/domain/ids";
 import type { AnswerValue } from "@/domain/answer";
-import type { Survey } from "@/domain/survey";
+import { authorSurvey } from "@/domain/localize";
+import type { AuthoredSurvey, Survey } from "@/domain/survey";
 import type {
     AnswerableQuestion,
     DropdownQuestion,
@@ -195,6 +196,13 @@ export const survey: Survey = {
     waveLabel: "2026",
     elements: [...ALL_ELEMENTS]
 };
+
+/**
+ * The same survey as it is stored: authored in Estonian and translated into
+ * nothing, which is what every survey built before Phase 12 looks like after
+ * the migration.
+ */
+export const authoredSurvey: AuthoredSurvey = authorSurvey(survey);
 
 // --- Twenty responses -------------------------------------------------------
 //
