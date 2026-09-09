@@ -6,6 +6,12 @@
 -- between the waves so the charts have something to show; they are derived from
 -- the response number rather than random(), so `pnpm db:reset` is reproducible.
 --
+-- Every piece of respondent-facing text in the documents below is a
+-- locale-keyed map ({"et": "..."}), which is what surveys.elements holds from
+-- the 20260909120000 migration onward. These two waves are Estonian and
+-- translated into nothing, which is what the migration left every survey
+-- looking like. See docs/DECISIONS.md 030.
+--
 -- Sign in as owner@kusimustik.test / password123.
 
 -- The owner ------------------------------------------------------------------
@@ -48,43 +54,103 @@ values ('00000000-0000-4000-8000-0000000000a1',
         '2025',
         $elements$
 [
-  {"id": "10000000-0000-4000-8000-000000000001", "key": "intro", "type": "statement",
-   "title": "Aitäh, et osalete", "description": "Vastamine võtab umbes kolm minutit."},
-  {"id": "10000000-0000-4000-8000-000000000002", "key": "role", "type": "single_choice",
-   "title": "Milline roll kirjeldab teid kõige paremini?", "required": true,
-   "options": [{"value": "student", "label": "Üliõpilane"},
-               {"value": "teacher", "label": "Õppejõud"},
-               {"value": "staff", "label": "Tugitöötaja"}]},
-  {"id": "10000000-0000-4000-8000-000000000003", "key": "channels", "type": "multi_choice",
-   "title": "Kust saite küsitluse kohta teada?", "required": true,
-   "minSelections": 1, "maxSelections": 3,
-   "options": [{"value": "email", "label": "E-kiri"},
-               {"value": "facebook", "label": "Facebook"},
-               {"value": "newsletter", "label": "Uudiskiri"},
-               {"value": "word_of_mouth", "label": "Sõbra soovitus"}]},
-  {"id": "10000000-0000-4000-8000-000000000004", "key": "country", "type": "dropdown",
-   "title": "Riik", "required": true,
-   "options": [{"value": "ee", "label": "Eesti"},
-               {"value": "lv", "label": "Läti"},
-               {"value": "lt", "label": "Leedu"},
-               {"value": "fi", "label": "Soome"}]},
-  {"id": "10000000-0000-4000-8000-000000000005", "key": "city", "type": "short_text",
-   "title": "Linn", "required": false, "maxLength": 100},
-  {"id": "10000000-0000-4000-8000-000000000006", "key": "feedback", "type": "long_text",
-   "title": "Mida saaksime paremini teha?", "required": false, "maxLength": 2000},
-  {"id": "10000000-0000-4000-8000-000000000007", "key": "satisfaction", "type": "opinion_scale",
-   "title": "Kui rahul olete teenusega?", "required": true,
-   "max": 5, "minLabel": "Ei ole rahul", "maxLabel": "Väga rahul"},
-  {"id": "10000000-0000-4000-8000-000000000008", "key": "recommend", "type": "nps",
-   "title": "Kui tõenäoliselt soovitaksite meid sõbrale?", "required": true},
-  {"id": "10000000-0000-4000-8000-000000000009", "key": "team_ratings", "type": "matrix_single",
-   "title": "Hinnake meie tiimi", "required": true,
-   "rows": [{"value": "speed", "label": "Kiirus"},
-            {"value": "clarity", "label": "Selgus"},
-            {"value": "support", "label": "Tugi"}],
-   "columns": [{"value": "poor", "label": "Halb"},
-               {"value": "ok", "label": "Rahuldav"},
-               {"value": "good", "label": "Hea"}]}
+  {
+    "id": "10000000-0000-4000-8000-000000000001",
+    "key": "intro",
+    "type": "statement",
+    "title": {"et": "Aitäh, et osalete"},
+    "description": {"et": "Vastamine võtab umbes kolm minutit."}
+  },
+  {
+    "id": "10000000-0000-4000-8000-000000000002",
+    "key": "role",
+    "type": "single_choice",
+    "title": {"et": "Milline roll kirjeldab teid kõige paremini?"},
+    "required": true,
+    "options": [
+      {"value": "student", "label": {"et": "Üliõpilane"}},
+      {"value": "teacher", "label": {"et": "Õppejõud"}},
+      {"value": "staff", "label": {"et": "Tugitöötaja"}}
+    ]
+  },
+  {
+    "id": "10000000-0000-4000-8000-000000000003",
+    "key": "channels",
+    "type": "multi_choice",
+    "title": {"et": "Kust saite küsitluse kohta teada?"},
+    "required": true,
+    "minSelections": 1,
+    "maxSelections": 3,
+    "options": [
+      {"value": "email", "label": {"et": "E-kiri"}},
+      {"value": "facebook", "label": {"et": "Facebook"}},
+      {"value": "newsletter", "label": {"et": "Uudiskiri"}},
+      {"value": "word_of_mouth", "label": {"et": "Sõbra soovitus"}}
+    ]
+  },
+  {
+    "id": "10000000-0000-4000-8000-000000000004",
+    "key": "country",
+    "type": "dropdown",
+    "title": {"et": "Riik"},
+    "required": true,
+    "options": [
+      {"value": "ee", "label": {"et": "Eesti"}},
+      {"value": "lv", "label": {"et": "Läti"}},
+      {"value": "lt", "label": {"et": "Leedu"}},
+      {"value": "fi", "label": {"et": "Soome"}}
+    ]
+  },
+  {
+    "id": "10000000-0000-4000-8000-000000000005",
+    "key": "city",
+    "type": "short_text",
+    "title": {"et": "Linn"},
+    "required": false,
+    "maxLength": 100
+  },
+  {
+    "id": "10000000-0000-4000-8000-000000000006",
+    "key": "feedback",
+    "type": "long_text",
+    "title": {"et": "Mida saaksime paremini teha?"},
+    "required": false,
+    "maxLength": 2000
+  },
+  {
+    "id": "10000000-0000-4000-8000-000000000007",
+    "key": "satisfaction",
+    "type": "opinion_scale",
+    "title": {"et": "Kui rahul olete teenusega?"},
+    "required": true,
+    "max": 5,
+    "minLabel": {"et": "Ei ole rahul"},
+    "maxLabel": {"et": "Väga rahul"}
+  },
+  {
+    "id": "10000000-0000-4000-8000-000000000008",
+    "key": "recommend",
+    "type": "nps",
+    "title": {"et": "Kui tõenäoliselt soovitaksite meid sõbrale?"},
+    "required": true
+  },
+  {
+    "id": "10000000-0000-4000-8000-000000000009",
+    "key": "team_ratings",
+    "type": "matrix_single",
+    "title": {"et": "Hinnake meie tiimi"},
+    "required": true,
+    "rows": [
+      {"value": "speed", "label": {"et": "Kiirus"}},
+      {"value": "clarity", "label": {"et": "Selgus"}},
+      {"value": "support", "label": {"et": "Tugi"}}
+    ],
+    "columns": [
+      {"value": "poor", "label": {"et": "Halb"}},
+      {"value": "ok", "label": {"et": "Rahuldav"}},
+      {"value": "good", "label": {"et": "Hea"}}
+    ]
+  }
 ]
 $elements$::jsonb,
         timestamptz '2025-04-01 09:00:00+03');
@@ -102,43 +168,103 @@ values ('00000000-0000-4000-8000-0000000000a2',
         '2026',
         $elements$
 [
-  {"id": "20000000-0000-4000-8000-000000000001", "key": "intro", "type": "statement",
-   "title": "Aitäh, et osalete", "description": "Vastamine võtab umbes kolm minutit."},
-  {"id": "20000000-0000-4000-8000-000000000002", "key": "role", "type": "single_choice",
-   "title": "Milline roll kirjeldab teid kõige paremini?", "required": true,
-   "options": [{"value": "student", "label": "Üliõpilane"},
-               {"value": "teacher", "label": "Õppejõud"},
-               {"value": "staff", "label": "Tugitöötaja"}]},
-  {"id": "20000000-0000-4000-8000-000000000003", "key": "channels", "type": "multi_choice",
-   "title": "Kust saite küsitluse kohta teada?", "required": true,
-   "minSelections": 1, "maxSelections": 3,
-   "options": [{"value": "email", "label": "E-kiri"},
-               {"value": "facebook", "label": "Facebook"},
-               {"value": "newsletter", "label": "Uudiskiri"},
-               {"value": "word_of_mouth", "label": "Sõbra soovitus"}]},
-  {"id": "20000000-0000-4000-8000-000000000004", "key": "country", "type": "dropdown",
-   "title": "Riik", "required": true,
-   "options": [{"value": "ee", "label": "Eesti"},
-               {"value": "lv", "label": "Läti"},
-               {"value": "lt", "label": "Leedu"},
-               {"value": "fi", "label": "Soome"}]},
-  {"id": "20000000-0000-4000-8000-000000000005", "key": "city", "type": "short_text",
-   "title": "Linn", "required": false, "maxLength": 100},
-  {"id": "20000000-0000-4000-8000-000000000006", "key": "feedback", "type": "long_text",
-   "title": "Mida peaksime järgmisel aastal muutma?", "required": false, "maxLength": 2000},
-  {"id": "20000000-0000-4000-8000-000000000007", "key": "satisfaction", "type": "opinion_scale",
-   "title": "Kui rahul olete meie teenusega sel aastal?", "required": true,
-   "max": 5, "minLabel": "Ei ole rahul", "maxLabel": "Väga rahul"},
-  {"id": "20000000-0000-4000-8000-000000000008", "key": "recommend", "type": "nps",
-   "title": "Kui tõenäoliselt soovitaksite meid sõbrale?", "required": true},
-  {"id": "20000000-0000-4000-8000-000000000009", "key": "team_ratings", "type": "matrix_single",
-   "title": "Hinnake meie tiimi", "required": true,
-   "rows": [{"value": "speed", "label": "Kiirus"},
-            {"value": "clarity", "label": "Selgus"},
-            {"value": "support", "label": "Tugi"}],
-   "columns": [{"value": "poor", "label": "Halb"},
-               {"value": "ok", "label": "Rahuldav"},
-               {"value": "good", "label": "Hea"}]}
+  {
+    "id": "20000000-0000-4000-8000-000000000001",
+    "key": "intro",
+    "type": "statement",
+    "title": {"et": "Aitäh, et osalete"},
+    "description": {"et": "Vastamine võtab umbes kolm minutit."}
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000002",
+    "key": "role",
+    "type": "single_choice",
+    "title": {"et": "Milline roll kirjeldab teid kõige paremini?"},
+    "required": true,
+    "options": [
+      {"value": "student", "label": {"et": "Üliõpilane"}},
+      {"value": "teacher", "label": {"et": "Õppejõud"}},
+      {"value": "staff", "label": {"et": "Tugitöötaja"}}
+    ]
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000003",
+    "key": "channels",
+    "type": "multi_choice",
+    "title": {"et": "Kust saite küsitluse kohta teada?"},
+    "required": true,
+    "minSelections": 1,
+    "maxSelections": 3,
+    "options": [
+      {"value": "email", "label": {"et": "E-kiri"}},
+      {"value": "facebook", "label": {"et": "Facebook"}},
+      {"value": "newsletter", "label": {"et": "Uudiskiri"}},
+      {"value": "word_of_mouth", "label": {"et": "Sõbra soovitus"}}
+    ]
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000004",
+    "key": "country",
+    "type": "dropdown",
+    "title": {"et": "Riik"},
+    "required": true,
+    "options": [
+      {"value": "ee", "label": {"et": "Eesti"}},
+      {"value": "lv", "label": {"et": "Läti"}},
+      {"value": "lt", "label": {"et": "Leedu"}},
+      {"value": "fi", "label": {"et": "Soome"}}
+    ]
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000005",
+    "key": "city",
+    "type": "short_text",
+    "title": {"et": "Linn"},
+    "required": false,
+    "maxLength": 100
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000006",
+    "key": "feedback",
+    "type": "long_text",
+    "title": {"et": "Mida peaksime järgmisel aastal muutma?"},
+    "required": false,
+    "maxLength": 2000
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000007",
+    "key": "satisfaction",
+    "type": "opinion_scale",
+    "title": {"et": "Kui rahul olete meie teenusega sel aastal?"},
+    "required": true,
+    "max": 5,
+    "minLabel": {"et": "Ei ole rahul"},
+    "maxLabel": {"et": "Väga rahul"}
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000008",
+    "key": "recommend",
+    "type": "nps",
+    "title": {"et": "Kui tõenäoliselt soovitaksite meid sõbrale?"},
+    "required": true
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000009",
+    "key": "team_ratings",
+    "type": "matrix_single",
+    "title": {"et": "Hinnake meie tiimi"},
+    "required": true,
+    "rows": [
+      {"value": "speed", "label": {"et": "Kiirus"}},
+      {"value": "clarity", "label": {"et": "Selgus"}},
+      {"value": "support", "label": {"et": "Tugi"}}
+    ],
+    "columns": [
+      {"value": "poor", "label": {"et": "Halb"}},
+      {"value": "ok", "label": {"et": "Rahuldav"}},
+      {"value": "good", "label": {"et": "Hea"}}
+    ]
+  }
 ]
 $elements$::jsonb,
         timestamptz '2026-04-01 09:00:00+03');

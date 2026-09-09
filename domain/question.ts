@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { localizedTextSchema } from "@/domain/content";
 import { QuestionIdSchema } from "@/domain/ids";
 
 /**
@@ -7,6 +8,22 @@ import { QuestionIdSchema } from "@/domain/ids";
  * CSV exporter, the builder's editor panel — switches over `type` and ends in
  * `assertNever`, so adding a variant here is deliberately a breaking change
  * that the compiler reports at every site that has to handle it.
+ *
+ * Every element exists in two shapes, and they differ only in their words:
+ *
+ * - **Authored** (`AuthoredElementSchema`) is what `surveys.elements` holds.
+ *   Each piece of respondent-facing text is a `LocalizedText` map, so one
+ *   element carries the question in every language it has been written in.
+ * - **Resolved** (`SurveyElementSchema`) is that same element in one language.
+ *   It is what a runner renders, an aggregator titles a chart with and an
+ *   exporter writes a column header from — none of which have any business
+ *   knowing that other translations exist.
+ *
+ * `domain/localize.ts` maps between them and is the only thing that may. The
+ * two are built from one set of field definitions here, so a field added to
+ * one is a compile error in the other; `question.test.ts` also fails if a new
+ * piece of text is added to the resolved shape without a translated
+ * counterpart. See docs/DECISIONS.md 030.
  *
  * Validation messages in this file are developer-facing. Respondent-facing
  * wording is mapped from the issue code and path in the runner; see
@@ -51,9 +68,24 @@ export const OTHER_OPTION_VALUE = "__other__";
 export const QUESTION_KEY_MAX_LENGTH = 64;
 
 /**
+ * How long each piece of text may be. The limits apply per language, not to
+ * the map: a translation is a different sentence, not a longer one.
+ */
+const TEXT_MAX = {
+    title: 500,
+    description: 2000,
+    optionLabel: 500,
+    otherLabel: 200,
+    endpointLabel: 200,
+    placeholder: 200
+} as const;
+
+/**
  * Stable, human-readable identity for a question. Unique within a survey and
  * preserved across duplication — wave comparison and CSV column identity join
  * on this, never on `id`. See docs/DECISIONS.md 003.
+ *
+ * Machine-facing, and therefore the same in every language.
  */
 export const QuestionKeySchema = z
     .string()
@@ -62,42 +94,129 @@ export const QuestionKeySchema = z
         error: "must start with a letter and contain only lowercase letters, digits and underscores"
     });
 
-export const ChoiceOptionSchema = z.object({
-    /** Stable across edits and waves; what an answer stores. */
-    value: z.string().min(1).max(200),
-    /** Display text; may be reworded freely without breaking anything. */
-    label: z.string().min(1).max(500)
-});
+/** One choice's stored value: what an answer holds, in every language. */
+const OptionValueSchema = z.string().min(1).max(200);
+
+const text = (max: number) => z.string().min(1).max(max);
+
+const choiceOption = <Label extends z.core.SomeType>(label: Label) =>
+    z.object({ value: OptionValueSchema, label });
+
+export const ChoiceOptionSchema = choiceOption(text(TEXT_MAX.optionLabel));
 export type ChoiceOption = z.infer<typeof ChoiceOptionSchema>;
 
-const optionList = (minimum: number) =>
+export const AuthoredChoiceOptionSchema = choiceOption(
+    localizedTextSchema(TEXT_MAX.optionLabel)
+);
+export type AuthoredChoiceOption = z.infer<typeof AuthoredChoiceOptionSchema>;
+
+// --- Shared refinements -----------------------------------------------------
+//
+// The rules that hold between an element's fields hold in both shapes, and
+// none of them reads a word of the text — only whether it is there. They are
+// written once against the fields they actually touch and applied to both.
+
+type FieldIssue = {
+    readonly path?: readonly PropertyKey[];
+    readonly message: string;
+};
+
+function report<T>(
+    ctx: z.core.ParsePayload<T>,
+    issues: readonly FieldIssue[]
+): void {
+    for (const issue of issues) {
+        ctx.issues.push({
+            code: "custom",
+            input: ctx.value,
+            ...(issue.path !== undefined && { path: [...issue.path] }),
+            message: issue.message
+        });
+    }
+}
+
+const optionIssues = (
+    options: readonly { readonly value: string }[]
+): readonly FieldIssue[] => {
+    const issues: FieldIssue[] = [];
+    const values = options.map(option => option.value);
+
+    if (new Set(values).size !== values.length) {
+        issues.push({ message: "values must be unique" });
+    }
+    if (values.includes(OTHER_OPTION_VALUE)) {
+        issues.push({
+            message: `"${OTHER_OPTION_VALUE}" is reserved for the free-text option`
+        });
+    }
+    return issues;
+};
+
+const otherLabelIssues = (question: {
+    readonly allowOther: boolean;
+    readonly otherLabel?: unknown;
+}): readonly FieldIssue[] =>
+    question.allowOther && question.otherLabel === undefined
+        ? [
+              {
+                  path: ["otherLabel"],
+                  message: "required when allowOther is set"
+              }
+          ]
+        : [];
+
+const selectionIssues = (question: {
+    readonly allowOther: boolean;
+    readonly options: readonly unknown[];
+    readonly minSelections?: number | undefined;
+    readonly maxSelections?: number | undefined;
+}): readonly FieldIssue[] => {
+    const { minSelections: min, maxSelections: max } = question;
+    const issues: FieldIssue[] = [];
+
+    if (min !== undefined && max !== undefined && min > max) {
+        issues.push({
+            path: ["minSelections"],
+            message: "cannot exceed maxSelections"
+        });
+    }
+
+    const selectable = question.options.length + (question.allowOther ? 1 : 0);
+    for (const [field, bound] of [
+        ["minSelections", min],
+        ["maxSelections", max]
+    ] as const) {
+        if (bound !== undefined && bound > selectable) {
+            issues.push({
+                path: [field],
+                message: `cannot exceed the ${selectable} available selections`
+            });
+        }
+    }
+    return issues;
+};
+
+const optionList = <Option extends z.core.$ZodType<{ readonly value: string }>>(
+    minimum: number,
+    option: Option
+) =>
     z
-        .array(ChoiceOptionSchema)
+        .array(option)
         .min(minimum)
         .max(200)
-        .check(ctx => {
-            const values = ctx.value.map(option => option.value);
-            if (new Set(values).size !== values.length) {
-                ctx.issues.push({
-                    code: "custom",
-                    input: ctx.value,
-                    message: "values must be unique"
-                });
-            }
-            if (values.includes(OTHER_OPTION_VALUE)) {
-                ctx.issues.push({
-                    code: "custom",
-                    input: ctx.value,
-                    message: `"${OTHER_OPTION_VALUE}" is reserved for the free-text option`
-                });
-            }
-        });
+        .check(ctx => report(ctx, optionIssues(ctx.value)));
+
+const options = (minimum: number) => optionList(minimum, ChoiceOptionSchema);
+const authoredOptions = (minimum: number) =>
+    optionList(minimum, AuthoredChoiceOptionSchema);
+
+// --- The fields -------------------------------------------------------------
 
 const elementBase = {
     id: QuestionIdSchema,
     key: QuestionKeySchema,
-    title: z.string().min(1).max(500),
-    description: z.string().max(2000).optional()
+    title: text(TEXT_MAX.title),
+    description: z.string().max(TEXT_MAX.description).optional()
 };
 
 /**
@@ -118,100 +237,103 @@ const otherFields = {
      * and the CSV header, so it has to come from the author (or the builder's
      * message catalogue), never from a literal in this package.
      */
-    otherLabel: z.string().min(1).max(200).optional()
+    otherLabel: text(TEXT_MAX.otherLabel).optional()
 };
+
+/**
+ * The same fields, translated. Everything absent from these overrides — ids,
+ * keys, option values, bounds, flags — is identical in both shapes and is
+ * inherited rather than restated.
+ */
+const authoredText = {
+    title: localizedTextSchema(TEXT_MAX.title),
+    description: localizedTextSchema(TEXT_MAX.description).optional()
+};
+
+const authoredOtherText = {
+    otherLabel: localizedTextSchema(TEXT_MAX.otherLabel).optional()
+};
+
+// --- The nine elements ------------------------------------------------------
 
 export const StatementElementSchema = z.object({
     ...elementBase,
     type: z.literal("statement"),
     isAnswerable: z.literal(false).default(false)
 });
+const AuthoredStatementSchema = StatementElementSchema.extend(authoredText);
 
-export const SingleChoiceQuestionSchema = z
-    .object({
-        ...questionBase,
-        ...otherFields,
-        type: z.literal("single_choice"),
-        options: optionList(2)
+const singleChoiceFields = z.object({
+    ...questionBase,
+    ...otherFields,
+    type: z.literal("single_choice"),
+    options: options(2)
+});
+export const SingleChoiceQuestionSchema = singleChoiceFields.check(ctx =>
+    report(ctx, otherLabelIssues(ctx.value))
+);
+const AuthoredSingleChoiceSchema = singleChoiceFields
+    .extend({
+        ...authoredText,
+        ...authoredOtherText,
+        options: authoredOptions(2)
     })
-    .check(ctx => {
-        if (ctx.value.allowOther && ctx.value.otherLabel === undefined) {
-            ctx.issues.push({
-                code: "custom",
-                input: ctx.value,
-                path: ["otherLabel"],
-                message: "required when allowOther is set"
-            });
-        }
-    });
+    .check(ctx => report(ctx, otherLabelIssues(ctx.value)));
 
-export const MultiChoiceQuestionSchema = z
-    .object({
-        ...questionBase,
-        ...otherFields,
-        type: z.literal("multi_choice"),
-        options: optionList(2),
-        minSelections: z.int().min(1).optional(),
-        maxSelections: z.int().min(1).optional()
+const multiChoiceFields = z.object({
+    ...questionBase,
+    ...otherFields,
+    type: z.literal("multi_choice"),
+    options: options(2),
+    minSelections: z.int().min(1).optional(),
+    maxSelections: z.int().min(1).optional()
+});
+export const MultiChoiceQuestionSchema = multiChoiceFields.check(ctx =>
+    report(ctx, [...otherLabelIssues(ctx.value), ...selectionIssues(ctx.value)])
+);
+const AuthoredMultiChoiceSchema = multiChoiceFields
+    .extend({
+        ...authoredText,
+        ...authoredOtherText,
+        options: authoredOptions(2)
     })
-    .check(ctx => {
-        const {
-            minSelections: min,
-            maxSelections: max,
-            options,
-            allowOther,
-            otherLabel
-        } = ctx.value;
-        if (allowOther && otherLabel === undefined) {
-            ctx.issues.push({
-                code: "custom",
-                input: ctx.value,
-                path: ["otherLabel"],
-                message: "required when allowOther is set"
-            });
-        }
-        if (min !== undefined && max !== undefined && min > max) {
-            ctx.issues.push({
-                code: "custom",
-                input: ctx.value,
-                path: ["minSelections"],
-                message: "cannot exceed maxSelections"
-            });
-        }
-        const selectable = options.length + (allowOther ? 1 : 0);
-        for (const [field, bound] of [
-            ["minSelections", min],
-            ["maxSelections", max]
-        ] as const) {
-            if (bound !== undefined && bound > selectable) {
-                ctx.issues.push({
-                    code: "custom",
-                    input: ctx.value,
-                    path: [field],
-                    message: `cannot exceed the ${selectable} available selections`
-                });
-            }
-        }
-    });
+    .check(ctx =>
+        report(ctx, [
+            ...otherLabelIssues(ctx.value),
+            ...selectionIssues(ctx.value)
+        ])
+    );
 
 export const DropdownQuestionSchema = z.object({
     ...questionBase,
     type: z.literal("dropdown"),
-    options: optionList(2)
+    options: options(2)
+});
+const AuthoredDropdownSchema = DropdownQuestionSchema.extend({
+    ...authoredText,
+    options: authoredOptions(2)
 });
 
 export const ShortTextQuestionSchema = z.object({
     ...questionBase,
     type: z.literal("short_text"),
     maxLength: z.int().min(1).max(1_000).optional(),
-    placeholder: z.string().max(200).optional()
+    placeholder: text(TEXT_MAX.placeholder).optional()
+});
+const AuthoredShortTextSchema = ShortTextQuestionSchema.extend({
+    ...authoredText,
+    placeholder: localizedTextSchema(TEXT_MAX.placeholder).optional()
 });
 
 export const LongTextQuestionSchema = z.object({
     ...questionBase,
     type: z.literal("long_text"),
     maxLength: z.int().min(1).max(10_000).optional(),
-    placeholder: z.string().max(200).optional()
+    placeholder: text(TEXT_MAX.placeholder).optional()
+});
+const AuthoredLongTextSchema = LongTextQuestionSchema.extend({
+    ...authoredText,
+    placeholder: localizedTextSchema(TEXT_MAX.placeholder).optional()
 });
 
 export const OpinionScaleQuestionSchema = z.object({
@@ -219,22 +341,34 @@ export const OpinionScaleQuestionSchema = z.object({
     type: z.literal("opinion_scale"),
     /** The scale runs 1..max. */
     max: z.int().min(2).max(OPINION_SCALE_MAX_STEPS),
-    minLabel: z.string().min(1).max(200).optional(),
-    maxLabel: z.string().min(1).max(200).optional()
+    minLabel: text(TEXT_MAX.endpointLabel).optional(),
+    maxLabel: text(TEXT_MAX.endpointLabel).optional()
+});
+const AuthoredOpinionScaleSchema = OpinionScaleQuestionSchema.extend({
+    ...authoredText,
+    minLabel: localizedTextSchema(TEXT_MAX.endpointLabel).optional(),
+    maxLabel: localizedTextSchema(TEXT_MAX.endpointLabel).optional()
 });
 
 export const NpsQuestionSchema = z.object({
     ...questionBase,
     type: z.literal("nps")
 });
+const AuthoredNpsSchema = NpsQuestionSchema.extend(authoredText);
 
 export const MatrixSingleQuestionSchema = z.object({
     ...questionBase,
     type: z.literal("matrix_single"),
-    rows: optionList(1),
-    columns: optionList(2)
+    rows: options(1),
+    columns: options(2)
+});
+const AuthoredMatrixSingleSchema = MatrixSingleQuestionSchema.extend({
+    ...authoredText,
+    rows: authoredOptions(1),
+    columns: authoredOptions(2)
 });
 
+/** One element in one language. */
 export const SurveyElementSchema = z.discriminatedUnion("type", [
     StatementElementSchema,
     SingleChoiceQuestionSchema,
@@ -247,9 +381,24 @@ export const SurveyElementSchema = z.discriminatedUnion("type", [
     MatrixSingleQuestionSchema
 ]);
 
+/** One element as it is stored: every language the author has written. */
+export const AuthoredElementSchema = z.discriminatedUnion("type", [
+    AuthoredStatementSchema,
+    AuthoredSingleChoiceSchema,
+    AuthoredMultiChoiceSchema,
+    AuthoredDropdownSchema,
+    AuthoredShortTextSchema,
+    AuthoredLongTextSchema,
+    AuthoredOpinionScaleSchema,
+    AuthoredNpsSchema,
+    AuthoredMatrixSingleSchema
+]);
+
 export type SurveyElement = z.infer<typeof SurveyElementSchema>;
 export type StatementElement = Extract<SurveyElement, { isAnswerable: false }>;
 export type AnswerableQuestion = Extract<SurveyElement, { isAnswerable: true }>;
+
+export type AuthoredElement = z.infer<typeof AuthoredElementSchema>;
 
 export type SingleChoiceQuestion = Extract<
     AnswerableQuestion,

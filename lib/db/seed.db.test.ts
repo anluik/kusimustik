@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildAnswerSchema } from "@/domain/answer";
 import { aggregate } from "@/domain/aggregate";
+import { resolveSurvey } from "@/domain/localize";
 import { isAnswerableElement } from "@/domain/question";
 import type { Survey } from "@/domain/survey";
 import { answersForQuestion, listResponses } from "@/lib/db/responses";
@@ -28,7 +29,7 @@ async function loadWaves(db: Db): Promise<Wave[]> {
         const record = await getSurvey(db, summary.id);
         if (record === null) throw new Error(`survey ${summary.id} vanished`);
         waves.push({
-            survey: record.survey,
+            survey: resolveSurvey(record.survey),
             responses: await listResponses(db, summary.id)
         });
     }

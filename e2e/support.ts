@@ -153,7 +153,9 @@ export function oneTextQuestion(): readonly unknown[] {
             id: crypto.randomUUID(),
             key: "city",
             type: "short_text",
-            title: "Linn",
+            // Locale-keyed, like everything else in a stored document; the
+            // fixture surveys below are Estonian (DECISIONS 030).
+            title: { et: "Linn" },
             required: false,
             maxLength: 100,
             isAnswerable: true

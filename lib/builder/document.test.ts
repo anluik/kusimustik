@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { questionId } from "@/domain/ids";
 import type { QuestionId } from "@/domain/ids";
-import type { SingleChoiceQuestion, SurveyElement } from "@/domain/question";
+import { authorElement } from "@/domain/localize";
+import type {
+    AuthoredElement,
+    SingleChoiceQuestion,
+    SurveyElement
+} from "@/domain/question";
 import {
     documentReducer,
     findElement,
@@ -14,6 +19,7 @@ import {
 const id = (n: number): QuestionId =>
     questionId(`44444444-4444-4444-8444-${String(n).padStart(12, "0")}`);
 
+/** One language of a question, as the editor panel hands it back. */
 function question(n: number): SingleChoiceQuestion {
     return {
         id: id(n),
@@ -30,10 +36,13 @@ function question(n: number): SingleChoiceQuestion {
     };
 }
 
+/** The same question as the document holds it: Estonian and nothing else. */
+const stored = (n: number): AuthoredElement => authorElement(question(n), "et");
+
 const keys = (document: BuilderDocument) =>
     document.elements.map(element => element.key);
 
-const three = [question(1), question(2), question(3)];
+const three = [stored(1), stored(2), stored(3)];
 
 describe("initialDocument", () => {
     it("selects the first element", () => {
@@ -49,7 +58,7 @@ describe("initialDocument", () => {
 
 describe("duplicate", () => {
     const start = initialDocument(three);
-    const copy: SurveyElement = { ...question(2), id: id(9), key: "q2_2" };
+    const copy: AuthoredElement = { ...stored(2), id: id(9), key: "q2_2" };
 
     it("inserts the copy directly after its source", () => {
         const next = documentReducer(start, {
@@ -126,7 +135,7 @@ describe("documentReducer", () => {
     });
 
     it("appends a new element and selects it", () => {
-        const added = question(4);
+        const added = stored(4);
         const next = documentReducer(start, { kind: "add", element: added });
 
         expect(keys(next)).toEqual(["q1", "q2", "q3", "q4"]);
@@ -156,7 +165,7 @@ describe("documentReducer", () => {
     });
 
     it("removing the only element leaves nothing selected", () => {
-        const next = documentReducer(initialDocument([question(1)]), {
+        const next = documentReducer(initialDocument([stored(1)]), {
             kind: "remove",
             id: id(1)
         });
@@ -194,17 +203,38 @@ describe("documentReducer", () => {
         const edited: SurveyElement = { ...question(2), title: "Reworded" };
         const next = documentReducer(start, {
             kind: "replace",
-            element: edited
+            element: edited,
+            locale: "et"
         });
 
-        expect(next.elements[1]).toBe(edited);
+        expect(next.elements[1]?.title).toEqual({ et: "Reworded" });
         expect(keys(next)).toEqual(["q1", "q2", "q3"]);
         expect(next.revision).toBe(1);
     });
 
+    it("merges an edit into the languages it did not show", () => {
+        // The panel is editing Russian, so what it hands back has Russian in
+        // its title field and nothing else. The Estonian it never showed has
+        // to survive that, or translating a survey would delete it.
+        const translated = documentReducer(initialDocument([stored(2)]), {
+            kind: "replace",
+            element: { ...question(2), title: "Вопрос 2" },
+            locale: "ru"
+        });
+
+        expect(translated.elements[0]?.title).toEqual({
+            et: "Question 2",
+            ru: "Вопрос 2"
+        });
+    });
+
     it("ignores a replacement of an element that has been deleted", () => {
         expect(
-            documentReducer(start, { kind: "replace", element: question(9) })
+            documentReducer(start, {
+                kind: "replace",
+                element: question(9),
+                locale: "et"
+            })
         ).toBe(start);
     });
 });

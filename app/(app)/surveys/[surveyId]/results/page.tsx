@@ -5,6 +5,7 @@ import { cache } from "react";
 
 import { ResultsScreen } from "@/components/results/results-screen";
 import { SurveyIdSchema } from "@/domain/ids";
+import { resolveElements } from "@/domain/localize";
 import { requireSessionUser } from "@/lib/auth/session";
 import { getFunnelTotals, listQuestionFunnel } from "@/lib/db/funnel";
 import { listResponses } from "@/lib/db/responses";
@@ -72,7 +73,10 @@ export default async function ResultsPage({
             surveyId={record.survey.id}
             title={record.survey.title}
             status={record.survey.status}
-            elements={record.survey.elements}
+            elements={resolveElements(
+                record.survey.elements,
+                record.survey.locale
+            )}
             responses={responses}
             totals={totals}
             // Handed over as an array rather than the repository's Map: a Map

@@ -43,6 +43,7 @@ export function SingleChoiceEditor({
 
             <OptionListEditor
                 dndId={`options-${question.id}`}
+                list="options"
                 options={question.options}
                 minimum={2}
                 copy={copy.options}

@@ -43,6 +43,7 @@ function item(
         status,
         slug: overrides.slug ?? (status === "draft" ? null : `slug-${counter}`),
         locale: "et",
+        locales: ["et"],
         waveGroupId: overrides.waveGroupId ?? crypto.randomUUID(),
         waveLabel: overrides.waveLabel ?? null,
         ownerId: OWNER_ID,

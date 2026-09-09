@@ -1,4 +1,5 @@
 import type { WaveGroupId } from "@/domain/ids";
+import { resolveSurvey } from "@/domain/localize";
 import type { Survey } from "@/domain/survey";
 import { listResponsesBySurvey } from "@/lib/db/responses";
 import type { ResponseRecord } from "@/lib/db/responses";
@@ -44,7 +45,10 @@ export async function listWaveGroupResponses(
     );
 
     return records.map(record => ({
-        survey: record.survey,
+        // Comparison is an owner-facing report in one language, and every wave
+        // brings its own: each is resolved through the locale it was written
+        // in, so a group whose 2027 wave was authored in English still lines up.
+        survey: resolveSurvey(record.survey),
         createdAt: record.createdAt,
         responses: responses.get(record.survey.id) ?? []
     }));

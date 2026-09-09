@@ -4,7 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CollectedAnswersProvider } from "@/components/builder/collected-answers";
 import { EditorPanel } from "@/components/builder/editor-panel";
+import { TranslationProvider } from "@/components/builder/translation";
 import { MESSAGES, renderWithIntl } from "@/components/test-support";
+import { authorElement } from "@/domain/localize";
+import type { SurveyLocale } from "@/domain/content";
+import { elementCopy } from "@/lib/builder/element-copy";
+import ruMessages from "@/messages/app/ru.json";
 import type { SurveyElement } from "@/domain/question";
 import type { CreatableElementType } from "@/lib/builder/new-element";
 import { createElement } from "@/lib/builder/new-element";
@@ -38,6 +43,19 @@ const defaults = {
     columnLabel: (index: number) => `Veerg ${index}`
 };
 
+/**
+ * The panel reads the language it is editing from context, so these render it
+ * in the survey's own — the case where the projection is the resolution and
+ * nothing about the fields differs from before Phase 12. The seed words come
+ * from the real catalogue, which is what makes "Muu" appear when the "other"
+ * toggle is switched on.
+ */
+const ELEMENT_COPY = {
+    et: copy.defaults,
+    en: copy.defaults,
+    ru: ruMessages.Builder.defaults
+};
+
 /** The label a message key resolves to for the default question. */
 function label(template: string, values: Record<string, string>): string {
     return Object.entries(values).reduce(
@@ -58,25 +76,35 @@ const DELETE_LABEL = label(copy.editor.deleteLabel, {
 function StatefulPanel({
     initial,
     onDelete = () => {},
-    collected = 0
+    collected = 0,
+    locale = "et"
 }: {
     readonly initial: SurveyElement;
     readonly onDelete?: () => void;
     /** Responses the survey has already taken; 0 is an unpublished draft. */
     readonly collected?: number;
+    /** The language the panel is editing; the survey's own is always `et`. */
+    readonly locale?: SurveyLocale;
 }) {
     const [element, setElement] = useState(initial);
 
     return (
         <CollectedAnswersProvider count={collected}>
-            <EditorPanel
-                selected={element}
-                elements={[element]}
-                keys={{ policy: "derive", reserved: [] }}
-                onChange={setElement}
-                onDuplicate={() => {}}
-                onDelete={onDelete}
-            />
+            <TranslationProvider
+                locale={locale}
+                source="et"
+                element={authorElement(element, "et")}
+                copy={elementCopy(ELEMENT_COPY, locale)}
+            >
+                <EditorPanel
+                    selected={element}
+                    elements={[element]}
+                    keys={{ policy: "derive", reserved: [] }}
+                    onChange={setElement}
+                    onDuplicate={() => {}}
+                    onDelete={onDelete}
+                />
+            </TranslationProvider>
         </CollectedAnswersProvider>
     );
 }
@@ -329,6 +357,55 @@ describe("removing a choice", () => {
         );
         expect(
             screen.getByText(warning.column.replaceAll("{label}", "Veerg 1"))
+        ).not.toBeNull();
+    });
+});
+
+/**
+ * The words the panel *writes* — the label that comes in with the "other"
+ * toggle, the label a new option is born with — are survey content, so they
+ * follow the language being edited. They used to follow the language the owner
+ * was reading the app in, which put "Muu" into a Russian translation of a
+ * survey written by someone using the app in Estonian. See docs/DECISIONS.md
+ * 032.
+ */
+describe("the words the panel seeds", () => {
+    const editor = MESSAGES.app.Builder.editor;
+
+    const seedIn = (locale: SurveyLocale) =>
+        renderWithIntl(
+            <StatefulPanel
+                initial={createElement("single_choice", defaults, [], KEYS)}
+                locale={locale}
+            />
+        );
+
+    it("carries in the other-label in the language being edited", () => {
+        seedIn("ru");
+        fireEvent.click(screen.getByLabelText(editor.allowOtherLabel));
+
+        expect(
+            screen.queryByDisplayValue(ruMessages.Builder.defaults.otherLabel)
+        ).not.toBeNull();
+    });
+
+    it("still uses the survey's own language when nothing is being translated", () => {
+        seedIn("et");
+        fireEvent.click(screen.getByLabelText(editor.allowOtherLabel));
+
+        expect(
+            screen.queryByDisplayValue(copy.defaults.otherLabel)
+        ).not.toBeNull();
+    });
+
+    it("names a new option in the language being edited", () => {
+        seedIn("ru");
+        fireEvent.click(screen.getByRole("button", { name: editor.addOption }));
+
+        expect(
+            screen.queryByDisplayValue(
+                ruMessages.Builder.defaults.optionLabel.replace("{index}", "3")
+            )
         ).not.toBeNull();
     });
 });

@@ -14,6 +14,7 @@ import {
     shortTextQuestion,
     signIn,
     singleChoiceQuestion,
+    stored,
     testSlug
 } from "@/lib/db/test-support";
 import type { TestUser } from "@/lib/db/test-support";
@@ -141,7 +142,7 @@ describe("a wave group whose questionnaire changed", () => {
             ownerId: owner.id,
             title: "Annual survey",
             waveLabel: "2025",
-            elements: [role2025, recommend2025, city2025, extra2025]
+            elements: stored([role2025, recommend2025, city2025, extra2025])
         });
         group = first.survey.waveGroupId;
 
@@ -150,7 +151,7 @@ describe("a wave group whose questionnaire changed", () => {
             title: "Annual survey, reworded",
             waveGroupId: group,
             waveLabel: "2026",
-            elements: [role2026, recommend2026, city2026]
+            elements: stored([role2026, recommend2026, city2026])
         });
 
         await publishSurvey(owner.db, first.survey.id, testSlug("wave-2025"));

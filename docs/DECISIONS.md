@@ -746,3 +746,101 @@ This entry is not a build. It is the decision written down before it is built, b
 - **The screen is `/waves/[waveGroupId]`, and the survey list is the way in.** Keyed on the group rather than on a wave: the series outlives any one of its waves, and a link naming a wave breaks the year that wave is deleted. The route is protected by being absent from `PUBLIC_PREFIXES` — deny by default — and RLS makes "not yours" and "never existed" the same 404, as it must when the URL is a UUID. The compare control on the wave-group row is the one DESIGN §5 always specified and 013 deliberately left out until there was something behind it.
 
 **Consequence.** `aggregate()` is unchanged and still knows nothing about waves; it is simply called once per wave. `domain/charts.ts` gained one function and one threshold, and the test that said "every chartable question is offered a line" now says which ones are and why.
+
+---
+
+## 030 — Multilingual content: two shapes of one document, and which one each surface holds
+
+**Status:** accepted
+
+**Context.** Phase 12 step 1. Every title, description, choice label, `otherLabel`, scale endpoint and matrix heading in `surveys.elements` becomes a map from locale to text, and every document already stored has to arrive in that shape. PLAN scheduled it ahead of skip logic for one reason that applies to nothing else on the list: its cost grows with every survey in production. Step 1 is the shape, the migration and the tests; the builder's translation surface (step 2) and the respondent's picker (step 3) follow, and nothing user-visible changes until they do.
+
+**Decisions.**
+
+- **`LocalizedText` is a partial map with at least one entry, and identifiers are not in it.** `domain/content.ts` owns the type, its schema and the fallback. Partial, because an author who has written a question in Estonian and not yet in Russian is in a normal state and the reader falls back; never empty, because text nobody can read is not a translation state but a broken document. A question `key`, a choice `value`, an element `id` and the survey slug stay single strings: they are machine-facing, they join across waves *and* languages, and translating them would sever exactly what DECISIONS 003 preserved.
+
+- **An element exists in two shapes, built from one set of field definitions.** *Authored* (`AuthoredElementSchema`) is what the column holds; *resolved* (`SurveyElementSchema`) is that element in one language. The nine authored variants are the nine resolved ones with their text fields overridden, and the refinements — a label whenever "other" is offered, coherent selection bounds, unique option values — are written once and applied to both, because not one of them reads a word of the text.
+
+  The **resolved shape keeps the plain names**. Nine-tenths of the codebase legitimately works in one language — the runner renders one, `aggregate()` titles a chart with one, `toCsvCells` writes one — and naming that shape `SurveyElement` is what kept step 1 from touching twenty files it has no business touching. The stored shape is the qualified one.
+
+- **`domain/localize.ts` is the only thing that maps between them.** Resolving is total and lossy; authoring writes one language and *replaces* the rest. Both switch exhaustively over the union and end in `assertNever`, so a new element type — or a new piece of text on an existing one — breaks this file first. `localize.test.ts` adds the guard the compiler cannot give: it authors a fully written element of every type and fails if any respondent-facing string survives as a bare string, which is what a text field added to one shape and forgotten in the other looks like.
+
+- **The fallback is: the language asked for, then the survey's own, then whatever the author wrote, in `LOCALES` order.** Written down twice, once in `resolveText` and once in `public.localized_text(jsonb, text)`, because `survey_questions` is derived in the database and has to agree with the application about what a question is called. Its last step is deterministic rather than arbitrary for the same reason.
+
+- **The repository returns the stored document; the surface resolves it.** `getSurvey` and `listWaveGroupSurveys` hand back `AuthoredSurvey`, and the builder page, the results page, the CSV route and `lib/db/waves.ts` each resolve through the survey's own locale. The one exception is `getRunnerSurveyBySlug`, which resolves inside the repository — it reads on behalf of a respondent, and step 3 hands it that respondent's locale rather than the survey's, with nothing below it changing.
+
+  This is what keeps `duplicateSurvey` honest: it works on the stored document, so a survey translated into three carries all three into next year's wave. Had the repository resolved on read, duplication would have quietly dropped every translation but one — a data loss with a year-long fuse, which is the failure mode DECISIONS 003 exists to prevent.
+
+- **The survey's own title and description stay untranslated columns.** They name the survey in the owner's list, in their tab and in the CSV's filename. The document is what a respondent reads. If a translated survey name is wanted later it is a separate decision, not a consequence of this one.
+
+- **The migration rewrites the documents with the definition triggers disabled.** `surveys_before_write()` would bump every survey's `version` — invalidating open builders and snapshotting a `survey_versions` row no response points at — and `sync_survey_questions()` would rewrite a projection whose titles do not change, since the same words resolve out of the map as went into it. `survey_versions.elements` is converted too: nothing reads those snapshots today, and one in a shape the domain rejects is a landmine under whatever reads them first. An optional field stored as an empty string becomes *absent*, the rule `element-patch.ts` already follows one level down.
+
+- **`survey_questions.title` is resolved by the trigger, and now re-derives when the locale changes.** It could not matter before — there was one title and the locale only named the language it was written in — but a survey with three titles and a switched locale would otherwise leave the owner's question list disagreeing with their builder.
+
+- **Until step 2, the builder's autosave replaces the document's text rather than merging into it.** It edits one language, so `saveSurveyElementsAction` authors what arrives into the survey's own locale. That is safe for exactly as long as nothing can write a second translation, which is why step 2 must send the stored shape and *delete* this conversion rather than edit it. Nothing else writes elements: `duplicateSurveyAction` copies the document whole.
+
+**Consequence.** `pnpm check` and `pnpm test:db` are green with no user-visible change: every survey renders the words it rendered before, through a map with one entry. The two unions have to be kept in step, which is what the untranslated-string test is for. Adding a question type is now eleven `assertNever` sites plus two schema variants plus two branches in `localize.ts` — which is the argument PLAN's backlog already makes for doing the remaining question types *after* this phase rather than before it.
+
+---
+
+## 031 — The builder's translation surface: one panel, one language, and a merge that cannot lose the others
+
+**Status:** accepted
+
+**Context.** Phase 12 step 2. 030 gave the stored document its locale-keyed shape and left the builder editing one language of it — the survey's own — by resolving on the way in and re-authoring on the way out. That conversion is a *replacement*, and it was safe only for as long as no second translation could exist. This step makes one exist. PLAN's constraint is the whole design brief: an author has to move between the survey's languages "without the editor panel doubling in size", which at DESIGN §4's 340px is not a figure of speech.
+
+**Decisions.**
+
+- **The set of languages a survey is offered in is a column, not something derived from the document.** `surveys.locales`, always containing `locale`, never empty. It cannot be derived: an author picks a language *before* writing a word of it, and a survey with one question translated is not a survey offered in two languages. It is edited in the settings dialog, beside the language the survey is written in, because the two are one decision — turning the authoring language off is not a state, so that switch is disabled rather than absent (DESIGN §6). Step 3 reads this for the respondent's picker; nothing below `get_runner_survey` reads it yet.
+
+  It is **normalised by `surveys_before_write()` rather than validated by a constraint**: canonical order, no duplicates, authoring language folded in. An insert that says nothing about languages — the seed, a test, `createSurvey` before the dialog has ever been opened — gets `array[locale]` rather than a violation, and no writer, however it reaches the table, can store a set that fails to parse on the way back out. `SurveyLocalesSchema` is still strict, so the repository refuses one; the trigger is the backstop under psql and migrations. It counts as a definition change, because the picker it drives is part of what the public link serves.
+
+- **Dropping a language does not delete its translations.** The author can put it back and find their work where they left it. The alternative is a switch that silently destroys a week of translating, and the cost of keeping it is some unread JSON.
+
+- **The builder holds the stored document and derives three views of it.** `hooks/use-survey-builder.ts` is the seam and the only place that knows translation exists; `lib/builder/document.ts` now reduces over `AuthoredElement`. What it exposes: `stored`, which is what the autosave sends; `elements`, the active language *and nothing else*; and `shown`, the same elements as a respondent reading in that language would get today, fallback and all.
+
+  The distinction between the last two is the design. The **editor panel binds to the strict projection**, so an untranslated title is an empty field and the sentence being translated from is its *placeholder* — one column of fields, and the reference text in the space a second column would have taken. The **canvas and the element list draw the resolved view**, because a preview that blanked every untranslated question would describe a survey nobody will ever see; a dot on the list rows and a count beside the switcher say what is still missing, in fields rather than in questions, since a question with four untranslated options is four pieces of work.
+
+  Had the panel been bound to the resolved view instead, an author who touched any field would have filed the Estonian they were reading as the Russian translation of itself — silently, and indistinguishably from real work.
+
+- **An edit is merged, never authored.** `mergeElement` takes the stored element, one language of it as the panel handed it back, and that language's name. Text is written into that language alone; everything that is not a word — options, bounds, keys, `required` — comes from the edit and therefore applies across every language. Inside a list the join is the option *value*, so reordering and translating in the same edit cannot move a label from one choice to another. Emptying a field withdraws that language rather than storing an empty translation, which is what makes "clear the Russian and let it fall back" expressible at all.
+
+  The merge happens **inside the reducer**, not in the caller, so two edits dispatched in one React batch apply in turn; a caller merging against the document it last rendered would have the second silently discard the first.
+
+- **`domain/localize.ts` gained two directions but not two switches.** Resolving, projecting, authoring and merging are four behaviours over one exhaustive switch per direction, with the per-field behaviour passed in as a reader addressed by `TextPath`. Four hand-written switches over the same nine variants would be four places to forget a field, which is the failure mode 030 built this file to prevent. `elementTexts` collects the paths by *running* the resolving switch rather than by a third switch that could disagree with it, so the set of text an element has is by construction the set the resolver reads.
+
+  030's untranslated-string test is now a **compile-time** guard as well as a runtime one. The runtime version walks a fixture and can only see fields the fixture happens to fill in — a text field added to `SurveyElementSchema` and inherited by the authored variant, which is how the two are built, passed it silently. `UntranslatedField` in `localize.test.ts` asks the same question of the *type*: any plain string on a stored element that is not `id`, `key`, `type` or `value` fails to compile, and the error names the field.
+
+- **Three things a translation may not touch.** The question `key` is machine-facing — it names a CSV column and joins this wave to the next — so its chip is read-only while a translation is being edited, and the key policy is frozen outright, since under `derive` it would otherwise follow a Russian title. A new element is authored into the survey's **own** language whatever is on screen: structure belongs to the source, so a question added while translating shows up in the translation as one more thing to translate rather than as a question the source language is missing. `duplicateElement` copies the **stored** element, so a question written in three languages is duplicated in three, and derives its fresh key from the source language.
+
+- **A blank field is an error only when no language has the text.** `element.title === "" && reference("title") === undefined`, and the same for the "other" label and every option label. A title with no Russian is a normal state that falls back; a title written in no language at all is a document nothing can render, and is what the save gate holds on — which is why that gate now parses `AuthoredElementsSchema` rather than the resolved one, or the builder would stop saving for as long as a translation was unfinished.
+
+- **`saveSurveyElementsAction` takes the stored shape and stores it verbatim.** 030 said this step would *delete* its conversion rather than edit it, and it does: an action that resolved or re-authored on the way through would be a second place a translation could be dropped, and it is reachable without going through the builder at all.
+
+**Consequence.** A survey offered in one language is unchanged in every respect — the switcher renders nothing, the projection equals the resolution, and the merge is the identity. A survey offered in more than one gains exactly one control in the app bar. Respondents see nothing yet: `get_runner_survey` returns `locales` so that `AuthoredSurveySchema` can parse it, and step 3 gives it the picker.
+
+---
+
+## 032 — Seed words belong to the survey's language, and an untranslated question says so where it is
+
+**Status:** accepted
+
+**Context.** Two things wrong with 031 as shipped, both found by using it. Switching on "allow a written answer" filled the label from `useTranslations()`, which is bound to the *owner app's* language — so an Estonian survey written by someone reading the app in English got "Other" into its questions, and translating into Russian got "Muu" into the Russian. And the untranslated marker was a dot beside a count in the app bar: legible only to the person who had just built it.
+
+**Decisions.**
+
+- **The words a new element is born with are content, not chrome.** "Uus küsimus", "Valik 1" and the "other" label are seeds for the survey document, and the document has a language of its own, so the language is a *parameter* — `lib/builder/element-copy.ts` — exactly as it is for the runner's translations (011). They still come from the message catalogues, because hardcoding them here would be the same rule broken from the other side.
+
+  Two languages are in play and each seed uses the right one: `createElement` is authored into the survey's own language, since that is what 031 decided structure belongs to; anything the *panel* creates — a new option, the label the "other" toggle carries in — goes into the language on screen, since that is what the merge will file it under. The active-language copy rides on the translation context rather than through nine editors' props, for the same reason the reference text does.
+
+  All three catalogues' seeds are loaded once by the builder page and passed down. The subtree is six short strings; the alternative is a round trip on a keystroke. `element-copy.test.ts` reads every seed out of every catalogue, because the failure this invites is a key missing from one language, which no amount of testing Estonian would find.
+
+- **A marker that says "something is different about this row" and nothing else is worse than none.** The dot is now a caution icon with the sentence on it — hover for the tooltip, and the same words in the accessible name, since it lives inside the row's button and cannot be a focus stop of its own without nesting a button in a button. It stays quiet in `text-muted-foreground`: an untranslated question is a normal state on the way to a finished translation, not an error, and it falls back rather than breaking anything.
+
+  The row's position number went with it. It duplicated the numbering the canvas already does, and next to a status mark it read as part of it.
+
+- **The running count in the app bar is gone.** It was a number with nowhere to go: it could not say *which* question, and the author was already looking at the list that could. What is left is said twice, in the two places it can be acted on — beside the question, and once in the publish dialog.
+
+- **Publishing warns and does not block.** A half-translated survey is publishable and always was: every untranslated field falls back to the language the survey is written in, so nothing breaks. But publishing is the last moment the author is asked anything, so the dialog names the languages that are short and says what a respondent will actually see. The confirm button is untouched (DESIGN §6: inform, do not disable what is legitimate).
+
+**Consequence.** `TranslationProvider` now carries the seed copy as well as the reference text, and `useTranslationTarget` throws outside it rather than defaulting — a default would be a second, silently wrong copy of the catalogue. The builder page is the only caller that loads the copy, so nothing else can pick the wrong language by accident.

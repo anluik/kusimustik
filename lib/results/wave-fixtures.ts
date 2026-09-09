@@ -107,6 +107,7 @@ export function wave(
         status: "published",
         slug: `annual-${digest(label, 8)}`,
         locale: "et",
+        locales: ["et"],
         waveGroupId: WAVE_GROUP,
         waveLabel: label,
         elements

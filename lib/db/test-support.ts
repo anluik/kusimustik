@@ -1,12 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { newQuestionId } from "@/domain/ids";
+import { authorElements } from "@/domain/localize";
 import type {
+    AuthoredElement,
     NpsQuestion,
     OpinionScaleQuestion,
     ShortTextQuestion,
     SingleChoiceQuestion,
-    StatementElement
+    StatementElement,
+    SurveyElement
 } from "@/domain/question";
 import type { Database } from "@/lib/db/database.types";
 import {
@@ -98,7 +101,17 @@ export async function signIn(email: string, password: string): Promise<Db> {
 }
 
 /* Element builders. Fresh ids every call: question_id is a primary key across
-   the whole table, so two surveys can never share one. */
+   the whole table, so two surveys can never share one.
+
+   They build the *resolved* shape — one language, plain strings — because that
+   is what reads like a survey in a test. `stored()` is what turns a hand-built
+   document into the shape `surveys.elements` actually holds. */
+
+/** A hand-built document as it is stored: authored in Estonian, translated
+    into nothing, which is every survey the migration touched. */
+export function stored(elements: readonly SurveyElement[]): AuthoredElement[] {
+    return authorElements(elements, "et");
+}
 
 export function statementElement(key: string): StatementElement {
     return {

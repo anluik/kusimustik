@@ -2,13 +2,16 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { duplicateSurvey } from "@/domain/duplicate";
 import { SurveySlugSchema } from "@/domain/survey";
+import { unwrap } from "@/lib/db/errors";
 import {
     createTestUser,
     deleteTestUser,
     npsQuestion,
     shortTextQuestion,
     singleChoiceQuestion,
-    statementElement
+    serviceClient,
+    statementElement,
+    stored
 } from "@/lib/db/test-support";
 import type { TestUser } from "@/lib/db/test-support";
 import { submitResponse } from "@/lib/db/responses";
@@ -49,7 +52,7 @@ async function draft(title: string): Promise<SurveyRecord> {
     return createSurvey(owner.db, {
         ownerId: owner.id,
         title,
-        elements: [npsQuestion("recommend"), shortTextQuestion("city")]
+        elements: stored([npsQuestion("recommend"), shortTextQuestion("city")])
     });
 }
 
@@ -80,7 +83,7 @@ describe("publishing", () => {
         const theirs = await createSurvey(other.db, {
             ownerId: other.id,
             title: "Tööandja maine uuring",
-            elements: [npsQuestion("recommend")]
+            elements: stored([npsQuestion("recommend")])
         });
         const published = await publishSurveyDerivingSlug(other.db, theirs);
 
@@ -132,11 +135,11 @@ describe("survey_stats", () => {
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Loendamine",
-            elements: [
+            elements: stored([
                 statementElement("intro"),
                 npsQuestion("recommend"),
                 singleChoiceQuestion("role")
-            ]
+            ])
         });
 
         const stats = await listSurveyStats(owner.db);
@@ -150,7 +153,7 @@ describe("survey_stats", () => {
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Vastuste loendamine",
-            elements: [recommend, city]
+            elements: stored([recommend, city])
         });
         const published = await publishSurveyDerivingSlug(owner.db, survey);
 
@@ -172,7 +175,7 @@ describe("survey_stats", () => {
             owner.db,
             survey.survey.id,
             published.version,
-            { elements: [recommend] }
+            { elements: stored([recommend]) }
         );
 
         stats = await listSurveyStats(owner.db);
@@ -201,7 +204,7 @@ describe("duplication as the next wave", () => {
             ownerId: owner.id,
             title: "Iga-aastane uuring",
             waveLabel: "2025",
-            elements: [role, recommend]
+            elements: stored([role, recommend])
         });
         const published = await publishSurveyDerivingSlug(owner.db, source);
 
@@ -240,7 +243,7 @@ describe("deletion", () => {
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
             title: "Kustutatav",
-            elements: [recommend]
+            elements: stored([recommend])
         });
         await publishSurveyDerivingSlug(owner.db, survey);
         await submitResponse(owner.db, {
@@ -278,5 +281,84 @@ describe("listSurveys", () => {
 
         const updatedAt = mine.map(survey => survey.updatedAt);
         expect(updatedAt).toEqual([...updatedAt].sort().reverse());
+    });
+});
+
+/**
+ * The set of languages a survey is offered in is normalised by
+ * `surveys_before_write()` rather than validated by a constraint, so that an
+ * insert which says nothing about languages still lands on something the
+ * domain schema accepts — and so that no caller, however it reaches the table,
+ * can store a set that would fail to parse on the way back out. See
+ * docs/DECISIONS.md 031.
+ */
+describe("survey locales", () => {
+    it("defaults to the language the survey is written in", async () => {
+        const survey = await createSurvey(owner.db, {
+            ownerId: owner.id,
+            title: "Ainult eesti keeles",
+            locale: "et"
+        });
+
+        expect(survey.survey.locales).toEqual(["et"]);
+    });
+
+    it("normalises a set no repository would have sent", async () => {
+        // Written past `createSurvey`, which parses `SurveyLocalesSchema` and
+        // would refuse this. The trigger is the backstop under it: out of
+        // order, duplicated and missing the authoring language are the three
+        // things the domain rejects, and all three come back fixed rather
+        // than stored — so a row written by a migration, a script or psql
+        // still parses on the way out.
+        const written = unwrap(
+            "insert surveys",
+            await serviceClient()
+                .from("surveys")
+                .insert({
+                    owner_id: owner.id,
+                    title: "Kolmes keeles",
+                    locale: "en",
+                    locales: ["ru", "ru", "et"]
+                })
+                .select("id, locales")
+                .single()
+        );
+
+        expect(written.locales).toEqual(["et", "en", "ru"]);
+    });
+
+    it("puts the new authoring language back into the set", async () => {
+        const survey = await createSurvey(owner.db, {
+            ownerId: owner.id,
+            title: "Keelevahetus",
+            locale: "et"
+        });
+
+        const switched = await updateSurveyDefinition(
+            owner.db,
+            survey.survey.id,
+            survey.version,
+            { locale: "ru" }
+        );
+
+        expect(switched.survey.locales).toEqual(["et", "ru"]);
+    });
+
+    it("counts as a definition change, because the runner's picker follows it", async () => {
+        const survey = await createSurvey(owner.db, {
+            ownerId: owner.id,
+            title: "Uus keel",
+            locale: "et"
+        });
+
+        const offered = await updateSurveyDefinition(
+            owner.db,
+            survey.survey.id,
+            survey.version,
+            { locales: ["et", "ru"] }
+        );
+
+        expect(offered.survey.locales).toEqual(["et", "ru"]);
+        expect(offered.version).toBe(survey.version + 1);
     });
 });

@@ -206,7 +206,8 @@
             "keyLabel": "Võti",
             "keyHelp": {
                 "derive": "Tekib pealkirjast, kuni sa seda ise muudad. Võti seob laineid ja annab CSV veergudele nime, seepärast lukustub see avaldamisel.",
-                "freeze": "Lukustatud: sellele võtmele viitavad juba vastused või teised lained. Muuta saab, aga hoiatuse kaudu."
+                "freeze": "Lukustatud: sellele võtmele viitavad juba vastused või teised lained. Muuta saab, aga hoiatuse kaudu.",
+                "translating": "Võti on masinatele, mitte vastajale: see on kõigis keeltes sama ja seda muudad põhikeeles."
             },
             "titleLabel": "Küsimus",
             "titlePlaceholder": "Mida sa vastajalt küsida tahad?",
@@ -281,14 +282,16 @@
         "publish": {
             "publish": "Avalda",
             "republish": "Avalda uuesti",
-            "collectingNothing": "küsimusteta — link ei kogu vastuseid"
+            "collectingNothing": "küsimusteta — link ei kogu vastuseid",
+            "untranslated": "Osa küsitluse tekstist on tõlkimata ({languages}). Vastaja näeb neis kohtades küsitluse enda keelt."
         },
         "defaults": {
             "questionTitle": "Uus küsimus",
             "optionLabel": "Valik {index}",
             "statementTitle": "Uus väide",
             "rowLabel": "Rida {index}",
-            "columnLabel": "Veerg {index}"
+            "columnLabel": "Veerg {index}",
+            "otherLabel": "Muu"
         },
         "errors": {
             "titleRequired": "Küsimusel peab olema pealkiri.",
@@ -336,10 +339,17 @@
             "descriptionHelp": "Vabatahtlik. Kuvatakse vastajale küsitluse alguses.",
             "localeLabel": "Küsitluse keel",
             "localeHelp": "Keel, milles vastaja küsitlust näeb. Rakenduse keelt see ei muuda.",
+            "localesLabel": "Küsitluse keeled",
+            "localesHelp": "Keeled, mille vahel vastaja valida saab. Põhikeelt välja lülitada ei saa. Uus keel algab tõlkimata: iga väli langeb tagasi põhikeelele, kuni sa selle üle kirjutad.",
             "waveLabel": "Laine",
             "wavePlaceholder": "nt 2026",
             "waveHelp": "Nimetab selle vooru lainete võrdluses. Tühi väli tähendab nimeta lainet.",
             "submit": "Salvesta"
+        },
+        "translation": {
+            "label": "Küsitluse keel, mida muudad",
+            "sourceOption": "{language} — küsitluse põhikeel",
+            "rowUntranslated": "Ei ole täielikult tõlgitud"
         }
     },
     "Results": {

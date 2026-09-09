@@ -6,11 +6,12 @@ import { z } from "zod";
 import { duplicateSurvey } from "@/domain/duplicate";
 import { SurveyIdSchema } from "@/domain/ids";
 import type { SurveyId } from "@/domain/ids";
-import { SurveyElementSchema } from "@/domain/question";
+import { AuthoredElementSchema } from "@/domain/question";
 import {
+    AuthoredSurveySchema,
     LOCALES,
     SurveyDescriptionSchema,
-    SurveySchema,
+    SurveyLocalesSchema,
     SurveyTitleSchema,
     WaveLabelSchema
 } from "@/domain/survey";
@@ -137,7 +138,7 @@ export async function renameSurveyAction(
 const SaveElementsInputSchema = IdInputSchema.extend({
     /** The version the builder last read; see `updateSurveyDefinition`. */
     expectedVersion: z.int().positive(),
-    elements: z.array(SurveyElementSchema)
+    elements: z.array(AuthoredElementSchema)
 });
 export type SaveSurveyElementsInput = z.input<typeof SaveElementsInputSchema>;
 
@@ -147,8 +148,14 @@ export type SaveSurveyElementsInput = z.input<typeof SaveElementsInputSchema>;
  * The document is re-parsed twice on purpose: once as an array of elements,
  * and once as the whole survey it would become, because the rules that matter
  * most here — no two questions sharing a `key`, none sharing an `id` — are
- * survey-level and live on `SurveySchema`. A client that skipped the builder
- * entirely gets the same answer as one that used it.
+ * survey-level and live on `AuthoredSurveySchema`. A client that skipped the
+ * builder entirely gets the same answer as one that used it.
+ *
+ * What arrives is the *stored* document, every language at once, because the
+ * builder holds it that way and merges each edit into it (docs/DECISIONS.md
+ * 031). It is stored as it arrives: an action that resolved or re-authored it
+ * would be a second place where a translation could be dropped, and this one
+ * is reachable without going through the builder at all.
  *
  * `expectedVersion` is what keeps two open tabs from silently overwriting each
  * other, and the new version comes back so the builder can carry on saving
@@ -166,7 +173,7 @@ export async function saveSurveyElementsAction(
         const found = await withSurvey(parsed.data.surveyId);
         if (!found.ok) return failed(found.error);
 
-        const candidate = SurveySchema.safeParse({
+        const candidate = AuthoredSurveySchema.safeParse({
             ...found.record.survey,
             elements: parsed.data.elements
         });
@@ -194,14 +201,17 @@ const SettingsInputSchema = IdInputSchema.extend({
     /** Empty means "no description"; the runner then shows none. */
     description: SurveyDescriptionSchema.nullable(),
     locale: z.literal(LOCALES),
+    /** Every language the survey is offered in; always includes `locale`. */
+    locales: SurveyLocalesSchema,
     /** Empty means "no label"; the survey then simply has none. */
     waveLabel: WaveLabelSchema.nullable()
 });
 export type SaveSurveySettingsInput = z.input<typeof SettingsInputSchema>;
 
 /**
- * The survey-level settings the builder owns: its title, the language the
- * runner renders it in, and which wave of its group it is.
+ * The survey-level settings the builder owns: its title, the language it is
+ * written in, the languages it is offered in, and which wave of its group it
+ * is.
  *
  * It carries `expectedVersion` and returns the new one for the same reason
  * the autosave does — the title and the locale are part of the definition, so
@@ -227,14 +237,23 @@ export async function saveSurveySettingsAction(
 
         // An emptied description is *no* description rather than an empty
         // string, the same rule `element-patch.ts` follows one level down: the
-        // survey is JSONB read back through `SurveySchema`, where absent and
-        // present-but-empty are different things. Null on the wire, absent in
-        // the document, and `null` in the patch so the column is cleared.
-        const candidate = SurveySchema.safeParse({
+        // survey is JSONB read back through `AuthoredSurveySchema`, where
+        // absent and present-but-empty are different things. Null on the wire,
+        // absent in the document, and `null` in the patch so the column is
+        // cleared.
+        //
+        // Changing the locale does not re-key the document's text: the words
+        // stay where the author put them and `resolveSurvey` falls back to
+        // them, so the survey reads exactly as it did before the switch.
+        // Dropping a language does not delete its translations either — the
+        // author can put it back and find their work where they left it, and
+        // the alternative is a switch that silently destroys a week of it.
+        const candidate = AuthoredSurveySchema.safeParse({
             ...found.record.survey,
             title: parsed.data.title,
             description: parsed.data.description ?? undefined,
             locale: parsed.data.locale,
+            locales: parsed.data.locales,
             ...(parsed.data.waveLabel !== null && {
                 waveLabel: parsed.data.waveLabel
             })
@@ -250,6 +269,7 @@ export async function saveSurveySettingsAction(
                     title: candidate.data.title,
                     description: parsed.data.description,
                     locale: candidate.data.locale,
+                    locales: candidate.data.locales,
                     waveLabel: parsed.data.waveLabel
                 }
             );
@@ -294,6 +314,7 @@ export async function duplicateSurveyAction(
                 description: copy.description
             }),
             locale: copy.locale,
+            locales: copy.locales,
             waveGroupId: copy.waveGroupId,
             ...(copy.waveLabel !== undefined && { waveLabel: copy.waveLabel }),
             elements: copy.elements

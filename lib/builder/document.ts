@@ -1,10 +1,18 @@
 import { assertNever } from "@/domain/assert-never";
+import type { SurveyLocale } from "@/domain/content";
 import type { QuestionId } from "@/domain/ids";
-import type { SurveyElement } from "@/domain/question";
+import { mergeElement } from "@/domain/localize";
+import type { AuthoredElement, SurveyElement } from "@/domain/question";
 
 /**
  * The builder's document and every edit that can be made to it, as a pure
  * reducer.
+ *
+ * It holds the *stored* document — every language the author has written — and
+ * not one language of it, because an edit made in Russian must not be able to
+ * drop the Estonian it was translated from. Projecting the active language out
+ * of it and merging an edit back into it is `use-survey-builder.ts`'s job; see
+ * docs/DECISIONS.md 031.
  *
  * The elements array is the source of truth while the builder is open: the
  * owner's edit lands here first and the autosave follows (docs/DECISIONS.md
@@ -18,7 +26,7 @@ import type { SurveyElement } from "@/domain/question";
  */
 
 export type BuilderDocument = {
-    readonly elements: readonly SurveyElement[];
+    readonly elements: readonly AuthoredElement[];
     readonly selectedId: QuestionId | null;
     readonly revision: number;
 };
@@ -26,23 +34,35 @@ export type BuilderDocument = {
 export type BuilderAction =
     | { readonly kind: "select"; readonly id: QuestionId | null }
     /** Appended at the end and selected, so the editor follows the owner. */
-    | { readonly kind: "add"; readonly element: SurveyElement }
+    | { readonly kind: "add"; readonly element: AuthoredElement }
     | { readonly kind: "remove"; readonly id: QuestionId }
     /** Inserted directly after its source and selected, so the copy is what
      *  the owner is now editing rather than the original. */
     | {
           readonly kind: "duplicate";
           readonly id: QuestionId;
-          readonly copy: SurveyElement;
+          readonly copy: AuthoredElement;
       }
     | { readonly kind: "move"; readonly id: QuestionId; readonly to: number }
-    /** Replaces the element with the same `id`; the editor's every keystroke. */
-    | { readonly kind: "replace"; readonly element: SurveyElement };
+    /**
+     * The editor's every keystroke: one language of an element, merged into
+     * the element of the same `id`.
+     *
+     * The merge happens here rather than in the caller so that two edits
+     * dispatched in one batch apply in turn — a caller that merged against the
+     * document it last rendered would have the second silently discard the
+     * first.
+     */
+    | {
+          readonly kind: "replace";
+          readonly element: SurveyElement;
+          readonly locale: SurveyLocale;
+      };
 
 /** The first element is selected, because a builder opening on nothing has
  *  nothing in its editor panel and reads as broken. */
 export function initialDocument(
-    elements: readonly SurveyElement[]
+    elements: readonly AuthoredElement[]
 ): BuilderDocument {
     return {
         elements,
@@ -51,10 +71,15 @@ export function initialDocument(
     };
 }
 
-export function findElement(
-    elements: readonly SurveyElement[],
+/**
+ * Generic over the element shape, because the builder looks the selected
+ * element up twice: once in the stored document and once in the one language
+ * of it the editor panel is bound to.
+ */
+export function findElement<T extends { readonly id: QuestionId }>(
+    elements: readonly T[],
     id: QuestionId | null
-): SurveyElement | null {
+): T | null {
     if (id === null) return null;
     return elements.find(element => element.id === id) ?? null;
 }
@@ -89,7 +114,7 @@ export function moveItem<T>(
  * neighbour the owner is already looking at.
  */
 function selectionAfterRemoval(
-    remaining: readonly SurveyElement[],
+    remaining: readonly AuthoredElement[],
     index: number
 ): QuestionId | null {
     return (remaining[index] ?? remaining[index - 1])?.id ?? null;
@@ -168,7 +193,9 @@ export function documentReducer(
             if (index === -1) return state;
 
             const elements = state.elements.map((element, position) =>
-                position === index ? action.element : element
+                position === index
+                    ? mergeElement(element, action.element, action.locale)
+                    : element
             );
             return { ...state, elements, revision: state.revision + 1 };
         }

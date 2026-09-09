@@ -27,6 +27,10 @@ import { useCallback, useState } from "react";
 import { useCollectedAnswers } from "@/components/builder/collected-answers";
 import { EditorSection } from "@/components/builder/element-fields";
 import {
+    useReferenceText,
+    useTranslationTarget
+} from "@/components/builder/translation";
+import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -38,6 +42,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { choicePath, type ChoiceList } from "@/domain/localize";
 import type { ChoiceOption } from "@/domain/question";
 import { moveItem } from "@/lib/builder/document";
 import { newOption } from "@/lib/builder/new-element";
@@ -49,7 +54,8 @@ import { newOption } from "@/lib/builder/new-element";
  * Option *values* are never touched here: an answer stores the value, so
  * rewording or reordering an option must leave the answers already given to it
  * alone. That is also why the rows are keyed and sorted by `value` rather than
- * by position.
+ * by position — and why a translation is filed under the value too, so
+ * reordering a list cannot move a label from one choice to another.
  *
  * Unlike the element list, these rows *do* displace as they are dragged. There
  * the design asks for a stationary list with a drop rule (docs/DECISIONS.md
@@ -111,6 +117,7 @@ function OptionRow({
     index,
     copy,
     error,
+    reference,
     removable,
     inputRef,
     onRename,
@@ -120,6 +127,9 @@ function OptionRow({
     readonly index: number;
     readonly copy: ChoiceListCopy;
     readonly error: string | undefined;
+    /** What this label says today, shown while it has no text in this
+     *  language. */
+    readonly reference: string | undefined;
     readonly removable: boolean;
     /** Set only on a row that was just added, to put the caret in it. */
     readonly inputRef?: (node: HTMLInputElement | null) => void;
@@ -162,7 +172,7 @@ function OptionRow({
                     {...(inputRef !== undefined && { ref: inputRef })}
                     value={option.label}
                     aria-label={copy.item(index + 1)}
-                    placeholder={copy.placeholder}
+                    placeholder={reference ?? copy.placeholder}
                     autoComplete="off"
                     aria-invalid={error !== undefined}
                     onChange={event => onRename(event.currentTarget.value)}
@@ -194,6 +204,7 @@ function OptionRow({
 
 export function OptionListEditor({
     dndId,
+    list,
     options,
     minimum,
     copy,
@@ -203,6 +214,8 @@ export function OptionListEditor({
      *  writes into the DOM must match between server and client, so every
      *  context on the page is named. See docs/DECISIONS.md 014. */
     readonly dndId: string;
+    /** Which of an element's three lists this is; see `choicePath`. */
+    readonly list: ChoiceList;
     readonly options: readonly ChoiceOption[];
     /** The schema's floor for this list: 2 for options, 1 for matrix rows. */
     readonly minimum: number;
@@ -211,6 +224,11 @@ export function OptionListEditor({
 }) {
     const tErrors = useTranslations("Builder.errors");
     const tWarning = useTranslations("Builder.editor.removeWarning");
+    const reference = useReferenceText();
+    // `copy.item` names the row for a screen reader and is app chrome; the
+    // label a *new* row is born with is survey content, and belongs to the
+    // language being edited (DECISIONS 032).
+    const { copy: content } = useTranslationTarget();
 
     /**
      * Removing a choice from a survey that has already been answered is not
@@ -283,10 +301,16 @@ export function OptionListEditor({
                                 index={index}
                                 copy={copy}
                                 error={
-                                    option.label.trim() === ""
+                                    option.label.trim() === "" &&
+                                    reference(
+                                        choicePath(list, option.value)
+                                    ) === undefined
                                         ? tErrors("optionRequired")
                                         : undefined
                                 }
+                                reference={reference(
+                                    choicePath(list, option.value)
+                                )}
                                 removable={options.length > minimum}
                                 {...(option.value === addedValue && {
                                     inputRef: focusOnMount
@@ -315,7 +339,9 @@ export function OptionListEditor({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                    const added = newOption(options, copy.item);
+                    const added = newOption(options, index =>
+                        content.newLabel(list, index)
+                    );
                     setAddedValue(added.value);
                     onChange([...options, added]);
                 }}

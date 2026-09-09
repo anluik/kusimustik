@@ -9,20 +9,27 @@ import {
     useState
 } from "react";
 
+import type { SurveyLocale } from "@/domain/content";
 import type { QuestionId, SurveyId } from "@/domain/ids";
-import type { SurveyElement } from "@/domain/question";
-import { SurveyElementsSchema } from "@/domain/survey";
+import {
+    authorElement,
+    projectElements,
+    resolveElements
+} from "@/domain/localize";
+import type { AuthoredElement, SurveyElement } from "@/domain/question";
+import { AuthoredElementsSchema } from "@/domain/survey";
 import {
     documentReducer,
     findElement,
     initialDocument
 } from "@/lib/builder/document";
 import type { SurveyKeys } from "@/lib/builder/keys";
+import { duplicateElement } from "@/lib/builder/new-element";
 import type { SurveyActionError } from "@/lib/surveys/errors";
 import { saveSurveyElementsAction } from "@/lib/surveys/actions";
 
 /**
- * The builder's document and its autosave.
+ * The builder's document, the language it is being edited in, and its autosave.
  *
  * The local document is the source of truth while the builder is open and is
  * never rolled back: an edit is applied immediately and the save follows it,
@@ -31,6 +38,22 @@ import { saveSurveyElementsAction } from "@/lib/surveys/actions";
  * so every save carries the version the last one returned and a second tab
  * loses the race loudly instead of silently overwriting. See
  * docs/DECISIONS.md 014.
+ *
+ * What it holds is the *stored* document, every language at once, and the
+ * three views of it below are derived (docs/DECISIONS.md 031):
+ *
+ * - `stored` is what is saved. Nothing else may be, or an edit made in one
+ *   language would delete the others.
+ * - `elements` is the active language and only the active language, blanks
+ *   included. It is what the editor panel binds to, so an untranslated field
+ *   is an empty field rather than the language it is being translated from.
+ * - `shown` is what a respondent reading in the active language would get
+ *   today, fallback and all. It is what the canvas and the element list draw,
+ *   because a preview that blanked every untranslated question would be
+ *   describing a survey nobody will ever see.
+ *
+ * An edit arrives as one language of an element and is *merged* back, so the
+ * translations the panel never showed survive it.
  */
 
 /** Long enough to swallow a burst of typing, short enough to feel automatic. */
@@ -52,9 +75,16 @@ type SaveState =
     | { readonly kind: "failed"; readonly error: SurveyActionError };
 
 export type SurveyBuilder = {
+    /** The document as it is stored: every language the author has written. */
+    readonly stored: readonly AuthoredElement[];
+    /** The active language alone — what the editor panel edits. */
     readonly elements: readonly SurveyElement[];
+    /** The same elements as a respondent would read them, fallback included. */
+    readonly shown: readonly SurveyElement[];
     readonly selectedId: QuestionId | null;
     readonly selected: SurveyElement | null;
+    /** The selected element with its other languages still attached. */
+    readonly selectedStored: AuthoredElement | null;
     readonly status: BuilderSaveStatus;
     /**
      * The optimistic-concurrency token the next save will carry. Exposed
@@ -64,18 +94,22 @@ export type SurveyBuilder = {
      */
     readonly version: number;
     readonly select: (id: QuestionId | null) => void;
+    /** A new element, authored into the survey's own language. */
     readonly add: (element: SurveyElement) => void;
     readonly remove: (id: QuestionId) => void;
-    readonly duplicate: (id: QuestionId, copy: SurveyElement) => void;
+    /** Copies every language of the element, not the one on screen. */
+    readonly duplicate: (id: QuestionId) => void;
     readonly move: (id: QuestionId, to: number) => void;
+    /** One language of an element, merged into the translations it has. */
     readonly replace: (element: SurveyElement) => void;
     /** Adopts the version another save of this survey just returned. */
     readonly syncVersion: (version: number) => void;
     /** Clears a failed save so the effect below picks the document up again. */
     readonly retry: () => void;
     /**
-     * The key rules, with everything this session has retired folded in. Use
-     * this rather than the `keys` passed in — see `retired` below.
+     * The key rules, with everything this session has retired folded in, and
+     * frozen outright while a translation is being edited. Use this rather
+     * than the `keys` passed in — see `retired` below.
      */
     readonly keys: SurveyKeys;
 };
@@ -84,13 +118,20 @@ export function useSurveyBuilder({
     surveyId,
     initialElements,
     initialVersion,
-    keys
+    keys,
+    source,
+    locale
 }: {
     readonly surveyId: SurveyId;
-    readonly initialElements: readonly SurveyElement[];
+    /** The stored document, as the repository handed it over. */
+    readonly initialElements: readonly AuthoredElement[];
     readonly initialVersion: number;
     /** As the page read them; the hook adds what this session retires. */
     readonly keys: SurveyKeys;
+    /** The language the survey is written in, and everything's fallback. */
+    readonly source: SurveyLocale;
+    /** The language being edited, which is `source` unless translating. */
+    readonly locale: SurveyLocale;
 }): SurveyBuilder {
     const [doc, dispatch] = useReducer(
         documentReducer,
@@ -102,22 +143,35 @@ export function useSurveyBuilder({
     const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
     const [version, setVersion] = useState(initialVersion);
 
-    const { elements, revision } = doc;
+    const { elements: stored, revision } = doc;
     const dirty = revision !== savedRevision;
 
-    // A document the schema rejects — an emptied option label, say — would come
-    // back from the server as `invalidInput`, so it is held here instead: the
-    // owner keeps typing, and the save resumes the moment the document is
-    // whole again.
+    const elements = useMemo(
+        () => projectElements(stored, locale),
+        [stored, locale]
+    );
+    const shown = useMemo(
+        () => resolveElements(stored, locale, source),
+        [stored, locale, source]
+    );
+
+    // A document the schema rejects — an option label emptied in its last
+    // language, say — would come back from the server as `invalidInput`, so it
+    // is held here instead: the owner keeps typing, and the save resumes the
+    // moment the document is whole again.
     //
-    // `SurveyElementsSchema`, not a per-element parse: a key two questions
+    // The *stored* shape, not the projected one: a title with no Russian is a
+    // perfectly good document, and holding the save on it would stop the
+    // builder saving for as long as a translation is unfinished.
+    //
+    // `AuthoredElementsSchema`, not a per-element parse: a key two questions
     // both claim is invalid without either element being invalid on its own,
     // and holding the save is the whole point — a save that goes out and
     // fails leaves a "save failed" the owner cannot retry out of, on top of
     // the field error that already explained the problem.
     const valid = useMemo(
-        () => SurveyElementsSchema.safeParse(elements).success,
-        [elements]
+        () => AuthoredElementsSchema.safeParse(stored).success,
+        [stored]
     );
 
     // Keys this session has retired: an element that leaves the document takes
@@ -135,14 +189,14 @@ export function useSurveyBuilder({
     // question under `derive` and then undoing the retitle still lands back on
     // the key it started with.
     const [retired, setRetired] = useState<readonly string[]>([]);
-    const previous = useRef(elements);
+    const previous = useRef(stored);
 
     useEffect(() => {
-        const present = new Set(elements.map(element => element.id));
+        const present = new Set(stored.map(element => element.id));
         const gone = previous.current
             .filter(element => !present.has(element.id))
             .map(element => element.key);
-        previous.current = elements;
+        previous.current = stored;
 
         if (gone.length > 0) {
             setRetired(before => [
@@ -150,17 +204,22 @@ export function useSurveyBuilder({
                 ...gone.filter(key => !before.includes(key))
             ]);
         }
-    }, [elements]);
+    }, [stored]);
+
+    const translating = locale !== source;
 
     const surveyKeys = useMemo(
         (): SurveyKeys => ({
-            policy: keys.policy,
+            // A key is machine-facing and derived from the title, so while a
+            // translation is being edited there is no title to derive it from
+            // that would not name the CSV column in the wrong language.
+            policy: translating ? "freeze" : keys.policy,
             reserved: [
                 ...keys.reserved,
                 ...retired.filter(key => !keys.reserved.includes(key))
             ]
         }),
-        [keys.policy, keys.reserved, retired]
+        [keys.policy, keys.reserved, retired, translating]
     );
 
     // The version is a parameter rather than something this closes over, so a
@@ -169,7 +228,7 @@ export function useSurveyBuilder({
     const save = useCallback(
         async (
             at: number,
-            saving: readonly SurveyElement[],
+            saving: readonly AuthoredElement[],
             expectedVersion: number
         ) => {
             setSaveState({ kind: "saving" });
@@ -202,11 +261,11 @@ export function useSurveyBuilder({
         if (saveState.kind !== "idle") return;
 
         const timer = setTimeout(() => {
-            void save(revision, elements, version);
+            void save(revision, stored, version);
         }, SAVE_DEBOUNCE_MS);
 
         return () => clearTimeout(timer);
-    }, [dirty, valid, saveState, revision, elements, version, save]);
+    }, [dirty, valid, saveState, revision, stored, version, save]);
 
     useEffect(() => {
         if (!dirty) return;
@@ -228,11 +287,16 @@ export function useSurveyBuilder({
         return valid ? { kind: "pending" } : { kind: "invalid" };
     }, [saveState, dirty, valid]);
 
+    const selectedStored = findElement(stored, doc.selectedId);
+
     return {
+        stored,
         elements,
+        shown,
         keys: surveyKeys,
         selectedId: doc.selectedId,
         selected: findElement(elements, doc.selectedId),
+        selectedStored,
         status,
         version,
         select: useCallback(
@@ -240,25 +304,37 @@ export function useSurveyBuilder({
             []
         ),
         add: useCallback(
-            (element: SurveyElement) => dispatch({ kind: "add", element }),
-            []
+            (element: SurveyElement) =>
+                dispatch({
+                    kind: "add",
+                    element: authorElement(element, source)
+                }),
+            [source]
         ),
         remove: useCallback(
             (id: QuestionId) => dispatch({ kind: "remove", id }),
             []
         ),
         duplicate: useCallback(
-            (id: QuestionId, copy: SurveyElement) =>
-                dispatch({ kind: "duplicate", id, copy }),
-            []
+            (id: QuestionId) => {
+                const element = findElement(stored, id);
+                if (element === null) return;
+                dispatch({
+                    kind: "duplicate",
+                    id,
+                    copy: duplicateElement(element, source, stored, surveyKeys)
+                });
+            },
+            [stored, source, surveyKeys]
         ),
         move: useCallback(
             (id: QuestionId, to: number) => dispatch({ kind: "move", id, to }),
             []
         ),
         replace: useCallback(
-            (element: SurveyElement) => dispatch({ kind: "replace", element }),
-            []
+            (element: SurveyElement) =>
+                dispatch({ kind: "replace", element, locale }),
+            [locale]
         ),
         syncVersion: useCallback((next: number) => setVersion(next), []),
         retry: useCallback(() => setSaveState({ kind: "idle" }), [])

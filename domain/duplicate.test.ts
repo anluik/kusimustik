@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import type { SurveyLocale } from "@/domain/content";
 import { duplicateSurvey } from "@/domain/duplicate";
-import { SurveySchema } from "@/domain/survey";
-import { survey } from "@/domain/test-fixtures";
+import { AuthoredSurveySchema } from "@/domain/survey";
+import { authoredSurvey as survey } from "@/domain/test-fixtures";
 
 describe("duplicateSurvey", () => {
     const copy = duplicateSurvey(survey);
 
     it("produces a survey that still parses", () => {
-        expect(SurveySchema.parse(copy)).toEqual(copy);
+        expect(AuthoredSurveySchema.parse(copy)).toEqual(copy);
     });
 
     it("gives the copy a fresh survey id", () => {
@@ -89,6 +90,26 @@ describe("duplicateSurvey", () => {
             "bbbbbbbb-bbbb-4bbb-8bbb-000000000001"
         );
         expect(n).toBe(survey.elements.length);
+    });
+
+    it("carries every language the source is offered in", () => {
+        // A survey translated into three has to arrive in next year's wave in
+        // three; the copy is of the stored document, so nothing resolves on
+        // the way through.
+        const multilingual = {
+            ...survey,
+            locales: ["et", "en", "ru"] satisfies SurveyLocale[],
+            elements: survey.elements.map(element => ({
+                ...element,
+                title: { ...element.title, ru: "Вопрос" }
+            }))
+        };
+        const next = duplicateSurvey(multilingual);
+
+        expect(next.locales).toEqual(["et", "en", "ru"]);
+        expect(next.elements[0]?.title).toEqual(
+            multilingual.elements[0]?.title
+        );
     });
 
     it("is not shallow — mutating the copy cannot reach the original", () => {

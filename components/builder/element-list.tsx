@@ -19,13 +19,18 @@ import {
     useSortable,
     verticalListSortingStrategy
 } from "@dnd-kit/sortable";
-import { GripVertical } from "lucide-react";
+import { GripVertical, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { ELEMENT_ICONS } from "@/components/builder/element-type";
 import { PanelHeader } from "@/components/builder/panel";
 import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger
+} from "@/components/ui/tooltip";
 import type { QuestionId } from "@/domain/ids";
 import type { SurveyElement } from "@/domain/question";
 import { cn } from "@/lib/utils";
@@ -44,12 +49,44 @@ import { cn } from "@/lib/utils";
 /** DESIGN §4: a dense row is 32px, and the drag handle may go to 28. */
 const ROW = "flex h-8 w-full items-center gap-2 rounded pr-2 pl-7 text-left";
 
+/**
+ * The one thing this row says beyond the element's name: that some of it has
+ * no text in the language being edited.
+ *
+ * A marked-but-unexplained row is worse than none — a dot says *something is
+ * different about this one* and leaves the author to guess what — so the mark
+ * is an icon that already reads as a caution and carries the sentence with it.
+ * It is deliberately quiet: an untranslated question is a normal state on the
+ * way to a finished translation, not an error, and it falls back rather than
+ * breaking anything.
+ *
+ * `asChild` on a plain span, because this sits inside the row's button and a
+ * button inside a button is not valid HTML. The tooltip is therefore
+ * hover-only, which is why the sentence is also in the accessible name.
+ */
+function UntranslatedMark() {
+    const t = useTranslations("Builder.translation");
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="shrink-0 text-muted-foreground">
+                    <TriangleAlert aria-hidden className="size-3.5" />
+                    <span className="sr-only">{t("rowUntranslated")}</span>
+                </span>
+            </TooltipTrigger>
+            <TooltipContent side="right">{t("rowUntranslated")}</TooltipContent>
+        </Tooltip>
+    );
+}
+
 function RowContent({
     element,
-    position
+    untranslated
 }: {
     readonly element: SurveyElement;
-    readonly position: number;
+    /** Something on this element has no text in the language being edited. */
+    readonly untranslated: boolean;
 }) {
     const Icon = ELEMENT_ICONS[element.type];
 
@@ -59,9 +96,7 @@ function RowContent({
             <span className="min-w-0 flex-1 truncate text-xs leading-none">
                 {element.title}
             </span>
-            <span className="shrink-0 font-mono text-[10px] leading-none text-muted-foreground tabular-nums">
-                {position}
-            </span>
+            {untranslated && <UntranslatedMark />}
         </>
     );
 }
@@ -84,10 +119,12 @@ function DropRule({ edge }: { readonly edge: "top" | "bottom" }) {
 function ElementRow({
     element,
     selected,
+    untranslated,
     onSelect
 }: {
     readonly element: SurveyElement;
     readonly selected: boolean;
+    readonly untranslated: boolean;
     readonly onSelect: () => void;
 }) {
     const t = useTranslations("Builder");
@@ -144,7 +181,7 @@ function ElementRow({
                     isDragging && "text-input"
                 )}
             >
-                <RowContent element={element} position={index + 1} />
+                <RowContent element={element} untranslated={untranslated} />
             </button>
         </li>
     );
@@ -153,12 +190,15 @@ function ElementRow({
 export function ElementList({
     elements,
     selectedId,
+    untranslated,
     onSelect,
     onMove,
     className
 }: {
     readonly elements: readonly SurveyElement[];
     readonly selectedId: QuestionId | null;
+    /** Elements with something still to translate; empty unless translating. */
+    readonly untranslated: ReadonlySet<QuestionId>;
     readonly onSelect: (id: QuestionId) => void;
     readonly onMove: (id: QuestionId, to: number) => void;
     readonly className?: string;
@@ -269,6 +309,7 @@ export function ElementList({
                                     key={element.id}
                                     element={element}
                                     selected={element.id === selectedId}
+                                    untranslated={untranslated.has(element.id)}
                                     onSelect={() => onSelect(element.id)}
                                 />
                             ))}
@@ -285,12 +326,7 @@ export function ElementList({
                             >
                                 <RowContent
                                     element={dragging}
-                                    position={
-                                        elements.findIndex(
-                                            element =>
-                                                element.id === dragging.id
-                                        ) + 1
-                                    }
+                                    untranslated={untranslated.has(dragging.id)}
                                 />
                             </div>
                         )}

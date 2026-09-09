@@ -265,15 +265,17 @@ The routing seam was left open for it deliberately: `lib/i18n/runner.ts` documen
 
 The blast radius is wide but entirely compiler-visible: the nine schemas, the nine builder editors, the runner inputs, the CSV headers in `domain/export.ts`, and `SummaryBase.title` — every place that reads a question's words.
 
+The author has to specify the language they are using to build a survey. The user can only pick a language that is supported for the survey.
+
 Three sessions, not one:
 
-1. The schema, the fallback migration and the domain tests. Nothing user-visible changes.
-2. The builder's translation surface — how an author moves between the survey's languages without the editor panel doubling in size.
+1. ~~The schema, the fallback migration and the domain tests. Nothing user-visible changes.~~ **Done** — DECISIONS 030.
+2. ~~The builder's translation surface — how an author moves between the survey's languages without the editor panel doubling in size.~~ **Done** — DECISIONS 031. A survey now carries the set of languages it is *offered* in (`surveys.locales`), the builder edits one of them at a time and merges each edit back, and the language being translated from shows through as placeholder text. Respondents still see nothing.
 3. The respondent picker and the `/k/[slug]/[locale]` segment.
 
-> **Prompt:** Phase 12 of docs/PLAN.md, step 1 only: the locale-keyed content shape in `domain/`, the migration that carries every existing `elements` document into it with `survey.locale` as its single entry, and the tests. Do not touch the builder or the runner yet — the fallback should make them compile and behave exactly as they do now.
+> **Prompt:** Phase 12 of docs/PLAN.md, step 3: the respondent's language picker and the `/k/[slug]/[locale]` segment. Read DECISIONS 030 and 031 first — the survey already knows which languages it is offered in and `get_runner_survey` already returns them, so this step is the routing and the picker, and `getRunnerSurveyBySlug` resolving through the respondent's locale rather than the survey's.
 
-**Done when:** every existing survey still renders identically, and the domain tests cover a question with a missing translation falling back to the survey's own locale.
+**Done when:** every existing survey still renders identically, the domain tests cover a question with a missing translation falling back to the survey's own locale, and a respondent following `/k/[slug]` to a survey offered in three languages can pick one.
 
 ---
 

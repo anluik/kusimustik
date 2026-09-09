@@ -1,4 +1,5 @@
-import { deriveQuestionKey, type SurveyElement } from "@/domain/question";
+import type { QuestionId } from "@/domain/ids";
+import { deriveQuestionKey } from "@/domain/question";
 
 /**
  * Question keys in the builder: which are spoken for, and when one may still
@@ -52,15 +53,26 @@ export function keyPolicyFor(survey: {
 }
 
 /**
+ * What these functions need of an element: which one it is, and what key it
+ * holds. Neither is a word, so both shapes of the document — the stored one
+ * the builder's reducer holds and the single language its editors bind to —
+ * satisfy it, and neither function has to care which it was handed.
+ */
+type KeyedElement = {
+    readonly id: QuestionId;
+    readonly key: string;
+};
+
+/**
  * Every key an element may not take: its siblings' keys, plus the keys the
  * survey's tombstoned questions still hold.
  *
  * `except` is the element being edited, which is allowed to keep its own key.
  */
 export function takenKeys(
-    elements: readonly SurveyElement[],
+    elements: readonly KeyedElement[],
     keys: SurveyKeys,
-    except?: SurveyElement
+    except?: KeyedElement
 ): readonly string[] {
     return [
         ...elements
@@ -79,9 +91,9 @@ export function takenKeys(
  * `freeze` the key never moves.
  */
 export function nextKeyFor(
-    element: SurveyElement,
+    element: KeyedElement & { readonly title: string },
     title: string,
-    siblings: readonly SurveyElement[],
+    siblings: readonly KeyedElement[],
     keys: SurveyKeys
 ): string {
     if (keys.policy === "freeze") return element.key;

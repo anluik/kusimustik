@@ -6,6 +6,10 @@ import { useState, type ReactNode } from "react";
 
 import { Field, ToggleRow } from "@/components/builder/field";
 import {
+    useReferenceText,
+    useTranslationTarget
+} from "@/components/builder/translation";
+import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -43,6 +47,14 @@ import { nextKeyFor, takenKeys, type SurveyKeys } from "@/lib/builder/keys";
  * element and hands it to the builder, which applies it and lets the autosave
  * follow; there is no form state of its own and therefore nothing that can
  * drift out of step with the document.
+ *
+ * The element these bind to is *one language* of the stored one, so an
+ * untranslated field arrives empty and the sentence it is being translated
+ * from arrives as its placeholder (docs/DECISIONS.md 031). That is also what
+ * decides when a blank is an error: a title with no Russian is a normal state
+ * and falls back, while a title written in no language at all is a document
+ * nothing can render — so the required-field errors below ask the reference
+ * text, not the field.
  */
 
 /** Ids are namespaced by element, so a switched selection cannot collide. */
@@ -78,6 +90,11 @@ export function EditorSection({
  * against it — that button goes through an `AlertDialog` first. The rename is
  * never *refused*: an owner who has read the warning may still have a good
  * reason. See docs/DECISIONS.md 015.
+ *
+ * It is the one field here that a translation cannot touch. A key is
+ * machine-facing — it names a CSV column and joins a wave to its successor —
+ * so it has no Russian, and the chip is read-only for as long as the panel is
+ * editing one.
  */
 function KeyField({
     element,
@@ -92,6 +109,7 @@ function KeyField({
 }) {
     const t = useTranslations("Builder.editor");
     const tErrors = useTranslations("Builder.errors");
+    const { translating } = useTranslationTarget();
     const [editing, setEditing] = useState(false);
     const [warning, setWarning] = useState(false);
 
@@ -114,7 +132,11 @@ function KeyField({
             id={id}
             label={t("keyLabel")}
             help={t(
-                keys.policy === "derive" ? "keyHelp.derive" : "keyHelp.freeze"
+                translating
+                    ? "keyHelp.translating"
+                    : keys.policy === "derive"
+                      ? "keyHelp.derive"
+                      : "keyHelp.freeze"
             )}
             {...(error !== undefined && { error })}
         >
@@ -146,18 +168,22 @@ function KeyField({
                     >
                         {element.key}
                     </Badge>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t("editKey")}
-                        onClick={() =>
-                            keys.policy === "freeze" ? setWarning(true) : edit()
-                        }
-                        className="rounded text-muted-foreground"
-                    >
-                        <Pencil aria-hidden />
-                    </Button>
+                    {!translating && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={t("editKey")}
+                            onClick={() =>
+                                keys.policy === "freeze"
+                                    ? setWarning(true)
+                                    : edit()
+                            }
+                            className="rounded text-muted-foreground"
+                        >
+                            <Pencil aria-hidden />
+                        </Button>
+                    )}
                 </div>
             )}
 
@@ -206,8 +232,12 @@ export function ElementFields({
     const t = useTranslations("Builder.editor");
     const tErrors = useTranslations("Builder.errors");
 
+    const reference = useReferenceText();
+
     const titleError =
-        element.title.trim() === "" ? tErrors("titleRequired") : undefined;
+        element.title.trim() === "" && reference("title") === undefined
+            ? tErrors("titleRequired")
+            : undefined;
 
     return (
         <>
@@ -219,7 +249,7 @@ export function ElementFields({
                 <Input
                     id={fieldId(element, "title")}
                     value={element.title}
-                    placeholder={titlePlaceholder}
+                    placeholder={reference("title") ?? titlePlaceholder}
                     autoComplete="off"
                     aria-invalid={titleError !== undefined}
                     {...(titleError !== undefined && {
@@ -244,7 +274,9 @@ export function ElementFields({
                 <Textarea
                     id={fieldId(element, "description")}
                     value={element.description ?? ""}
-                    placeholder={t("descriptionPlaceholder")}
+                    placeholder={
+                        reference("description") ?? t("descriptionPlaceholder")
+                    }
                     rows={2}
                     onChange={event =>
                         onChange(
@@ -314,9 +346,15 @@ export function OtherToggle({
 }) {
     const t = useTranslations("Builder.editor");
     const tErrors = useTranslations("Builder.errors");
+    const reference = useReferenceText();
+    // The label is survey content, so it comes in in the language being
+    // edited — not the one the app is being read in (DECISIONS 032).
+    const { copy } = useTranslationTarget();
 
     const error =
-        question.allowOther && (question.otherLabel ?? "").trim() === ""
+        question.allowOther &&
+        (question.otherLabel ?? "").trim() === "" &&
+        reference("otherLabel") === undefined
             ? tErrors("otherLabelRequired")
             : undefined;
 
@@ -331,11 +369,7 @@ export function OtherToggle({
                         checked={question.allowOther}
                         onCheckedChange={allowOther =>
                             onChange(
-                                withOther(
-                                    question,
-                                    allowOther,
-                                    t("otherLabelPlaceholder")
-                                )
+                                withOther(question, allowOther, copy.otherLabel)
                             )
                         }
                     />
@@ -351,7 +385,10 @@ export function OtherToggle({
                     <Input
                         id={fieldId(question, "other-label")}
                         value={question.otherLabel ?? ""}
-                        placeholder={t("otherLabelPlaceholder")}
+                        placeholder={
+                            reference("otherLabel") ??
+                            t("otherLabelPlaceholder")
+                        }
                         autoComplete="off"
                         aria-invalid={error !== undefined}
                         {...(error !== undefined && {
