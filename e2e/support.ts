@@ -122,6 +122,14 @@ export async function createFixtureSurvey(fixture: {
     readonly title: string;
     readonly slug: string;
     readonly elements: readonly unknown[];
+    /** The language it is written in; Estonian unless a spec says otherwise. */
+    readonly locale?: string;
+    /**
+     * The languages it is *offered* in. Omitted, the trigger fills in
+     * `[locale]` — a survey is offered in the language it is written in until
+     * its author says otherwise (docs/DECISIONS.md 031).
+     */
+    readonly locales?: readonly string[];
 }): Promise<string> {
     const { data, error } = await serviceDb()
         .from("surveys")
@@ -130,7 +138,10 @@ export async function createFixtureSurvey(fixture: {
             title: fixture.title,
             slug: fixture.slug,
             status: "published",
-            locale: "et",
+            locale: fixture.locale ?? "et",
+            ...(fixture.locales !== undefined && {
+                locales: [...fixture.locales]
+            }),
             wave_group_id: crypto.randomUUID(),
             elements: fixture.elements,
             published_at: new Date().toISOString()

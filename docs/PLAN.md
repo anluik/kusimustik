@@ -271,11 +271,11 @@ Three sessions, not one:
 
 1. ~~The schema, the fallback migration and the domain tests. Nothing user-visible changes.~~ **Done** — DECISIONS 030.
 2. ~~The builder's translation surface — how an author moves between the survey's languages without the editor panel doubling in size.~~ **Done** — DECISIONS 031. A survey now carries the set of languages it is *offered* in (`surveys.locales`), the builder edits one of them at a time and merges each edit back, and the language being translated from shows through as placeholder text. Respondents still see nothing.
-3. The respondent picker and the `/k/[slug]/[locale]` segment.
+3. ~~The respondent picker and the `/k/[slug]/[locale]` segment.~~ **Done** — DECISIONS 033. The language is a path segment and nothing else: `/k/<slug>` is still the share link and renders the survey's own language, the others are `/k/<slug>/<locale>`, and the picker is three links above the first question. `responses.locale` now records the language answered in.
 
-> **Prompt:** Phase 12 of docs/PLAN.md, step 3: the respondent's language picker and the `/k/[slug]/[locale]` segment. Read DECISIONS 030 and 031 first — the survey already knows which languages it is offered in and `get_runner_survey` already returns them, so this step is the routing and the picker, and `getRunnerSurveyBySlug` resolving through the respondent's locale rather than the survey's.
+**Done when:** ~~every existing survey still renders identically, the domain tests cover a question with a missing translation falling back to the survey's own locale, and a respondent following `/k/[slug]` to a survey offered in three languages can pick one.~~ **Met.**
 
-**Done when:** every existing survey still renders identically, the domain tests cover a question with a missing translation falling back to the survey's own locale, and a respondent following `/k/[slug]` to a survey offered in three languages can pick one.
+**What this phase leaves behind.** A survey's own `title` and `description` are untranslated columns (030) and the runner shows both to the respondent, so a Russian reading of an Estonian survey has Estonian in the header and in the opening paragraph. The workaround is a `statement` element, which is part of the document and translates. Translating the two columns is a schema change with a migration behind it — a decision of its own, as 030 said it would be, and the obvious next thing this phase invites.
 
 ---
 

@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { buildAnswerSchema } from "@/domain/answer";
 import { isAnswerableElement } from "@/domain/question";
-import { SurveySlugSchema } from "@/domain/survey";
+import { LOCALES, SurveySlugSchema } from "@/domain/survey";
 import { failed, ok, runAction } from "@/lib/actions/result";
 import type { SubmittedAnswer } from "@/lib/db/responses";
 import { submitResponse } from "@/lib/db/responses";
@@ -38,6 +38,13 @@ import { createPublicDb } from "@/lib/supabase/public";
 
 const SubmitInputSchema = SubmitGuardSchema.extend({
     slug: SurveySlugSchema,
+    /**
+     * The language the respondent read the survey in. Optional because it is
+     * a claim rather than a fact — an older tab, or a direct POST, may not
+     * send one — and it is checked against what the survey is actually
+     * offered in before it is stored.
+     */
+    locale: z.literal(LOCALES).optional(),
     /**
      * Keyed by question id. Values are `unknown` on purpose — they are parsed
      * question by question below, where the schema that applies is known.
@@ -106,10 +113,21 @@ export async function submitResponseAction(
         // refuses it — and losing the whole submission over it would be worse
         // for the respondent than losing the one answer.
 
+        // Which language this response was answered in. The client's claim is
+        // only believed for a language the survey is offered in — it is the
+        // same untrusted POST body every answer above was re-parsed from — and
+        // anything else files the response under the language the survey is
+        // written in, which is what the respondent would have been served.
+        const answeredIn =
+            parsed.data.locale !== undefined &&
+            survey.locales.includes(parsed.data.locale)
+                ? parsed.data.locale
+                : survey.locale;
+
         await submitResponse(db, {
             surveyId: survey.id,
             answers,
-            locale: survey.locale
+            locale: answeredIn
         });
 
         // Nothing is revalidated: the owner's results page reads its own data,

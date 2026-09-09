@@ -9,6 +9,14 @@
         "submitting": "Saadan…",
         "answerAgain": "Vasta uuesti"
     },
+    "RunnerLanguage": {
+        "label": "Küsitluse keel",
+        "name": {
+            "et": "Eesti keel",
+            "en": "English",
+            "ru": "Русский"
+        }
+    },
     "RunnerQuestion": {
         "otherPlaceholder": "Kirjuta oma vastus",
         "dropdownPlaceholder": "Vali…",

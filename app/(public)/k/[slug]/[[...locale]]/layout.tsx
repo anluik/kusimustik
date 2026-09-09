@@ -5,28 +5,38 @@ import { NextIntlClientProvider } from "next-intl";
 import { ThemeProvider } from "@/components/shell/theme-provider";
 import { sans, mono } from "@/lib/fonts";
 import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
-import { getRunnerTranslations } from "@/lib/i18n/runner";
+import {
+    getRunnerTranslations,
+    readLocaleSegment,
+    requestedLocale
+} from "@/lib/i18n/runner";
 import { loadRunnerSurvey } from "@/lib/runner/load";
 import { cn } from "@/lib/utils";
 
 /**
  * The runner's root layout — the third of three, and the reason there is no
- * `app/layout.tsx` (docs/DECISIONS.md 011). `lang` comes from `survey.locale`,
- * not from a cookie and not from the URL, so it is resolved here where the
- * slug is: only a root layout can set `<html lang>`, and only this segment
- * knows which survey is being rendered.
+ * `app/layout.tsx` (docs/DECISIONS.md 011).
  *
- * A slug that matches nothing falls back to Estonian and renders
- * `not-found.tsx` inside this shell.
+ * It sits under the optional `[[...locale]]` segment rather than beside the
+ * slug, because `<html lang>` is the language being *read* and only a root
+ * layout can set it: a layout one level up would be handed the slug and not
+ * the language. That is the whole reason for the optional catch-all — one
+ * segment serving both `/k/<slug>` and `/k/<slug>/<locale>`, so that the two
+ * share this layout instead of needing two of them. See docs/DECISIONS.md 033.
+ *
+ * A slug that matches nothing, or a segment that names no language, falls back
+ * to the survey's own language — or to Estonian when there is no survey — and
+ * renders `not-found.tsx` inside this shell.
  */
 export default async function RunnerLayout({
     children,
     params
-}: LayoutProps<"/k/[slug]">) {
-    const { slug } = await params;
-    const found = await loadRunnerSurvey(slug);
+}: LayoutProps<"/k/[slug]/[[...locale]]">) {
+    const { slug, locale: segments } = await params;
+    const asked = requestedLocale(readLocaleSegment(segments));
+    const found = await loadRunnerSurvey(slug, asked);
     const { locale, messages, timeZone } = await getRunnerTranslations(
-        found?.survey.locale ?? DEFAULT_LOCALE
+        found?.locale ?? DEFAULT_LOCALE
     );
 
     return (

@@ -38,7 +38,7 @@ pnpm db:reset       # reset local DB and replay migrations + seed
   **A default that lands in the document is content, not chrome.** A new question's title, an option's label, the "other" label: those go into the survey's language, through `lib/builder/element-copy.ts`, never through `useTranslations()` — which speaks the language the *owner* is reading the app in. See docs/DECISIONS.md 032.
 
 - **`survey_questions` is derived.** A trigger rebuilds it from `surveys.elements`. Application code never writes to it and never reads a definition from it — definitions come from `surveys.elements` through `SurveySchema`. A question that leaves the document keeps a tombstoned row (`removed_at`) if it has answers; readers filter it out.
-- **Locale is resolved per surface, and there is no locale segment.** The owner app reads the `NEXT_LOCALE` cookie through `lib/i18n/request.ts`; the runner is rendered in `survey.locale`, passed explicitly to `getRunnerTranslations()` and `NextIntlClientProvider`. Never read the locale cookie from `app/(public)/` — it would make every respondent request dynamic. See docs/DECISIONS.md 011.
+- **Locale is resolved per surface: a cookie for the owner, a path segment for the respondent.** The owner app reads the `NEXT_LOCALE` cookie through `lib/i18n/request.ts`. The runner is rendered in the language the *URL* names — `/k/<slug>` is the survey's own, `/k/<slug>/<locale>` is one of the others it is offered in — passed explicitly to `getRunnerTranslations()` and `NextIntlClientProvider`. Never read the locale cookie, or `Accept-Language`, from `app/(public)/`: it would make every respondent request dynamic and hand two people the same URL for different pages. See docs/DECISIONS.md 011 and 033.
 - **Analytics never blocks.** `survey_events` writes are best-effort and batched. A failed event write must never surface to a respondent or abort a submission.
 - **No hardcoded user-facing strings.** All copy goes through next-intl message files. Two catalogues, split by surface (docs/DECISIONS.md 011): `messages/app/{et,en,ru}.json` for the owner app, `messages/runner/{et,en,ru}.json` for the respondent runner. Top-level namespaces never collide between them. Estonian is the source of truth — add the key to `et.json` first, then all three; if you cannot write the et or ru wording, use the English text as the placeholder and flag it in your summary.
 
@@ -54,7 +54,10 @@ app/                 App Router — routes only. NO app/layout.tsx: each group
                      by surface (docs/DECISIONS.md 011)
   (app)/             authed dashboard — builder, results, wave comparison
   (auth)/            signed-out surfaces — /login
-  (public)/          respondent runner at /k/[slug], no auth
+  (public)/          respondent runner at /k/[slug], no auth. The four route
+                     files sit under [[...locale]]: the respondent's language
+                     is a path segment and only a root layout can set
+                     <html lang> (DECISIONS 033)
   auth/callback/     magic-link landing (route handler)
   api/               route handlers (analytics beacons, CSV download)
   global-not-found.tsx  the 404; needed because there are several root layouts

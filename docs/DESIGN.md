@@ -105,6 +105,7 @@ option row  min-h 48      sticky footer  action min-h 48
 - Every tap target ≥ 44px; ≥ 48px in practice.
 - One question group per card, one column, no side-by-side controls.
 - Progress and the primary action are pinned. The respondent never hunts for "next".
+- **The language picker is the first thing in the page, above the description.** A row of equal-width links, one per language the survey is offered in, each at least 44px tall and named in its own language ("Eesti keel", "English", "Русский"). The one being read carries the selected-option treatment below *plus* a tick, because the person who needs this control cannot read the page it is on. Nothing is rendered at all for a survey offered in one language. The header is not the place for it: it is 52px with a title and a count in it already. See docs/DECISIONS.md 033.
 - Selected option: `border-[1.5px] border-primary bg-accent text-accent-foreground` plus a filled control. **Colour alone never carries state.**
 - Radius steps 4 → 6 and type steps up one level. This is the only place the app's density rules relax, and it is deliberate.
 

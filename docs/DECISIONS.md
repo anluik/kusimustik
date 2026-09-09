@@ -844,3 +844,41 @@ This entry is not a build. It is the decision written down before it is built, b
 - **Publishing warns and does not block.** A half-translated survey is publishable and always was: every untranslated field falls back to the language the survey is written in, so nothing breaks. But publishing is the last moment the author is asked anything, so the dialog names the languages that are short and says what a respondent will actually see. The confirm button is untouched (DESIGN §6: inform, do not disable what is legitimate).
 
 **Consequence.** `TranslationProvider` now carries the seed copy as well as the reference text, and `useTranslationTarget` throws outside it rather than defaulting — a default would be a second, silently wrong copy of the catalogue. The builder page is the only caller that loads the copy, so nothing else can pick the wrong language by accident.
+
+---
+
+## 033 — The respondent's language is a path segment, and every language is its own page
+
+**Status:** accepted
+
+**Context.** Phase 12 step 3, and the last of it. 030 gave the document its locale-keyed shape, 031 gave the author a way to fill it in and a column saying which languages a survey is *offered* in. Nothing of that had reached a respondent: the runner still rendered `survey.locale` and `get_runner_survey` returned `locales` only so the schema could parse them. DECISIONS 011 left the seam open in as many words — `getRunnerTranslations` takes its locale as a parameter so that "an optional `/k/[slug]/[locale]` segment" could pass one in "with no change to anything below that function". This is that change, and it is the shape 011 predicted.
+
+**Decisions.**
+
+- **The language is in the URL, and it is the *only* place it is.** Not a cookie, not `Accept-Language`, not a preference stored anywhere. 011 refused a cookie on the runner because reading one makes every respondent request dynamic and gives up a render that depends on nothing but the slug; negotiating the header would cost exactly the same and would additionally hand the same URL to two people and serve them different pages. A segment keeps the read a pure function of the path, and it makes the respondent's choice shareable, bookmarkable and reloadable, which none of the alternatives do.
+
+- **The share link keeps no language.** `/k/<slug>` renders the language the survey is written in; only the *other* languages carry a segment. The link an owner hands out therefore does not change the day they add a translation, and `ROUTES.runner` is still the one thing that builds it. `/k/<slug>/<its own language>` is accepted rather than redirected — it is a URL somebody may reasonably type — but nothing generates it, so the canonical spelling is what gets shared. Both are `noindex` (a survey link is unlisted), which is also what keeps one survey's several URLs from competing as duplicates.
+
+- **It is an optional catch-all, `[[...locale]]`, and the root layout lives inside it.** `<html lang>` is the language being read, only a root layout can set it, and a layout beside `[slug]` would be handed the slug and not the language. One segment serving both `/k/<slug>` and `/k/<slug>/<locale>` is what lets the two share a single root layout instead of needing two — which, with no `app/layout.tsx` at all (011), is not a thing to have lightly. The whole runner segment moved down a directory for this; nothing else about it changed.
+
+- **Three answers to what the segment says, and they are different answers.** Nothing — the share link, rendered in the survey's own language. A language the survey is offered in — rendered in it. A language it is *not* offered in — a **redirect** to `/k/<slug>`, because the respondent came to answer a survey and the part of their link that no longer exists is the language, not the survey. Anything that is not a language at all — a **404**, because that URL names nothing. The distinction is between a stale link, which is a thing that happens to real people when an author drops a language, and junk, which is not.
+
+  `readLocaleSegment` decides only whether the URL names a language; whether the *survey* offers it is `getRunnerSurveyBySlug`'s, because only the row knows. That function now takes the requested locale and reports back the one it actually resolved into, and a language not on offer is refused rather than resolved: serving it anyway would render the page field by field through the fallback, in a language the author never agreed to offer, with nothing able to tell that it had happened.
+
+- **`Survey.locale` still means the language the survey was *written* in — in both shapes.** It was tempting to have `resolveSurvey` rewrite it to the language it resolved into, which would have made "the language to render" free everywhere. It would also have destroyed the fallback's name at the moment the fallback became observable, and the two are separately needed: one to render in, the other to know which URL is canonical and which fields fell back. So the reading language travels beside the survey — `RunnerSurvey.locale`, and a `locale` prop on `RunnerScreen` — and never inside it.
+
+- **The picker is links, not a control, and each one is a full page load.** No JavaScript decides anything: three anchors, and the choice survives a reload because it is the URL. `<a>` rather than `next/link` because the language is `<html lang>`, the chrome catalogue and the questions all at once, decided in the root layout, and a document load is the one navigation certain to bring every part of it — at no cost the respondent can feel, since the draft is in `localStorage` under a key that never mentions the language, and at a saving they can, since nothing prefetches two more copies of the survey onto a phone that will read one.
+
+  It sits **above the description and every question**, in the flow rather than in the 52px header, which already holds a title and a progress count and is 340px wide on the viewport DESIGN §4 sizes for. A respondent who cannot read the page has to meet the picker before they meet anything else, and a language is chosen once.
+
+  The names are **endonyms** — "Eesti keel", "English", "Русский" — and are therefore the same three strings in all three catalogues. That is the point of them: the person who needs this control cannot read the language it is currently rendered in.
+
+- **It renders nothing for a survey offered in one language,** which is most of them. A picker with one entry is a choice nobody has, and the runner is the surface that ships to a stranger's phone.
+
+- **The response records the language it was answered in.** `responses.locale` existed from Phase 5 and had been storing `survey.locale`, which said nothing — every response to one survey had the same value. It now carries the reading language, re-checked server-side against `survey.locales` like every other thing the client claims: a Server Action is a public POST endpoint, and a language the survey does not offer is filed as the survey's own, which is what that respondent would have been served.
+
+**Consequences.**
+
+- A survey offered in one language is unchanged in every respect, down to the URL. `/k/<slug>` renders exactly what it rendered before.
+- **The survey's own title and description are still untranslated columns (030), and this is the first surface where that shows.** The runner puts both on the page — the title in the header, the description above the first question — so a Russian-language reading of an Estonian survey has Estonian in those two places and Russian everywhere else. An author who needs a translated opening has one today: a `statement` element, which is part of the document and translates like everything else. Translating the columns themselves is a schema change with a migration behind it, and 030 already said it would be a decision of its own rather than a consequence of that one. It is the obvious next thing this phase invites.
+- The runner's four route files moved from `app/(public)/k/[slug]/` into `app/(public)/k/[slug]/[[...locale]]/`. `PageProps<"/k/[slug]/[[...locale]]">` is the generated type, and `params.locale` is `string[] | undefined`.
