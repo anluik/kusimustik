@@ -35,6 +35,8 @@ pnpm db:reset       # reset local DB and replay migrations + seed
 
   `surveys.locale` is the language a survey is *written* in and everything's fallback; `surveys.locales` is the set it is *offered* in, always containing `locale` and normalised by `surveys_before_write()`. The builder holds the authored document and edits one language of it: `projectElement` for what the panel binds to, `mergeElement` for what comes back. Never author over a stored document — that replaces every other translation. See docs/DECISIONS.md 031.
 
+  **A default that lands in the document is content, not chrome.** A new question's title, an option's label, the "other" label: those go into the survey's language, through `lib/builder/element-copy.ts`, never through `useTranslations()` — which speaks the language the *owner* is reading the app in. See docs/DECISIONS.md 032.
+
 - **`survey_questions` is derived.** A trigger rebuilds it from `surveys.elements`. Application code never writes to it and never reads a definition from it — definitions come from `surveys.elements` through `SurveySchema`. A question that leaves the document keeps a tombstoned row (`removed_at`) if it has answers; readers filter it out.
 - **Locale is resolved per surface, and there is no locale segment.** The owner app reads the `NEXT_LOCALE` cookie through `lib/i18n/request.ts`; the runner is rendered in `survey.locale`, passed explicitly to `getRunnerTranslations()` and `NextIntlClientProvider`. Never read the locale cookie from `app/(public)/` — it would make every respondent request dynamic. See docs/DECISIONS.md 011.
 - **Analytics never blocks.** `survey_events` writes are best-effort and batched. A failed event write must never surface to a respondent or abort a submission.
@@ -76,8 +78,9 @@ components/ui/       shadcn — do not hand-edit, re-run the CLI (one documented
 components/shell/    app shell — sidebar, app bar, empty state, providers
 components/surveys/  the survey list, its row actions and its dialogs
 components/builder/  the three-panel builder — element list, canvas, editor panel;
-                     translation.tsx is the language the panel edits and the
-                     reference text behind its placeholders
+                     translation.tsx is the language the panel edits, the
+                     reference text behind its placeholders, and the seed words
+                     anything it creates is born with
 components/          app components
 hooks/               use-survey-builder.ts is the builder's document, its autosave
                      and the seam between the stored document and one language of it;

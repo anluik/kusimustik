@@ -282,14 +282,16 @@
         "publish": {
             "publish": "Опубликовать",
             "republish": "Опубликовать снова",
-            "collectingNothing": "без вопросов — ссылка ничего не собирает"
+            "collectingNothing": "без вопросов — ссылка ничего не собирает",
+            "untranslated": "Часть текста анкеты не переведена ({languages}). В этих местах респондент увидит основной язык анкеты."
         },
         "defaults": {
             "questionTitle": "Новый вопрос",
             "optionLabel": "Вариант {index}",
             "statementTitle": "Новое утверждение",
             "rowLabel": "Строка {index}",
-            "columnLabel": "Столбец {index}"
+            "columnLabel": "Столбец {index}",
+            "otherLabel": "Другое"
         },
         "errors": {
             "titleRequired": "У вопроса должен быть заголовок.",
@@ -347,9 +349,7 @@
         "translation": {
             "label": "Редактируемый язык анкеты",
             "sourceOption": "{language} — основной язык анкеты",
-            "missing": "{count, plural, one {# без перевода} other {# без перевода}}",
-            "complete": "Переведено полностью",
-            "rowUntranslated": "Здесь есть непереведённый текст на этом языке"
+            "rowUntranslated": "Переведено не полностью"
         }
     },
     "Results": {

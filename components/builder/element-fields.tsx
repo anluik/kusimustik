@@ -347,6 +347,9 @@ export function OtherToggle({
     const t = useTranslations("Builder.editor");
     const tErrors = useTranslations("Builder.errors");
     const reference = useReferenceText();
+    // The label is survey content, so it comes in in the language being
+    // edited — not the one the app is being read in (DECISIONS 032).
+    const { copy } = useTranslationTarget();
 
     const error =
         question.allowOther &&
@@ -366,11 +369,7 @@ export function OtherToggle({
                         checked={question.allowOther}
                         onCheckedChange={allowOther =>
                             onChange(
-                                withOther(
-                                    question,
-                                    allowOther,
-                                    t("otherLabelPlaceholder")
-                                )
+                                withOther(question, allowOther, copy.otherLabel)
                             )
                         }
                     />

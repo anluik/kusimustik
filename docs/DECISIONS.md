@@ -818,3 +818,29 @@ This entry is not a build. It is the decision written down before it is built, b
 - **`saveSurveyElementsAction` takes the stored shape and stores it verbatim.** 030 said this step would *delete* its conversion rather than edit it, and it does: an action that resolved or re-authored on the way through would be a second place a translation could be dropped, and it is reachable without going through the builder at all.
 
 **Consequence.** A survey offered in one language is unchanged in every respect — the switcher renders nothing, the projection equals the resolution, and the merge is the identity. A survey offered in more than one gains exactly one control in the app bar. Respondents see nothing yet: `get_runner_survey` returns `locales` so that `AuthoredSurveySchema` can parse it, and step 3 gives it the picker.
+
+---
+
+## 032 — Seed words belong to the survey's language, and an untranslated question says so where it is
+
+**Status:** accepted
+
+**Context.** Two things wrong with 031 as shipped, both found by using it. Switching on "allow a written answer" filled the label from `useTranslations()`, which is bound to the *owner app's* language — so an Estonian survey written by someone reading the app in English got "Other" into its questions, and translating into Russian got "Muu" into the Russian. And the untranslated marker was a dot beside a count in the app bar: legible only to the person who had just built it.
+
+**Decisions.**
+
+- **The words a new element is born with are content, not chrome.** "Uus küsimus", "Valik 1" and the "other" label are seeds for the survey document, and the document has a language of its own, so the language is a *parameter* — `lib/builder/element-copy.ts` — exactly as it is for the runner's translations (011). They still come from the message catalogues, because hardcoding them here would be the same rule broken from the other side.
+
+  Two languages are in play and each seed uses the right one: `createElement` is authored into the survey's own language, since that is what 031 decided structure belongs to; anything the *panel* creates — a new option, the label the "other" toggle carries in — goes into the language on screen, since that is what the merge will file it under. The active-language copy rides on the translation context rather than through nine editors' props, for the same reason the reference text does.
+
+  All three catalogues' seeds are loaded once by the builder page and passed down. The subtree is six short strings; the alternative is a round trip on a keystroke. `element-copy.test.ts` reads every seed out of every catalogue, because the failure this invites is a key missing from one language, which no amount of testing Estonian would find.
+
+- **A marker that says "something is different about this row" and nothing else is worse than none.** The dot is now a caution icon with the sentence on it — hover for the tooltip, and the same words in the accessible name, since it lives inside the row's button and cannot be a focus stop of its own without nesting a button in a button. It stays quiet in `text-muted-foreground`: an untranslated question is a normal state on the way to a finished translation, not an error, and it falls back rather than breaking anything.
+
+  The row's position number went with it. It duplicated the numbering the canvas already does, and next to a status mark it read as part of it.
+
+- **The running count in the app bar is gone.** It was a number with nowhere to go: it could not say *which* question, and the author was already looking at the list that could. What is left is said twice, in the two places it can be acted on — beside the question, and once in the publish dialog.
+
+- **Publishing warns and does not block.** A half-translated survey is publishable and always was: every untranslated field falls back to the language the survey is written in, so nothing breaks. But publishing is the last moment the author is asked anything, so the dialog names the languages that are short and says what a respondent will actually see. The confirm button is untouched (DESIGN §6: inform, do not disable what is legitimate).
+
+**Consequence.** `TranslationProvider` now carries the seed copy as well as the reference text, and `useTranslationTarget` throws outside it rather than defaulting — a default would be a second, silently wrong copy of the catalogue. The builder page is the only caller that loads the copy, so nothing else can pick the wrong language by accident.

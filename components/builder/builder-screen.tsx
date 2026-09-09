@@ -3,7 +3,7 @@
 import { BarChart3, Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { AddElementMenu } from "@/components/builder/add-element-menu";
 import { CollectedAnswersProvider } from "@/components/builder/collected-answers";
@@ -37,10 +37,12 @@ import type { SurveyStatus } from "@/domain/survey";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSurveyBuilder } from "@/hooks/use-survey-builder";
 import type { SurveyKeys } from "@/lib/builder/keys";
+import { elementCopy } from "@/lib/builder/element-copy";
 import {
     createElement,
     type CreatableElementType
 } from "@/lib/builder/new-element";
+import type { ElementCopyMessages } from "@/lib/i18n/messages";
 import { ROUTES } from "@/lib/routes";
 
 /**
@@ -71,6 +73,7 @@ export function BuilderScreen({
     initialElements,
     initialVersion,
     keys,
+    elementCopyMessages,
     hasResults,
     responseCount,
     status,
@@ -83,6 +86,9 @@ export function BuilderScreen({
     readonly initialVersion: number;
     /** Which keys are spoken for, and whether a key may still follow its title. */
     readonly keys: SurveyKeys;
+    /** The words a new element is born with, in every language a survey may be
+     *  written in; see `lib/builder/element-copy.ts`. */
+    readonly elementCopyMessages: ElementCopyMessages;
     /** The survey has been published at least once, so results exist. */
     readonly hasResults: boolean;
     /** Answers already collected, which is what makes an edit destructive. */
@@ -124,17 +130,31 @@ export function BuilderScreen({
                   .map(element => element.id)
     );
 
-    const defaults = {
-        title: t("defaults.questionTitle"),
-        statementTitle: t("defaults.statementTitle"),
-        optionLabel: (index: number) => t("defaults.optionLabel", { index }),
-        rowLabel: (index: number) => t("defaults.rowLabel", { index }),
-        columnLabel: (index: number) => t("defaults.columnLabel", { index })
-    };
+    // The same question asked of every language at once, for the publish
+    // dialog: which of the ones this survey is offered in are still short of a
+    // translation somewhere.
+    const untranslatedLocales = settings.locales.filter(
+        candidate =>
+            candidate !== settings.locale &&
+            missingTranslationCount(builder.stored, candidate) > 0
+    );
+
+    // A new element's words go into the survey's own language, since that is
+    // what `builder.add` authors them into; anything the editor panel creates
+    // goes into the language on screen. Neither is the language the *app* is
+    // being read in (docs/DECISIONS.md 032).
+    const sourceCopy = useMemo(
+        () => elementCopy(elementCopyMessages, settings.locale),
+        [elementCopyMessages, settings.locale]
+    );
+    const activeCopy = useMemo(
+        () => elementCopy(elementCopyMessages, locale),
+        [elementCopyMessages, locale]
+    );
 
     function add(type: CreatableElementType) {
         builder.add(
-            createElement(type, defaults, builder.elements, builder.keys)
+            createElement(type, sourceCopy, builder.elements, builder.keys)
         );
         setSheetOpen(true);
     }
@@ -151,6 +171,7 @@ export function BuilderScreen({
             locale={locale}
             source={settings.locale}
             element={builder.selectedStored}
+            copy={activeCopy}
         >
             <EditorPanel
                 selected={builder.selected}
@@ -188,10 +209,6 @@ export function BuilderScreen({
                             locale={locale}
                             source={settings.locale}
                             locales={settings.locales}
-                            missing={missingTranslationCount(
-                                builder.stored,
-                                locale
-                            )}
                             onSelect={setLocale}
                         />
                         <PublishControl
@@ -203,6 +220,7 @@ export function BuilderScreen({
                                     element => element.isAnswerable
                                 ).length
                             }
+                            untranslatedLocales={untranslatedLocales}
                             unsaved={builder.status.kind !== "clean"}
                         />
                         {/* Only once the survey has been published: before

@@ -26,7 +26,10 @@ import { useCallback, useState } from "react";
 
 import { useCollectedAnswers } from "@/components/builder/collected-answers";
 import { EditorSection } from "@/components/builder/element-fields";
-import { useReferenceText } from "@/components/builder/translation";
+import {
+    useReferenceText,
+    useTranslationTarget
+} from "@/components/builder/translation";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -222,6 +225,10 @@ export function OptionListEditor({
     const tErrors = useTranslations("Builder.errors");
     const tWarning = useTranslations("Builder.editor.removeWarning");
     const reference = useReferenceText();
+    // `copy.item` names the row for a screen reader and is app chrome; the
+    // label a *new* row is born with is survey content, and belongs to the
+    // language being edited (DECISIONS 032).
+    const { copy: content } = useTranslationTarget();
 
     /**
      * Removing a choice from a survey that has already been answered is not
@@ -332,7 +339,9 @@ export function OptionListEditor({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                    const added = newOption(options, copy.item);
+                    const added = newOption(options, index =>
+                        content.newLabel(list, index)
+                    );
                     setAddedValue(added.value);
                     onChange([...options, added]);
                 }}

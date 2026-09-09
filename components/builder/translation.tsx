@@ -5,6 +5,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { SurveyLocale } from "@/domain/content";
 import { referenceTexts, type TextPath } from "@/domain/localize";
 import type { AuthoredElement } from "@/domain/question";
+import type { ElementCopy } from "@/lib/builder/element-copy";
 
 /**
  * Which language the editor panel is editing, and what the element being
@@ -19,6 +20,11 @@ import type { AuthoredElement } from "@/domain/question";
  * A context rather than a prop, because the alternative was threading two
  * more props through all nine editors and the shared field components under
  * them — nine files that have no other reason to know translation exists.
+ *
+ * It also carries the seed words for anything the panel *creates* — a new
+ * option, the label that comes in with the "other" toggle — because those are
+ * survey content and belong to the language being edited rather than to the
+ * one the app is being read in (docs/DECISIONS.md 032).
  */
 
 type TranslationTarget = {
@@ -33,27 +39,32 @@ type TranslationTarget = {
      * this language if it is written, the survey's own if not.
      */
     readonly reference: ReadonlyMap<TextPath, string>;
+    /** The words a new option or label is born with, in `locale`. */
+    readonly copy: ElementCopy;
 };
 
 const EMPTY: ReadonlyMap<TextPath, string> = new Map();
 
-const TranslationContext = createContext<TranslationTarget>({
-    locale: "et",
-    source: "et",
-    translating: false,
-    reference: EMPTY
-});
+/**
+ * There is no sensible default for the seed words, so the context holds none:
+ * every consumer of this is rendered inside the builder's provider, and a
+ * fallback would be a second, silently wrong copy of the catalogue.
+ */
+const TranslationContext = createContext<TranslationTarget | null>(null);
 
 export function TranslationProvider({
     locale,
     source,
     element,
+    copy,
     children
 }: {
     readonly locale: SurveyLocale;
     readonly source: SurveyLocale;
     /** The element the panel is editing; null when nothing is selected. */
     readonly element: AuthoredElement | null;
+    /** The seed words in `locale`; see `lib/builder/element-copy.ts`. */
+    readonly copy: ElementCopy;
     readonly children: ReactNode;
 }) {
     const value = useMemo(
@@ -64,16 +75,21 @@ export function TranslationProvider({
             reference:
                 element === null
                     ? EMPTY
-                    : referenceTexts(element, locale, source)
+                    : referenceTexts(element, locale, source),
+            copy
         }),
-        [locale, source, element]
+        [locale, source, element, copy]
     );
 
     return <TranslationContext value={value}>{children}</TranslationContext>;
 }
 
 export function useTranslationTarget(): TranslationTarget {
-    return useContext(TranslationContext);
+    const value = useContext(TranslationContext);
+    if (value === null) {
+        throw new Error("useTranslationTarget outside a TranslationProvider");
+    }
+    return value;
 }
 
 /**

@@ -282,14 +282,16 @@
         "publish": {
             "publish": "Publish",
             "republish": "Publish again",
-            "collectingNothing": "no questions — the link collects nothing"
+            "collectingNothing": "no questions — the link collects nothing",
+            "untranslated": "Some of this survey's text is not translated ({languages}). Respondents will see the survey's own language there."
         },
         "defaults": {
             "questionTitle": "New question",
             "optionLabel": "Option {index}",
             "statementTitle": "New statement",
             "rowLabel": "Row {index}",
-            "columnLabel": "Column {index}"
+            "columnLabel": "Column {index}",
+            "otherLabel": "Other"
         },
         "errors": {
             "titleRequired": "A question needs a title.",
@@ -347,9 +349,7 @@
         "translation": {
             "label": "Survey language being edited",
             "sourceOption": "{language} — the survey's own language",
-            "missing": "{count, plural, one {# untranslated} other {# untranslated}}",
-            "complete": "Fully translated",
-            "rowUntranslated": "Something here is untranslated in this language"
+            "rowUntranslated": "Not fully translated"
         }
     },
     "Results": {

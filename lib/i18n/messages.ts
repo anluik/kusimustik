@@ -45,3 +45,36 @@ export async function loadRunnerMessages(
 ): Promise<RunnerMessages> {
     return (await RUNNER_CATALOGUES[locale]()).default;
 }
+
+/**
+ * The words a new element is born with, in every language a survey may be
+ * written in.
+ *
+ * These are the one part of the owner app's catalogue that is *not* chrome:
+ * "Uus küsimus", "Valik 1" and the "other" label are seeds for the survey
+ * document, so they belong to the language the survey is being written in and
+ * not to the language its author happens to be reading the app in. The whole
+ * subtree is six short strings, so all three languages are loaded at once and
+ * handed to the builder, which picks per keystroke — see
+ * `lib/builder/element-copy.ts` and docs/DECISIONS.md 032.
+ */
+export type ElementCopyMessages = Record<
+    UiLocale,
+    AppMessages["Builder"]["defaults"]
+>;
+
+export async function loadElementCopyMessages(): Promise<ElementCopyMessages> {
+    // Written out rather than mapped over `UI_LOCALES`, so that the record is
+    // complete by construction: a fourth language is a type error here rather
+    // than a `Record` assembled with a cast and missing a key at runtime.
+    const [et, en, ru] = await Promise.all([
+        loadAppMessages("et"),
+        loadAppMessages("en"),
+        loadAppMessages("ru")
+    ]);
+    return {
+        et: et.Builder.defaults,
+        en: en.Builder.defaults,
+        ru: ru.Builder.defaults
+    };
+}

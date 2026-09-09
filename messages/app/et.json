@@ -282,14 +282,16 @@
         "publish": {
             "publish": "Avalda",
             "republish": "Avalda uuesti",
-            "collectingNothing": "küsimusteta — link ei kogu vastuseid"
+            "collectingNothing": "küsimusteta — link ei kogu vastuseid",
+            "untranslated": "Osa küsitluse tekstist on tõlkimata ({languages}). Vastaja näeb neis kohtades küsitluse enda keelt."
         },
         "defaults": {
             "questionTitle": "Uus küsimus",
             "optionLabel": "Valik {index}",
             "statementTitle": "Uus väide",
             "rowLabel": "Rida {index}",
-            "columnLabel": "Veerg {index}"
+            "columnLabel": "Veerg {index}",
+            "otherLabel": "Muu"
         },
         "errors": {
             "titleRequired": "Küsimusel peab olema pealkiri.",
@@ -347,9 +349,7 @@
         "translation": {
             "label": "Küsitluse keel, mida muudad",
             "sourceOption": "{language} — küsitluse põhikeel",
-            "missing": "{count, plural, one {# tõlkimata} other {# tõlkimata}}",
-            "complete": "Kõik tõlgitud",
-            "rowUntranslated": "Selles keeles on midagi tõlkimata"
+            "rowUntranslated": "Ei ole täielikult tõlgitud"
         }
     },
     "Results": {

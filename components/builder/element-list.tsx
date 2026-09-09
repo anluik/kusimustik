@@ -19,13 +19,18 @@ import {
     useSortable,
     verticalListSortingStrategy
 } from "@dnd-kit/sortable";
-import { GripVertical } from "lucide-react";
+import { GripVertical, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { ELEMENT_ICONS } from "@/components/builder/element-type";
 import { PanelHeader } from "@/components/builder/panel";
 import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger
+} from "@/components/ui/tooltip";
 import type { QuestionId } from "@/domain/ids";
 import type { SurveyElement } from "@/domain/question";
 import { cn } from "@/lib/utils";
@@ -44,17 +49,45 @@ import { cn } from "@/lib/utils";
 /** DESIGN §4: a dense row is 32px, and the drag handle may go to 28. */
 const ROW = "flex h-8 w-full items-center gap-2 rounded pr-2 pl-7 text-left";
 
+/**
+ * The one thing this row says beyond the element's name: that some of it has
+ * no text in the language being edited.
+ *
+ * A marked-but-unexplained row is worse than none — a dot says *something is
+ * different about this one* and leaves the author to guess what — so the mark
+ * is an icon that already reads as a caution and carries the sentence with it.
+ * It is deliberately quiet: an untranslated question is a normal state on the
+ * way to a finished translation, not an error, and it falls back rather than
+ * breaking anything.
+ *
+ * `asChild` on a plain span, because this sits inside the row's button and a
+ * button inside a button is not valid HTML. The tooltip is therefore
+ * hover-only, which is why the sentence is also in the accessible name.
+ */
+function UntranslatedMark() {
+    const t = useTranslations("Builder.translation");
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="shrink-0 text-muted-foreground">
+                    <TriangleAlert aria-hidden className="size-3.5" />
+                    <span className="sr-only">{t("rowUntranslated")}</span>
+                </span>
+            </TooltipTrigger>
+            <TooltipContent side="right">{t("rowUntranslated")}</TooltipContent>
+        </Tooltip>
+    );
+}
+
 function RowContent({
     element,
-    position,
     untranslated
 }: {
     readonly element: SurveyElement;
-    readonly position: number;
     /** Something on this element has no text in the language being edited. */
     readonly untranslated: boolean;
 }) {
-    const t = useTranslations("Builder");
     const Icon = ELEMENT_ICONS[element.type];
 
     return (
@@ -63,24 +96,7 @@ function RowContent({
             <span className="min-w-0 flex-1 truncate text-xs leading-none">
                 {element.title}
             </span>
-            {/* A dot rather than a count: the row is 32px and already carries
-                an icon, a title and a position. The count for the whole
-                language is beside the switcher, where there is room for it.
-                DESIGN §6 — colour is never the only encoding — is why it
-                carries a name for screen readers. */}
-            {untranslated && (
-                <span
-                    title={t("translation.rowUntranslated")}
-                    className="size-1.5 shrink-0 rounded-full bg-primary"
-                >
-                    <span className="sr-only">
-                        {t("translation.rowUntranslated")}
-                    </span>
-                </span>
-            )}
-            <span className="shrink-0 font-mono text-[10px] leading-none text-muted-foreground tabular-nums">
-                {position}
-            </span>
+            {untranslated && <UntranslatedMark />}
         </>
     );
 }
@@ -165,11 +181,7 @@ function ElementRow({
                     isDragging && "text-input"
                 )}
             >
-                <RowContent
-                    element={element}
-                    position={index + 1}
-                    untranslated={untranslated}
-                />
+                <RowContent element={element} untranslated={untranslated} />
             </button>
         </li>
     );
@@ -314,12 +326,6 @@ export function ElementList({
                             >
                                 <RowContent
                                     element={dragging}
-                                    position={
-                                        elements.findIndex(
-                                            element =>
-                                                element.id === dragging.id
-                                        ) + 1
-                                    }
                                     untranslated={untranslated.has(dragging.id)}
                                 />
                             </div>

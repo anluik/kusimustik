@@ -12,6 +12,7 @@ import {
     listReservedQuestionKeys,
     listSurveysInWaveGroup
 } from "@/lib/db/surveys";
+import { loadElementCopyMessages } from "@/lib/i18n/messages";
 import { createServerDb } from "@/lib/supabase/server";
 
 /**
@@ -66,6 +67,10 @@ export default async function BuilderPage({
     if (found === null) notFound();
 
     const { record, waveCount, responseCount, reservedKeys } = found;
+    // A new question's words belong to the language the *survey* is written
+    // in, so the builder needs every language's copy rather than the one the
+    // owner is reading the app in (docs/DECISIONS.md 032).
+    const elementCopyMessages = await loadElementCopyMessages();
 
     return (
         <BuilderScreen
@@ -82,6 +87,7 @@ export default async function BuilderPage({
             // only shape it can safely hold (docs/DECISIONS.md 031).
             initialElements={record.survey.elements}
             initialVersion={record.version}
+            elementCopyMessages={elementCopyMessages}
             keys={{
                 policy: keyPolicyFor({
                     publishedVersion: record.publishedVersion,

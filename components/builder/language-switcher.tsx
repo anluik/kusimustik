@@ -20,17 +20,15 @@ import { UI_LOCALES } from "@/lib/i18n/locales";
  * settings dialog is where a second language is added, which is also where the
  * author already goes to say what language the survey *is*.
  *
- * The count beside it is how much of the language on screen is still
- * untranslated, in fields rather than in questions: a question with a
- * translated title and four untranslated options is four pieces of work, and
- * counting it as one would make the number read as "nearly done" when it is
- * not.
+ * It is only the switch. What is still untranslated is said where the author
+ * can act on it — beside the question it belongs to, in the element list —
+ * and once more in the publish dialog, which is the moment it starts to
+ * matter. A running total in the app bar was a number with nowhere to go.
  */
 export function LanguageSwitcher({
     locale,
     source,
     locales,
-    missing,
     onSelect
 }: {
     readonly locale: SurveyLocale;
@@ -38,8 +36,6 @@ export function LanguageSwitcher({
     readonly source: SurveyLocale;
     /** Every language the survey is offered in, in `LOCALES` order. */
     readonly locales: readonly SurveyLocale[];
-    /** Fields with no text in `locale`. Zero while editing the source. */
-    readonly missing: number;
     readonly onSelect: (locale: SurveyLocale) => void;
 }) {
     const t = useTranslations("Builder.translation");
@@ -48,45 +44,33 @@ export function LanguageSwitcher({
     if (locales.length < 2) return null;
 
     return (
-        <div className="flex min-w-0 items-center gap-2">
-            <Tabs
-                value={locale}
-                onValueChange={value => {
-                    if (hasLocale(UI_LOCALES, value)) onSelect(value);
-                }}
+        <Tabs
+            value={locale}
+            onValueChange={value => {
+                if (hasLocale(UI_LOCALES, value)) onSelect(value);
+            }}
+        >
+            <TabsList
+                aria-label={t("label")}
+                className="h-[30px] rounded p-0.5"
             >
-                <TabsList
-                    aria-label={t("label")}
-                    className="h-[30px] rounded p-0.5"
-                >
-                    {locales.map(option => (
-                        <TabsTrigger
-                            key={option}
-                            value={option}
-                            aria-label={
-                                option === source
-                                    ? t("sourceOption", {
-                                          language: tLanguage(`name.${option}`)
-                                      })
-                                    : tLanguage(`name.${option}`)
-                            }
-                            className="h-[26px] rounded px-2 font-mono text-[10px] leading-none tracking-[0.07em]"
-                        >
-                            {tLanguage(`short.${option}`)}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-            </Tabs>
-
-            {/* Never on the source language: what a survey is written in is
-                not a translation that is behind. */}
-            {locale !== source && (
-                <span className="hidden font-mono text-[10px] leading-none whitespace-nowrap text-muted-foreground sm:inline">
-                    {missing === 0
-                        ? t("complete")
-                        : t("missing", { count: missing })}
-                </span>
-            )}
-        </div>
+                {locales.map(option => (
+                    <TabsTrigger
+                        key={option}
+                        value={option}
+                        aria-label={
+                            option === source
+                                ? t("sourceOption", {
+                                      language: tLanguage(`name.${option}`)
+                                  })
+                                : tLanguage(`name.${option}`)
+                        }
+                        className="h-[26px] rounded px-2 font-mono text-[10px] leading-none tracking-[0.07em]"
+                    >
+                        {tLanguage(`short.${option}`)}
+                    </TabsTrigger>
+                ))}
+            </TabsList>
+        </Tabs>
     );
 }
