@@ -10,6 +10,12 @@ export const ROUTES = {
     builder: (surveyId: string) => `/surveys/${surveyId}`,
     /** Charts, individual responses and the drop-off funnel. */
     results: (surveyId: string) => `/surveys/${surveyId}/results`,
+    /**
+     * One recurring survey's waves side by side. Keyed on the wave group rather
+     * than on a survey: the series outlives any one of its waves, and naming a
+     * wave here would make the link break the year it is deleted.
+     */
+    compare: (waveGroupId: string) => `/waves/${waveGroupId}`,
     settings: "/settings",
     login: "/login",
     authCallback: "/auth/callback",

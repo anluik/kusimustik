@@ -712,3 +712,37 @@ This entry is not a build. It is the decision written down before it is built, b
 - **Phases 11–13 are the paid hooks, and each one wires its own flag when it lands.** Wave comparison (11) is the feature neither competitor offers and the reason an annual customer stays for year two; multilingual content (12) and skip logic (13) are the feature-grid gaps. Deciding once, here, what is free is what stops that being decided three times under deadline.
 
 **Cost accepted.** Every account created between now and Phase 14 is an account that has been using the product with no ceiling, and imposing one on somebody afterwards is a conversation rather than a fact they agreed to at sign-up. That is the price of not building this yet, and it is the reason Phase 14 should not drift far behind opening sign-ups — or that sign-ups should stay closed until it lands (`docs/DEPLOY.md` step 22). The numbers themselves are deliberately not settled here: the shape is what this entry commits to.
+
+---
+
+## 029 — Wave comparison: what joins the waves, what a missing wave looks like, and what the wave costs the palette
+
+**Status:** accepted
+
+**Context.** Phase 11 is the feature the schema has been carrying since Phase 2 — `wave_group_id`, the preserved `key`, `CHART_DATA_SHAPES`, the unreachable `line` branches — so the work was small and the decisions were not. PLAN named two of them and building it turned up three more.
+
+**Decisions.**
+
+- **The join is on `key`, over `surveys.elements`, in a pure module.** `lib/results/wave-comparison.ts` takes the waves as the repository returns them and aligns them; `lib/db/waves.ts` only reads. The definitions come from the `elements` documents rather than from `survey_questions`, as everywhere else — the projection is the FK target and the key index, not a source of definitions (001, 002). What the projection contributes is the guarantee that the join is unambiguous: 024 made key uniqueness total across tombstones *specifically* so one key means one question for the life of a survey.
+
+  The repository is three queries however many waves there are (`listResponsesBySurvey` fetches the responses and answers of every wave at once). A loop over `listResponses` would have been two per wave, and a wave group is the one thing in this product guaranteed to grow every year.
+
+- **A question missing from a wave is a sentence, not a gap.** The two cases PLAN asked to settle are one case — a column that exists for some waves — and they are reported, never drawn as nought:
+  - **`absent`**: the key is not in that wave's document. It did not ask. Nought would say the option was offered and nobody took it, which is a different and false finding. A question *tombstoned* in a later wave (008) arrives here identically, and so is compared across the waves that still ask it.
+  - **`mismatched`**: the key is there on a different element type — a scale replaced by an NPS question, or by a statement. The summaries are not even the same shape, so the wave is named as incomparable rather than charted.
+
+  The card names the waves in both cases, which is `unshownCount`'s precedent (021): a number the owner cannot reconcile is worse than one line of prose explaining it.
+
+- **The wave is the category, so the five-colour cap is a cap on waves.** DESIGN §7 permits five categorical colours and forbids reaching for a sixth, so `MAX_COMPARED_WAVES` is five: the comparison shows the five most recent waves and says how many older ones it left out. Dropping them silently was the one option not available.
+
+- **The comparison charts shares, never counts.** Waves collect different numbers of responses — that is the normal case — so a bar twice as tall because twice as many people answered would read as a doubled result. The percentages are `aggregate()`'s own, so a card in the comparison says exactly what the single-wave card says.
+
+- **Options keep the author's order, and there is no aggregate "other (n)" bar.** §7 sorts a single-wave categorical chart descending and collapses a long tail; a comparison cannot. Sorted by which wave? Any answer makes the rows move between waves, and lining up is the whole point. The tail is not collapsed for a related reason — each wave's tail is a different set, and one bar standing for different options in different waves is not a comparison.
+
+- **Ordered data is drawn wave by wave; only the categorical bars and the line draw every wave at once.** §7 gives scales, NPS and matrix intensity the ramp and nothing else, so their colours are already spoken for and the wave becomes a caption instead of a fill. `SummaryBody` is therefore exported from `question-card.tsx` and reused per wave — a scale's distribution has to read identically whether the owner is looking at one wave or five. Text questions land in the same branch: two waves of free text are two lists.
+
+- **`line` is now conditional, and `chartKindsFor` says so.** It was offered to every chartable question in a series, which was a promise the drawing could not keep: a line needs one number per wave per series, and there are only five colours. `hasSeriesLine` — exhaustive, `assertNever`-ended, tested — offers it to choice questions up to `CHART_MAX_LINES` options, to `opinion_scale` (its mean) and `nps` (its score) as a single line under §7's single-series rule, and to `matrix_single` **not at all**: a matrix is several distributions at once and the aggregator defines no scalar for it. Inventing one — "mean column index" — would be a metric nobody asked for on an axis nobody can read.
+
+- **The screen is `/waves/[waveGroupId]`, and the survey list is the way in.** Keyed on the group rather than on a wave: the series outlives any one of its waves, and a link naming a wave breaks the year that wave is deleted. The route is protected by being absent from `PUBLIC_PREFIXES` — deny by default — and RLS makes "not yours" and "never existed" the same 404, as it must when the URL is a UUID. The compare control on the wave-group row is the one DESIGN §5 always specified and 013 deliberately left out until there was something behind it.
+
+**Consequence.** `aggregate()` is unchanged and still knows nothing about waves; it is simply called once per wave. `domain/charts.ts` gained one function and one threshold, and the test that said "every chartable question is offered a line" now says which ones are and why.

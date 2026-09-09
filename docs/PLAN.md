@@ -251,6 +251,8 @@ Two things to decide rather than improvise: what a question present in one wave 
 
 **Done when:** the seeded two waves render side by side with their wave labels as the series, a question missing from one wave says so rather than rendering an empty series, and `pnpm test:db` is green.
 
+**Done.** `lib/db/waves.ts` reads a wave group in three queries however many waves it holds; `lib/results/wave-comparison.ts` aligns them on `key` and calls `aggregate()` once per wave; `lib/results/wave-chart-data.ts` shapes the series. The screen is `/waves/[waveGroupId]`, reached from the compare control DESIGN §5 always specified and 013 left out, and the `line` branches are reachable at last. DECISIONS 029 records the five decisions, chiefly what an absent wave renders as and why the wave costs the palette its five colours. Proved by `lib/db/waves.db.test.ts` against the seed's two waves and a constructed group whose questionnaire changed, and by `e2e/wave-comparison.spec.ts` end to end as the owner.
+
 ---
 
 ## Phase 12 — Multilingual survey content

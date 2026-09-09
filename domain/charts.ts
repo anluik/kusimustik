@@ -17,8 +17,8 @@ import type { AnswerableQuestion } from "@/domain/question";
  * - Ordered data — scales, NPS, matrix intensity — is *always* the ramp, never
  *   the categorical palette.
  * - There are no pie or doughnut charts, at any count.
- * - A line encodes a value across a series. Nothing in MVP produces a series,
- *   so nothing offers a line yet; the shape argument is what will turn it on.
+ * - A line encodes a value across a series, and is offered only where the
+ *   series can be drawn in five colours or fewer — see `hasSeriesLine`.
  */
 
 export const CHART_KINDS = [
@@ -38,8 +38,8 @@ export type ChartKind = (typeof CHART_KINDS)[number];
 
 /**
  * Whether the summaries being charted are one wave's, or the same question
- * across several. Wave comparison is after-MVP; every Phase 7 call site passes
- * `"single_wave"`.
+ * across several. The results screen passes `"single_wave"`; the wave
+ * comparison (PLAN Phase 11) is what passes `"series"`.
  */
 export const CHART_DATA_SHAPES = ["single_wave", "series"] as const;
 
@@ -61,6 +61,14 @@ export const CHART_VERTICAL_MAX_OPTIONS = 5;
 export const CHART_SHORT_LABEL_MAX = 12;
 
 /**
+ * How many lines a series chart may draw, which is §7's five-colour cap again:
+ * a comparison plots one line per option, and there is no sixth hue to give a
+ * sixth option. Past it the bars remain, which is the encoding change §7 asks
+ * for rather than a palette that grows.
+ */
+export const CHART_MAX_LINES = 5;
+
+/**
  * The kinds this question may be drawn with, **default first**, or an empty
  * list for a question there is nothing to chart about.
  *
@@ -79,8 +87,51 @@ export function chartKindsFor(
 
     // A line is an option on a series, never the default: the owner switching
     // to the comparison view should not also have their encoding changed under
-    // them.
-    return shape === "series" ? [...base, "line"] : base;
+    // them. And only where there is something to plot — see `hasSeriesLine`.
+    return shape === "series" && hasSeriesLine(question)
+        ? [...base, "line"]
+        : base;
+}
+
+/**
+ * Whether this question's waves can be drawn as lines.
+ *
+ * A line needs one number per wave per series, and what that number is depends
+ * on the question:
+ *
+ * - **Choice** questions trend each option's share, one line per option — so
+ *   they qualify up to `CHART_MAX_LINES` options, the free-text bucket counted.
+ * - **`opinion_scale`** trends its mean and **`nps`** its score: a single line,
+ *   which §7 draws in `--chart-1` with no legend at all.
+ * - **`matrix_single`** has no such number. It is several distributions at
+ *   once, and the aggregator defines no scalar for it; picking one would invent
+ *   a metric rather than report one. Its waves are compared as ramps instead.
+ * - **Text** questions chart nothing in any shape.
+ */
+export function hasSeriesLine(question: AnswerableQuestion): boolean {
+    switch (question.type) {
+        case "single_choice":
+        case "multi_choice":
+            return (
+                question.options.length + (question.allowOther ? 1 : 0) <=
+                CHART_MAX_LINES
+            );
+
+        case "dropdown":
+            return question.options.length <= CHART_MAX_LINES;
+
+        case "opinion_scale":
+        case "nps":
+            return true;
+
+        case "matrix_single":
+        case "short_text":
+        case "long_text":
+            return false;
+
+        default:
+            return assertNever(question, "question type");
+    }
 }
 
 /** The kind to render before the owner has chosen one; null if unchartable. */

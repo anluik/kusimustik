@@ -103,7 +103,8 @@
             "publish": "Publish",
             "publishBlocked": "0 questions",
             "close": "Close survey",
-            "delete": "Delete"
+            "delete": "Delete",
+            "compare": "Compare"
         },
         "empty": {
             "title": "No surveys yet",
@@ -465,6 +466,39 @@
             "noQuestions": {
                 "title": "Nothing left to summarise",
                 "body": "This survey has no answerable questions — they have all been removed in the builder. The responses collected are still here and still reach the CSV, but there is nothing to chart them against."
+            }
+        }
+    },
+    "Waves": {
+        "title": "Wave comparison",
+        "backToSurveys": "Back to surveys",
+        "unlabelledWave": "Unlabelled",
+        "waves": "{count, plural, one {# wave} other {# waves}}",
+        "responses": "{count, plural, one {# response in total} other {# responses in total}}",
+        "omitted": "Showing the {shown} most recent waves; {omitted} older ones are left out.",
+        "question": {
+            "comparedWaves": "compared across {count} waves",
+            "answered": "{count, plural, one {# answer} other {# answers}}",
+            "notAsked": "Not asked in: {waves}",
+            "notComparable": "Not comparable, the question type changed: {waves}",
+            "noAnswers": "No wave has answers to this question yet.",
+            "waveNoAnswers": "This wave has no answers to this question.",
+            "noWave": "None of the compared waves asks this question."
+        },
+        "chart": {
+            "wave": "Wave",
+            "value": "Value",
+            "mean": "Mean",
+            "score": "NPS"
+        },
+        "empty": {
+            "noQuestions": {
+                "title": "Nothing to compare",
+                "body": "The waves in this series have no answerable questions. Add questions in the builder and publish a wave again."
+            },
+            "noResponses": {
+                "title": "No responses yet",
+                "body": "None of the waves in this series has collected a response. Share a wave's public link — the comparison appears here as soon as answers arrive."
             }
         }
     },

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
     CHART_KINDS,
+    CHART_MAX_LINES,
     CHART_SHORT_LABEL_MAX,
     CHART_VERTICAL_MAX_OPTIONS,
     chartKindsFor,
     defaultChartKind,
+    hasSeriesLine,
     supportsChartKind
 } from "@/domain/charts";
 import type { ChartKind } from "@/domain/charts";
@@ -167,7 +169,7 @@ describe("chartKindsFor", () => {
             }
         });
 
-        it("is offered by every chartable question in a series", () => {
+        it("is offered in a series by every question that has a trend", () => {
             for (const question of ALL_QUESTIONS) {
                 const single = chartKindsFor(question, "single_wave");
                 const series = chartKindsFor(question, "series");
@@ -175,7 +177,44 @@ describe("chartKindsFor", () => {
                     expect(series).toEqual([]);
                     continue;
                 }
-                expect(series).toContain("line");
+                expect(series.includes("line")).toBe(hasSeriesLine(question));
+                // Whatever the shape, the single-wave kinds are all still there
+                // and still in the same order: a line is added, never a swap.
+                expect(series.slice(0, single.length)).toEqual(single);
+            }
+        });
+
+        it("is withheld from a matrix, which has no single value per wave", () => {
+            expect(hasSeriesLine(matrixSingle)).toBe(false);
+            expect(chartKindsFor(matrixSingle, "series")).toEqual([
+                "ramp_bar",
+                "ramp_stacked"
+            ]);
+        });
+
+        it("is withheld past the palette's five lines", () => {
+            // One line per option, and DESIGN §7 has no sixth colour to give
+            // the sixth option. The bars stay; the line goes.
+            expect(
+                chartKindsFor(choiceWith(CHART_MAX_LINES, 4), "series")
+            ).toContain("line");
+            expect(
+                chartKindsFor(choiceWith(CHART_MAX_LINES + 1, 4), "series")
+            ).not.toContain("line");
+
+            // The free-text bucket is a line like any other, so it counts.
+            const withOther: SingleChoiceQuestion = {
+                ...choiceWith(CHART_MAX_LINES, 4),
+                allowOther: true,
+                otherLabel: "Other"
+            };
+            expect(chartKindsFor(withOther, "series")).not.toContain("line");
+        });
+
+        it("trends a scale and an NPS question, which are one line each", () => {
+            for (const question of [opinionScale, nps]) {
+                expect(hasSeriesLine(question)).toBe(true);
+                expect(chartKindsFor(question, "series")).toContain("line");
             }
         });
 

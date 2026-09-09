@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, GitCompareArrows } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import { Fragment, useState } from "react";
@@ -10,6 +10,7 @@ import { ShareLink } from "@/components/surveys/share-link";
 import { SurveyStatusBadge } from "@/components/surveys/status-badge";
 import { SurveyRowActions } from "@/components/surveys/survey-row-actions";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Table,
     TableBody,
@@ -415,9 +416,31 @@ function GroupRow({
             </TableCell>
             <TableCell className={cn("px-3", WIDE_ONLY)} />
             <TableCell className="px-2 text-right">
-                {/* The menu acts on the newest wave — the live one, and the one
-                    "new wave" has to copy for the keys to line up. */}
-                <SurveyRowActions survey={newest} isWave />
+                <div className="flex items-center justify-end gap-1">
+                    {/* DESIGN §5 gives the series a compare control, and 013
+                        left it out until there was something behind it. This
+                        is the only way into the comparison: it belongs to the
+                        series, not to any one wave. */}
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="h-[26px] rounded px-2 font-mono text-[10px] tracking-[0.04em] uppercase"
+                    >
+                        <Link href={ROUTES.compare(row.waveGroupId)}>
+                            <GitCompareArrows aria-hidden />
+                            <span className="hidden sm:inline">
+                                {tActions("compare")}
+                            </span>
+                            <span className="sr-only sm:hidden">
+                                {tActions("compare")}
+                            </span>
+                        </Link>
+                    </Button>
+                    {/* The menu acts on the newest wave — the live one, and the
+                        one "new wave" has to copy for the keys to line up. */}
+                    <SurveyRowActions survey={newest} isWave />
+                </div>
             </TableCell>
         </TableRow>
     );

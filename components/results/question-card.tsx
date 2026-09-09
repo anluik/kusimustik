@@ -51,7 +51,7 @@ import { cn } from "@/lib/utils";
  * DESIGN §7 forbids.
  */
 
-/** MVP charts one wave at a time; wave comparison is after-MVP item 2. */
+/** This card is one wave's; `WaveQuestionCard` is the one that passes "series". */
 const SHAPE: ChartDataShape = "single_wave";
 
 export function QuestionCard({
@@ -137,7 +137,16 @@ export function QuestionCard({
     );
 }
 
-function SummaryBody({
+/**
+ * One summary's body, at the chart kind the card is showing.
+ *
+ * Exported because the wave comparison renders it once per wave for the
+ * encodings that are drawn wave by wave rather than all at once — the ramps and
+ * the text lists (docs/DECISIONS.md 029). Sharing it is the point: a scale's
+ * distribution must read identically whether the owner is looking at one wave
+ * or five.
+ */
+export function SummaryBody({
     summary,
     kind
 }: {

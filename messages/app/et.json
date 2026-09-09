@@ -103,7 +103,8 @@
             "publish": "Avalda",
             "publishBlocked": "0 küsimust",
             "close": "Sulge küsitlus",
-            "delete": "Kustuta"
+            "delete": "Kustuta",
+            "compare": "Võrdle"
         },
         "empty": {
             "title": "Ühtegi küsitlust veel pole",
@@ -465,6 +466,39 @@
             "noQuestions": {
                 "title": "Kokkuvõtteks pole midagi",
                 "body": "Selles küsitluses ei ole ühtegi vastatavat küsimust — kõik on koostajast eemaldatud. Kogutud vastused on alles ja jõuavad CSV-faili, aga graafikuid neist teha ei saa."
+            }
+        }
+    },
+    "Waves": {
+        "title": "Lainete võrdlus",
+        "backToSurveys": "Tagasi küsitluste juurde",
+        "unlabelledWave": "Sildita",
+        "waves": "{count, plural, one {# laine} other {# lainet}}",
+        "responses": "{count, plural, one {# vastus kokku} other {# vastust kokku}}",
+        "omitted": "Näidatakse {shown} viimast lainet; {omitted} vanemat jäi kõrvale.",
+        "question": {
+            "comparedWaves": "võrreldud {count} laines",
+            "answered": "{count, plural, one {# vastus} other {# vastust}}",
+            "notAsked": "Ei küsitud: {waves}",
+            "notComparable": "Ei ole võrreldav, küsimuse tüüp on muutunud: {waves}",
+            "noAnswers": "Ükski laine ei ole sellele küsimusele veel vastuseid saanud.",
+            "waveNoAnswers": "Selles laines ei ole sellele küsimusele vastatud.",
+            "noWave": "Ükski võrreldav laine seda küsimust ei küsi."
+        },
+        "chart": {
+            "wave": "Laine",
+            "value": "Väärtus",
+            "mean": "Keskmine",
+            "score": "NPS"
+        },
+        "empty": {
+            "noQuestions": {
+                "title": "Võrrelda ei ole midagi",
+                "body": "Selle seeria lainetes ei ole ühtegi vastatavat küsimust. Lisa koostajas küsimusi ja avalda laine uuesti."
+            },
+            "noResponses": {
+                "title": "Vastuseid ei ole veel",
+                "body": "Ükski selle seeria laine ei ole veel vastuseid kogunud. Jaga mõne laine avalikku linki — võrdlus tekib siia niipea, kui vastused saabuvad."
             }
         }
     },

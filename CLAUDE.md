@@ -46,7 +46,7 @@ root, so `domain/` is `@/domain` and `lib/db/` is `@/lib/db`.
 app/                 App Router — routes only. NO app/layout.tsx: each group
                      below is its own root layout, because <html lang> differs
                      by surface (docs/DECISIONS.md 011)
-  (app)/             authed dashboard — builder, results
+  (app)/             authed dashboard — builder, results, wave comparison
   (auth)/            signed-out surfaces — /login
   (public)/          respondent runner at /k/[slug], no auth
   auth/callback/     magic-link landing (route handler)

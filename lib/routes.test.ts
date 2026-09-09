@@ -15,6 +15,9 @@ describe("isPublicPath", () => {
         "/surveys",
         "/settings",
         "/surveys/abc/results",
+        // The wave comparison is the owner's too, and it is protected by
+        // being absent from `PUBLIC_PREFIXES` rather than by being listed.
+        ROUTES.compare("abc"),
         // The beacon is exempt by endpoint, not by prefix: Phase 8's CSV
         // download lands under /api and belongs to the owner.
         "/api/surveys/abc/export"

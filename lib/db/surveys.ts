@@ -254,6 +254,30 @@ export async function listSurveysInWaveGroup(
     return rows.map(toSummary);
 }
 
+/**
+ * The same waves with their definitions attached — what a comparison needs and
+ * a list does not, which is why the summary version above stays as it is.
+ *
+ * Oldest first, by `created_at`: wave order is chronological, and `wave_label`
+ * is free text that cannot be relied on to sort ("Q1" and "2026 kevad" both
+ * happen). A wave the owner may not see is not in the result at all; RLS is
+ * the filter, exactly as it is for `listSurveys`.
+ */
+export async function listWaveGroupSurveys(
+    db: Db,
+    waveGroupId: WaveGroupId
+): Promise<SurveyRecord[]> {
+    const rows = unwrap(
+        `listWaveGroupSurveys(${waveGroupId})`,
+        await db
+            .from("surveys")
+            .select(RECORD_COLUMNS)
+            .eq("wave_group_id", waveGroupId)
+            .order("created_at", { ascending: true })
+    );
+    return rows.map(toRecord);
+}
+
 export async function createSurvey(
     db: Db,
     input: NewSurvey

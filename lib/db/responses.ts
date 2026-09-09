@@ -112,21 +112,48 @@ export async function listResponses(
     db: Db,
     surveyId: SurveyId
 ): Promise<ResponseRecord[]> {
+    const bySurvey = await listResponsesBySurvey(db, [surveyId]);
+    return bySurvey.get(surveyId) ?? [];
+}
+
+/**
+ * The same, for several surveys at once, keyed by survey id.
+ *
+ * Two round trips whatever the number of surveys, which is what keeps wave
+ * comparison from issuing a query per wave — a wave group is small, but the
+ * per-wave version is a loop that grows with the customer's history. Every
+ * requested survey gets an entry, empty where it has no responses, so a caller
+ * never has to tell "no responses" from "not asked for".
+ */
+export async function listResponsesBySurvey(
+    db: Db,
+    surveyIds: readonly SurveyId[]
+): Promise<ReadonlyMap<SurveyId, ResponseRecord[]>> {
+    const bySurvey = new Map<SurveyId, ResponseRecord[]>(
+        surveyIds.map(id => [id, []])
+    );
+    // `.in()` with an empty list is a query that cannot match, not an error —
+    // but it is still a round trip, and the answer is already known.
+    if (surveyIds.length === 0) return bySurvey;
+
+    const ids = [...surveyIds];
+    const what = `listResponsesBySurvey(${ids.length} surveys)`;
+
     const responseRows = unwrap(
-        `listResponses(${surveyId})`,
+        what,
         await db
             .from("responses")
             .select("id, survey_id, survey_version, locale, submitted_at")
-            .eq("survey_id", surveyId)
+            .in("survey_id", ids)
             .order("submitted_at", { ascending: true })
     );
 
     const answerRows = unwrap(
-        `listResponses(${surveyId}) answers`,
+        `${what} answers`,
         await db
             .from("answers")
             .select("response_id, question_id, value")
-            .eq("survey_id", surveyId)
+            .in("survey_id", ids)
     );
 
     const byResponse = new Map<string, Record<string, unknown>>();
@@ -136,7 +163,7 @@ export async function listResponses(
         byResponse.set(row.response_id, answers);
     }
 
-    return parseRows(
+    const records = parseRows(
         ResponseRecordSchema,
         responseRows.map(row => ({
             id: row.id,
@@ -146,8 +173,19 @@ export async function listResponses(
             submittedAt: row.submitted_at,
             answers: byResponse.get(row.id) ?? {}
         })),
-        `responses of ${surveyId}`
+        what
     );
+
+    for (const record of records) {
+        // A response whose survey was not asked for cannot come back: RLS and
+        // the `in` filter agree on the set. The fallback keeps the map total
+        // rather than trusting that.
+        const existing = bySurvey.get(record.surveyId) ?? [];
+        existing.push(record);
+        bySurvey.set(record.surveyId, existing);
+    }
+
+    return bySurvey;
 }
 
 export async function getResponse(
