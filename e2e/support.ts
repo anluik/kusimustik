@@ -135,7 +135,10 @@ export async function createFixtureSurvey(fixture: {
         .from("surveys")
         .insert({
             owner_id: OWNER_ID,
-            title: fixture.title,
+            // Locale-keyed, like everything else a respondent reads. The
+            // fixtures stay one-language: a spec reads better saying what the
+            // survey is called than saying it in a map (docs/DECISIONS.md 034).
+            title: { [fixture.locale ?? "et"]: fixture.title },
             slug: fixture.slug,
             status: "published",
             locale: fixture.locale ?? "et",

@@ -14,11 +14,11 @@ import { OpinionScaleEditor } from "@/components/builder/opinion-scale-editor";
 import { PanelHeader } from "@/components/builder/panel";
 import { SingleChoiceEditor } from "@/components/builder/single-choice-editor";
 import { StatementEditor } from "@/components/builder/statement-editor";
+import { SurveyHeadFields } from "@/components/builder/survey-head-fields";
 import {
     LongTextEditor,
     ShortTextEditor
 } from "@/components/builder/text-editor";
-import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -32,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { assertNever } from "@/domain/assert-never";
 import type { SurveyElement } from "@/domain/question";
+import type { SurveyHead } from "@/domain/survey";
 import type { SurveyKeys } from "@/lib/builder/keys";
 import { cn } from "@/lib/utils";
 
@@ -93,20 +94,31 @@ function ElementEditor({
     }
 }
 
+/**
+ * What the panel is editing. A union rather than two nullable props, so the
+ * header, the body and the footer each answer the same question once and the
+ * compiler holds them to every case.
+ */
+export type EditorTarget =
+    | { readonly kind: "head"; readonly head: SurveyHead }
+    | { readonly kind: "element"; readonly element: SurveyElement };
+
 export function EditorPanel({
-    selected,
+    target,
     elements,
     keys,
     onChange,
+    onHeadChange,
     onDuplicate,
     onDelete,
     insetHeader = false,
     className
 }: {
-    readonly selected: SurveyElement | null;
+    readonly target: EditorTarget;
     readonly elements: readonly SurveyElement[];
     readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
+    readonly onHeadChange: (head: SurveyHead) => void;
     readonly onDuplicate: () => void;
     readonly onDelete: () => void;
     /**
@@ -122,6 +134,9 @@ export function EditorPanel({
     // The survey-delete dialog names what it destroys (`Surveys.delete`); a
     // question with answers behind it deserves the same sentence.
     const collected = useCollectedAnswers();
+    // Only an element can be here — the dialog is only reachable from its
+    // delete button — but the name is read after `target` may have changed.
+    const deleting = target.kind === "element" ? target.element.title : "";
 
     return (
         <div
@@ -131,9 +146,13 @@ export function EditorPanel({
             )}
         >
             <PanelHeader
-                title={selected === null ? t("title") : typeName(selected.type)}
+                title={
+                    target.kind === "head"
+                        ? t("headTitle")
+                        : typeName(target.element.type)
+                }
                 {...(insetHeader && { className: "pr-14" })}
-                {...(selected !== null && {
+                {...(target.kind === "element" && {
                     actions: (
                         <Button
                             type="button"
@@ -141,7 +160,7 @@ export function EditorPanel({
                             size="sm"
                             onClick={onDuplicate}
                             aria-label={t("duplicateLabel", {
-                                title: selected.title
+                                title: target.element.title
                             })}
                             className="h-7 rounded px-1.5 text-xs text-muted-foreground"
                         >
@@ -153,42 +172,43 @@ export function EditorPanel({
             />
 
             <div className="min-h-0 flex-1 overflow-y-auto">
-                {selected === null ? (
-                    <EmptyState
-                        title={t("empty.title")}
-                        body={t("empty.body")}
-                        preview={
-                            <>
-                                <EmptyStateRow />
-                                <EmptyStateRow />
-                            </>
-                        }
-                    />
-                ) : (
-                    <div className="flex flex-col gap-3.5 p-3">
-                        {/* Keyed by element, so selecting a second question of
-                            the same type remounts the editor: its local state
-                            — the key field's open/warned flags — belongs to
-                            the element being edited, not to the panel. */}
+                <div className="flex flex-col gap-3.5 p-3">
+                    {target.kind === "head" ? (
+                        <SurveyHeadFields
+                            head={target.head}
+                            onChange={onHeadChange}
+                        />
+                    ) : (
+                        /* Keyed by element, so selecting a second question of
+                           the same type remounts the editor: its local state
+                           — the key field's open/warned flags — belongs to
+                           the element being edited, not to the panel. The
+                           header block needs no key: there is one of it, and
+                           it has no local state to carry over. */
                         <ElementEditor
-                            key={selected.id}
-                            element={selected}
+                            key={target.element.id}
+                            element={target.element}
                             siblings={elements}
                             keys={keys}
                             onChange={onChange}
                         />
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
-            {selected !== null && (
+            {/* The header block has neither: a survey cannot be duplicated
+                into itself and cannot be left without a name — the autosave
+                holds on a title written in no language at all. */}
+            {target.kind === "element" && (
                 <div className="shrink-0 border-t p-3">
                     <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => setConfirming(true)}
-                        aria-label={t("deleteLabel", { title: selected.title })}
+                        aria-label={t("deleteLabel", {
+                            title: target.element.title
+                        })}
                         className="h-[30px] w-full justify-start rounded px-1.5 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     >
                         <Trash aria-hidden />
@@ -210,10 +230,10 @@ export function EditorPanel({
                         <AlertDialogDescription className="text-xs leading-[1.35]">
                             {collected === 0
                                 ? t("deleteWarning.body", {
-                                      title: selected?.title ?? ""
+                                      title: deleting
                                   })
                                 : t("deleteWarning.bodyWithResponses", {
-                                      title: selected?.title ?? "",
+                                      title: deleting,
                                       count: collected
                                   })}
                         </AlertDialogDescription>

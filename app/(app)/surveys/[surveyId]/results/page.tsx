@@ -5,7 +5,7 @@ import { cache } from "react";
 
 import { ResultsScreen } from "@/components/results/results-screen";
 import { SurveyIdSchema } from "@/domain/ids";
-import { resolveElements } from "@/domain/localize";
+import { resolveElements, resolveSurveyTitle } from "@/domain/localize";
 import { requireSessionUser } from "@/lib/auth/session";
 import { getFunnelTotals, listQuestionFunnel } from "@/lib/db/funnel";
 import { listResponses } from "@/lib/db/responses";
@@ -54,7 +54,9 @@ export async function generateMetadata({
     if (found === null) return {};
 
     const t = await getTranslations("Results");
-    return { title: `${found.record.survey.title} · ${t("title")}` };
+    return {
+        title: `${resolveSurveyTitle(found.record.survey)} · ${t("title")}`
+    };
 }
 
 export default async function ResultsPage({
@@ -71,7 +73,7 @@ export default async function ResultsPage({
     return (
         <ResultsScreen
             surveyId={record.survey.id}
-            title={record.survey.title}
+            title={resolveSurveyTitle(record.survey)}
             status={record.survey.status}
             elements={resolveElements(
                 record.survey.elements,

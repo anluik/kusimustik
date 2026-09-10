@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { LOCALES, orderLocales } from "@/domain/content";
+import { LOCALES, localizedTextSchema, orderLocales } from "@/domain/content";
 import type { SurveyLocale } from "@/domain/content";
 import { SurveyIdSchema, WaveGroupIdSchema } from "@/domain/ids";
 import { AuthoredElementSchema, SurveyElementSchema } from "@/domain/question";
@@ -12,23 +12,54 @@ export { LOCALES };
 export type { SurveyLocale } from "@/domain/content";
 
 /**
- * A survey's name. Trimmed before validation, so a title of nothing but spaces
- * is rejected rather than stored — the create and rename forms parse this same
- * schema before they submit.
- *
- * The survey's own title and description are columns rather than part of the
- * `elements` document, and are not translated: they name the survey in the
- * owner's list and in their browser tab. What a respondent reads is the
- * document. See docs/DECISIONS.md 030.
+ * How long the survey's own words may be, per language. One source for both
+ * shapes, exactly as `TEXT_MAX` is in `domain/question.ts`.
  */
-export const SurveyTitleSchema = z.string().trim().min(1).max(300);
+const SURVEY_TEXT_MAX = { title: 300, description: 2000 } as const;
+
+/**
+ * A survey's name, in one language.
+ *
+ * The resolved shape keeps the plain name, the rule DECISIONS 030 set for
+ * elements: nine-tenths of the codebase works in one language, and this is the
+ * schema the create dialog's single field and the header block's title still
+ * parse. `AuthoredSurveyTitleSchema` below is what the column holds.
+ *
+ * Trimmed before validation, so a title of nothing but spaces is rejected
+ * rather than stored.
+ */
+export const SurveyTitleSchema = z
+    .string()
+    .trim()
+    .min(1)
+    .max(SURVEY_TEXT_MAX.title);
 
 /**
  * The paragraph a respondent reads above the first question. Optional, and
  * trimmed like the title, so a description of nothing but spaces is no
  * description rather than an empty line in the runner.
  */
-export const SurveyDescriptionSchema = z.string().trim().max(2000);
+export const SurveyDescriptionSchema = z
+    .string()
+    .trim()
+    .max(SURVEY_TEXT_MAX.description);
+
+/**
+ * The same two as they are *stored*: locale-keyed, like every other word a
+ * respondent reads (docs/DECISIONS.md 034).
+ *
+ * These do not trim, and neither does any element's text. `withLocale` treats
+ * whitespace-only as *absence*, which is stronger — it withdraws the language
+ * rather than storing a blank — so a title of nothing but spaces still cannot
+ * be stored: what is left is the empty map, which the schema refuses. What is
+ * no longer trimmed is the padding around a real title.
+ */
+export const AuthoredSurveyTitleSchema = localizedTextSchema(
+    SURVEY_TEXT_MAX.title
+);
+export const AuthoredSurveyDescriptionSchema = localizedTextSchema(
+    SURVEY_TEXT_MAX.description
+);
 
 /** Free text ("2026", "Q1") naming one wave of a recurring survey. */
 export const WaveLabelSchema = z.string().trim().min(1).max(100);
@@ -123,10 +154,36 @@ export const SurveyLocalesSchema = z
         }
     });
 
+/**
+ * The survey's own words — its title and the paragraph above the first
+ * question — in the two shapes every other piece of content has.
+ *
+ * They are their own pair rather than fields spliced into the survey schemas,
+ * because the builder holds them on their own: the header block is the first
+ * thing in the element list, the editor panel binds to one language of it, and
+ * the reducer merges an edit back into it. See docs/DECISIONS.md 034.
+ */
+const resolvedHeadFields = {
+    title: SurveyTitleSchema,
+    description: SurveyDescriptionSchema.optional()
+};
+
+const authoredHeadFields = {
+    title: AuthoredSurveyTitleSchema,
+    description: AuthoredSurveyDescriptionSchema.optional()
+};
+
+/** The survey's words in one language: what the runner and the panel read. */
+export const SurveyHeadSchema = z.object(resolvedHeadFields);
+/** The same as the columns hold them, every translation included. */
+export const AuthoredSurveyHeadSchema = z.object(authoredHeadFields);
+
+export type SurveyHead = z.infer<typeof SurveyHeadSchema>;
+export type AuthoredSurveyHead = z.infer<typeof AuthoredSurveyHeadSchema>;
+
+/** Everything about a survey that is not a word. */
 const surveyFields = {
     id: SurveyIdSchema,
-    title: SurveyTitleSchema,
-    description: SurveyDescriptionSchema.optional(),
     status: z.literal(SURVEY_STATUSES),
     /** Assigned on publish; null while the survey has never been published. */
     slug: SurveySlugSchema.nullable(),
@@ -182,13 +239,21 @@ const publishedNeedsSlug = <T extends { status: string; slug: string | null }>(
 
 /** A survey in one language: what a runner renders and a report titles. */
 export const SurveySchema = z
-    .object({ ...surveyFields, elements: SurveyElementsSchema })
+    .object({
+        ...surveyFields,
+        ...resolvedHeadFields,
+        elements: SurveyElementsSchema
+    })
     .check(publishedNeedsSlug)
     .check(localeIsOffered);
 
 /** A survey as it is stored, translations and all. */
 export const AuthoredSurveySchema = z
-    .object({ ...surveyFields, elements: AuthoredElementsSchema })
+    .object({
+        ...surveyFields,
+        ...authoredHeadFields,
+        elements: AuthoredElementsSchema
+    })
     .check(publishedNeedsSlug)
     .check(localeIsOffered);
 

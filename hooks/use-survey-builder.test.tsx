@@ -26,7 +26,7 @@ import { useSurveyBuilder } from "@/hooks/use-survey-builder";
  */
 
 const save = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/surveys/actions", () => ({ saveSurveyElementsAction: save }));
+vi.mock("@/lib/surveys/actions", () => ({ saveSurveyDocumentAction: save }));
 
 const SURVEY_ID = newSurveyId();
 
@@ -48,6 +48,9 @@ const question = (title: string, siblings: readonly AuthoredElement[] = []) =>
 const stored = (title: string, siblings: readonly AuthoredElement[] = []) =>
     authorElement(question(title, siblings), "et");
 
+/** A survey written in Estonian and translated into nothing. */
+const HEAD_FIXTURE = { title: { et: "Maine ja rahulolu" } };
+
 function builderWith(
     initialElements: readonly AuthoredElement[],
     {
@@ -58,6 +61,7 @@ function builderWith(
     return renderHook(() =>
         useSurveyBuilder({
             surveyId: SURVEY_ID,
+            initialHead: HEAD_FIXTURE,
             initialElements,
             initialVersion: 1,
             keys,

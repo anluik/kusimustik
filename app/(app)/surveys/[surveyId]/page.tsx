@@ -1,3 +1,4 @@
+import { resolveSurveyTitle } from "@/domain/localize";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
@@ -54,7 +55,9 @@ export async function generateMetadata({
 }: PageProps<"/surveys/[surveyId]">): Promise<Metadata> {
     const { surveyId } = await params;
     const found = await loadSurvey(surveyId);
-    return found === null ? {} : { title: found.record.survey.title };
+    return found === null
+        ? {}
+        : { title: resolveSurveyTitle(found.record.survey) };
 }
 
 export default async function BuilderPage({
@@ -76,11 +79,18 @@ export default async function BuilderPage({
         <BuilderScreen
             surveyId={record.survey.id}
             initialSettings={{
-                title: record.survey.title,
-                description: record.survey.description,
                 locale: record.survey.locale,
                 locales: record.survey.locales,
                 waveLabel: record.survey.waveLabel
+            }}
+            // The survey's own words are content, so they arrive stored like
+            // the elements do and are edited in the header block at the top of
+            // the list (docs/DECISIONS.md 034).
+            initialHead={{
+                title: record.survey.title,
+                ...(record.survey.description !== undefined && {
+                    description: record.survey.description
+                })
             }}
             // The stored document, translations and all: the builder edits one
             // language of it at a time and merges each edit back, so it is the

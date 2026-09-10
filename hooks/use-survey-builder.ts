@@ -9,24 +9,35 @@ import {
     useState
 } from "react";
 
-import type { SurveyLocale } from "@/domain/content";
+import type { LocalizedText, SurveyLocale } from "@/domain/content";
 import type { QuestionId, SurveyId } from "@/domain/ids";
 import {
     authorElement,
+    elementTexts,
+    headTexts,
     projectElements,
-    resolveElements
+    projectHead,
+    resolveElements,
+    resolveHead
 } from "@/domain/localize";
+import type { TextPath } from "@/domain/localize";
 import type { AuthoredElement, SurveyElement } from "@/domain/question";
-import { AuthoredElementsSchema } from "@/domain/survey";
 import {
+    AuthoredElementsSchema,
+    AuthoredSurveyHeadSchema
+} from "@/domain/survey";
+import type { AuthoredSurveyHead, SurveyHead } from "@/domain/survey";
+import {
+    HEAD,
     documentReducer,
     findElement,
     initialDocument
 } from "@/lib/builder/document";
+import type { BuilderSelection } from "@/lib/builder/document";
 import type { SurveyKeys } from "@/lib/builder/keys";
 import { duplicateElement } from "@/lib/builder/new-element";
 import type { SurveyActionError } from "@/lib/surveys/errors";
-import { saveSurveyElementsAction } from "@/lib/surveys/actions";
+import { saveSurveyDocumentAction } from "@/lib/surveys/actions";
 
 /**
  * The builder's document, the language it is being edited in, and its autosave.
@@ -57,6 +68,9 @@ import { saveSurveyElementsAction } from "@/lib/surveys/actions";
  */
 
 /** Long enough to swallow a burst of typing, short enough to feel automatic. */
+/** Nothing is selected only in the instant before a selection exists. */
+const EMPTY_TEXTS: ReadonlyMap<TextPath, LocalizedText> = new Map();
+
 const SAVE_DEBOUNCE_MS = 700;
 
 export type BuilderSaveStatus =
@@ -75,16 +89,29 @@ type SaveState =
     | { readonly kind: "failed"; readonly error: SurveyActionError };
 
 export type SurveyBuilder = {
+    /** The survey's own words as they are stored — what the save sends. */
+    readonly storedHead: AuthoredSurveyHead;
+    /** The active language alone — what the header block's fields edit. */
+    readonly head: SurveyHead;
+    /** The same as a respondent would read them, fallback included. */
+    readonly shownHead: SurveyHead;
     /** The document as it is stored: every language the author has written. */
     readonly stored: readonly AuthoredElement[];
     /** The active language alone — what the editor panel edits. */
     readonly elements: readonly SurveyElement[];
     /** The same elements as a respondent would read them, fallback included. */
     readonly shown: readonly SurveyElement[];
-    readonly selectedId: QuestionId | null;
+    readonly selectedId: BuilderSelection;
     readonly selected: SurveyElement | null;
     /** The selected element with its other languages still attached. */
     readonly selectedStored: AuthoredElement | null;
+    /**
+     * Every piece of text on whatever is selected, addressed by path — the
+     * head's or an element's. It is what the editor panel's placeholders are
+     * read from, and it lives here because this hook is the only thing that
+     * knows translation exists.
+     */
+    readonly selectedTexts: ReadonlyMap<TextPath, LocalizedText>;
     readonly status: BuilderSaveStatus;
     /**
      * The optimistic-concurrency token the next save will carry. Exposed
@@ -93,7 +120,7 @@ export type SurveyBuilder = {
      * did not cause.
      */
     readonly version: number;
-    readonly select: (id: QuestionId | null) => void;
+    readonly select: (id: BuilderSelection) => void;
     /** A new element, authored into the survey's own language. */
     readonly add: (element: SurveyElement) => void;
     readonly remove: (id: QuestionId) => void;
@@ -102,6 +129,8 @@ export type SurveyBuilder = {
     readonly move: (id: QuestionId, to: number) => void;
     /** One language of an element, merged into the translations it has. */
     readonly replace: (element: SurveyElement) => void;
+    /** The same for the survey's own title and intro. */
+    readonly replaceHead: (head: SurveyHead) => void;
     /** Adopts the version another save of this survey just returned. */
     readonly syncVersion: (version: number) => void;
     /** Clears a failed save so the effect below picks the document up again. */
@@ -116,6 +145,7 @@ export type SurveyBuilder = {
 
 export function useSurveyBuilder({
     surveyId,
+    initialHead,
     initialElements,
     initialVersion,
     keys,
@@ -123,6 +153,8 @@ export function useSurveyBuilder({
     locale
 }: {
     readonly surveyId: SurveyId;
+    /** The survey's own words, as the repository handed them over. */
+    readonly initialHead: AuthoredSurveyHead;
     /** The stored document, as the repository handed it over. */
     readonly initialElements: readonly AuthoredElement[];
     readonly initialVersion: number;
@@ -135,15 +167,15 @@ export function useSurveyBuilder({
 }): SurveyBuilder {
     const [doc, dispatch] = useReducer(
         documentReducer,
-        initialElements,
-        initialDocument
+        { head: initialHead, elements: initialElements },
+        ({ head, elements }) => initialDocument(head, elements)
     );
 
     const [savedRevision, setSavedRevision] = useState(0);
     const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
     const [version, setVersion] = useState(initialVersion);
 
-    const { elements: stored, revision } = doc;
+    const { head: storedHead, elements: stored, revision } = doc;
     const dirty = revision !== savedRevision;
 
     const elements = useMemo(
@@ -153,6 +185,14 @@ export function useSurveyBuilder({
     const shown = useMemo(
         () => resolveElements(stored, locale, source),
         [stored, locale, source]
+    );
+    const head = useMemo(
+        () => projectHead(storedHead, locale),
+        [storedHead, locale]
+    );
+    const shownHead = useMemo(
+        () => resolveHead(storedHead, locale, source),
+        [storedHead, locale, source]
     );
 
     // A document the schema rejects — an option label emptied in its last
@@ -169,9 +209,23 @@ export function useSurveyBuilder({
     // and holding the save is the whole point — a save that goes out and
     // fails leaves a "save failed" the owner cannot retry out of, on top of
     // the field error that already explained the problem.
+    //
+    // The head is held to the same rule, and the three cases it can be in are
+    // worth saying out loud, because the failure mode is a builder that
+    // silently stopped saving while someone was translating:
+    //
+    //   * a title emptied in *every* language is `{}`, which the schema
+    //     refuses — the save is held, exactly as it is for a question titled
+    //     in no language;
+    //   * a title merely untranslated in the language on screen is still
+    //     `{ et: "..." }` and parses, so the save goes out;
+    //   * an intro emptied everywhere never reaches `{}` at all — `mergeHead`
+    //     withdraws it to absent, which is a valid unfilled optional.
     const valid = useMemo(
-        () => AuthoredElementsSchema.safeParse(stored).success,
-        [stored]
+        () =>
+            AuthoredSurveyHeadSchema.safeParse(storedHead).success &&
+            AuthoredElementsSchema.safeParse(stored).success,
+        [storedHead, stored]
     );
 
     // Keys this session has retired: an element that leaves the document takes
@@ -228,14 +282,17 @@ export function useSurveyBuilder({
     const save = useCallback(
         async (
             at: number,
+            savingHead: AuthoredSurveyHead,
             saving: readonly AuthoredElement[],
             expectedVersion: number
         ) => {
             setSaveState({ kind: "saving" });
 
-            const result = await saveSurveyElementsAction({
+            const result = await saveSurveyDocumentAction({
                 surveyId,
                 expectedVersion,
+                title: savingHead.title,
+                description: savingHead.description ?? null,
                 elements: [...saving]
             });
 
@@ -261,11 +318,11 @@ export function useSurveyBuilder({
         if (saveState.kind !== "idle") return;
 
         const timer = setTimeout(() => {
-            void save(revision, stored, version);
+            void save(revision, storedHead, stored, version);
         }, SAVE_DEBOUNCE_MS);
 
         return () => clearTimeout(timer);
-    }, [dirty, valid, saveState, revision, stored, version, save]);
+    }, [dirty, valid, saveState, revision, storedHead, stored, version, save]);
 
     useEffect(() => {
         if (!dirty) return;
@@ -288,8 +345,20 @@ export function useSurveyBuilder({
     }, [saveState, dirty, valid]);
 
     const selectedStored = findElement(stored, doc.selectedId);
+    const selectedTexts = useMemo(
+        () =>
+            doc.selectedId === HEAD
+                ? headTexts(storedHead)
+                : selectedStored === null
+                  ? EMPTY_TEXTS
+                  : elementTexts(selectedStored),
+        [doc.selectedId, storedHead, selectedStored]
+    );
 
     return {
+        storedHead,
+        head,
+        shownHead,
         stored,
         elements,
         shown,
@@ -297,10 +366,11 @@ export function useSurveyBuilder({
         selectedId: doc.selectedId,
         selected: findElement(elements, doc.selectedId),
         selectedStored,
+        selectedTexts,
         status,
         version,
         select: useCallback(
-            (id: QuestionId | null) => dispatch({ kind: "select", id }),
+            (id: BuilderSelection) => dispatch({ kind: "select", id }),
             []
         ),
         add: useCallback(
@@ -334,6 +404,11 @@ export function useSurveyBuilder({
         replace: useCallback(
             (element: SurveyElement) =>
                 dispatch({ kind: "replace", element, locale }),
+            [locale]
+        ),
+        replaceHead: useCallback(
+            (next: SurveyHead) =>
+                dispatch({ kind: "replaceHead", head: next, locale }),
             [locale]
         ),
         syncVersion: useCallback((next: number) => setVersion(next), []),

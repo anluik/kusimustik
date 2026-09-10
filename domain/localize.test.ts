@@ -3,21 +3,32 @@ import { describe, expect, it } from "vitest";
 import {
     authorElement,
     authorElements,
+    authorHead,
     authorSurvey,
     elementTexts,
+    headTexts,
     mergeElement,
     mergeElements,
+    mergeHead,
     missingTranslationCount,
     missingTranslations,
     projectElement,
+    projectHead,
     referenceTexts,
     resolveElement,
     resolveElements,
-    resolveSurvey
+    resolveHead,
+    resolveSurvey,
+    resolveSurveyTitle
 } from "@/domain/localize";
 import type { AuthoredChoiceOption, AuthoredElement } from "@/domain/question";
 import { AuthoredElementSchema, SurveyElementSchema } from "@/domain/question";
-import { AuthoredSurveySchema, SurveySchema } from "@/domain/survey";
+import type { AuthoredSurvey, AuthoredSurveyHead } from "@/domain/survey";
+import {
+    AuthoredSurveyHeadSchema,
+    AuthoredSurveySchema,
+    SurveySchema
+} from "@/domain/survey";
 import { LOCALES } from "@/domain/content";
 import type { SurveyElement } from "@/domain/question";
 import {
@@ -33,7 +44,8 @@ import {
     shortText,
     singleChoice,
     statement,
-    survey
+    survey,
+    authoredSurvey
 } from "@/domain/test-fixtures";
 
 const authored = authorElements(ALL_ELEMENTS, "et");
@@ -385,15 +397,33 @@ describe("what the author still has to write", () => {
     it("counts the fields with no text in the language, not the elements", () => {
         // Two endpoint labels on one question is two pieces of work; counting
         // the question once would read as "nearly done" when it is not.
-        expect(missingTranslations(stored, "ru")).toBe(2);
-        expect(missingTranslations(stored, "et")).toBe(0);
-        expect(missingTranslationCount([stored, stored], "ru")).toBe(4);
+        expect(missingTranslations(elementTexts(stored), "ru")).toBe(2);
+        expect(missingTranslations(elementTexts(stored), "et")).toBe(0);
+    });
+
+    it("counts the survey's own head alongside its elements", () => {
+        const head = { title: { et: "Maine" }, description: { et: "Tere" } };
+        // Two on the head, two on each of the two questions.
+        expect(missingTranslationCount(head, [stored, stored], "ru")).toBe(6);
+        expect(missingTranslationCount(head, [stored, stored], "et")).toBe(0);
     });
 
     it("reads back what each field says today, which is what a placeholder shows", () => {
-        const reference = referenceTexts(stored, "ru", "et");
+        const reference = referenceTexts(elementTexts(stored), "ru", "et");
         expect(reference.get("title")).toBe("Удовлетворённость");
         expect(reference.get("minLabel")).toBe("Üldse mitte");
+    });
+
+    it("reads the head back through the same lookup an element uses", () => {
+        const head = {
+            title: { et: "Maine", ru: "Репутация" },
+            description: { et: "Kolm minutit" }
+        };
+        const reference = referenceTexts(headTexts(head), "ru", "et");
+        expect(reference.get("title")).toBe("Репутация");
+        // Untranslated: what shows through is the language being translated
+        // from, which is the whole point of the placeholder.
+        expect(reference.get("description")).toBe("Kolm minutit");
     });
 });
 
@@ -431,6 +461,116 @@ const FULLY_WRITTEN: readonly SurveyElement[] = [
     { ...matrixSingle, description: "Selgitus" }
 ];
 
+describe("the survey's own head", () => {
+    const stored: AuthoredSurveyHead = {
+        title: { et: "Maine ja rahulolu", ru: "Репутация" },
+        description: { et: "Vastamine võtab kolm minutit." }
+    };
+
+    it("resolves the language asked for", () => {
+        expect(resolveHead(stored, "ru", "et").title).toBe("Репутация");
+    });
+
+    it("falls back per field, so an untranslated intro is not a blank", () => {
+        // The title is Russian and the intro is not. A respondent reading
+        // Russian gets the Russian name and the Estonian paragraph, which is
+        // the survey the author has so far written — not half a page.
+        expect(resolveHead(stored, "ru", "et")).toEqual({
+            title: "Репутация",
+            description: "Vastamine võtab kolm minutit."
+        });
+    });
+
+    it("projects blank, so the panel shows what is missing", () => {
+        // Not the Estonian: typed over, that would be filed as the Russian
+        // translation of itself. The reference text is the placeholder.
+        expect(projectHead(stored, "ru")).toEqual({ title: "Репутация" });
+        expect(projectHead({ title: { et: "Maine" } }, "ru")).toEqual({
+            title: ""
+        });
+    });
+
+    it("merges one language and keeps the others", () => {
+        const merged = mergeHead(
+            stored,
+            { title: "Репутация 2026", description: "Три минуты" },
+            "ru"
+        );
+        expect(merged).toEqual({
+            title: { et: "Maine ja rahulolu", ru: "Репутация 2026" },
+            description: {
+                et: "Vastamine võtab kolm minutit.",
+                ru: "Три минуты"
+            }
+        });
+    });
+
+    it("treats a cleared intro as one language withdrawn, not as empty text", () => {
+        const withRussian = mergeHead(
+            stored,
+            { title: "Репутация", description: "Три минуты" },
+            "ru"
+        );
+        const cleared = mergeHead(withRussian, { title: "Репутация" }, "ru");
+        expect(cleared.description).toEqual({
+            et: "Vastamine võtab kolm minutit."
+        });
+    });
+
+    it("drops the intro entirely once no language has it", () => {
+        const cleared = mergeHead(stored, { title: "Maine" }, "et");
+        expect(cleared.description).toBeUndefined();
+        expect(AuthoredSurveyHeadSchema.safeParse(cleared).success).toBe(true);
+    });
+
+    it("lets the last language of the title go, so the save is held", () => {
+        // The builder's gate, not the reducer's: an edit is never silently
+        // dropped, it is refused by the schema and the autosave waits.
+        const emptied = mergeHead(
+            { title: { et: "Maine" } },
+            { title: "" },
+            "et"
+        );
+        expect(emptied.title).toEqual({});
+        expect(AuthoredSurveyHeadSchema.safeParse(emptied).success).toBe(false);
+    });
+
+    it("holds nothing back for a title merely untranslated", () => {
+        const untranslated = mergeHead(stored, { title: "" }, "ru");
+        expect(untranslated.title).toEqual({ et: "Maine ja rahulolu" });
+        expect(AuthoredSurveyHeadSchema.safeParse(untranslated).success).toBe(
+            true
+        );
+    });
+
+    it("round-trips through the language it was written in", () => {
+        const head = { title: "Maine", description: "Tere" };
+        expect(resolveHead(authorHead(head, "et"), "et")).toEqual(head);
+    });
+
+    it("addresses its words by the same paths an element uses", () => {
+        expect([...headTexts(stored).keys()].sort()).toEqual([
+            "description",
+            "title"
+        ]);
+    });
+});
+
+describe("resolveSurveyTitle", () => {
+    it("answers with the survey's own language unless told otherwise", () => {
+        const stored: AuthoredSurvey = {
+            ...authoredSurvey,
+            locale: "et",
+            locales: ["et", "ru"],
+            title: { et: "Maine", ru: "Репутация" }
+        };
+        expect(resolveSurveyTitle(stored)).toBe("Maine");
+        expect(resolveSurveyTitle(stored, "ru")).toBe("Репутация");
+        // A language nobody has written falls back rather than blanking.
+        expect(resolveSurveyTitle(stored, "en")).toBe("Maine");
+    });
+});
+
 /** Machine-facing, and therefore the same in every language. */
 const IDENTIFIER_FIELDS = ["id", "key", "type", "value"] as const;
 type IdentifierField = (typeof IDENTIFIER_FIELDS)[number];
@@ -457,13 +597,22 @@ type BareStringFields<T> = T extends unknown
  * by the authored shape — which is how the two variants are built — fails here
  * without anyone having to remember to extend a fixture.
  */
+/**
+ * The survey's own machine-facing fields. Separate from an element's, because
+ * a survey has different ones: a slug is an identifier, a wave label names a
+ * column in the owner's comparison, and neither is ever read by a respondent.
+ */
+type SurveyIdentifierField =
+    "id" | "status" | "slug" | "locale" | "waveGroupId" | "waveLabel";
+
 type UntranslatedField =
     | Exclude<BareStringFields<AuthoredElement>, IdentifierField>
-    | Exclude<BareStringFields<AuthoredChoiceOption>, IdentifierField>;
+    | Exclude<BareStringFields<AuthoredChoiceOption>, IdentifierField>
+    | Exclude<BareStringFields<AuthoredSurvey>, SurveyIdentifierField>;
 
 const noUntranslatedFields: [UntranslatedField] extends [never]
     ? true
-    : ["untranslated text on the stored element:", UntranslatedField] = true;
+    : ["untranslated text on the stored document:", UntranslatedField] = true;
 
 /**
  * Every string in an authored document that is neither an identifier nor one

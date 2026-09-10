@@ -12,6 +12,8 @@ import { TranslationProvider } from "@/components/builder/translation";
 import { PublishControl } from "@/components/builder/publish-control";
 import { EditorPanel } from "@/components/builder/editor-panel";
 import { ElementCanvas } from "@/components/builder/element-canvas";
+import { HEAD } from "@/lib/builder/document";
+import type { BuilderSelection } from "@/lib/builder/document";
 import { ElementList } from "@/components/builder/element-list";
 import { SaveIndicator } from "@/components/builder/save-indicator";
 import {
@@ -27,13 +29,15 @@ import {
     SheetTitle
 } from "@/components/ui/sheet";
 import type { SurveyLocale } from "@/domain/content";
-import type { QuestionId, SurveyId } from "@/domain/ids";
+import type { SurveyId } from "@/domain/ids";
 import {
+    elementTexts,
+    headTexts,
     missingTranslationCount,
     missingTranslations
 } from "@/domain/localize";
 import type { AuthoredElement } from "@/domain/question";
-import type { SurveyStatus } from "@/domain/survey";
+import type { AuthoredSurveyHead, SurveyStatus } from "@/domain/survey";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSurveyBuilder } from "@/hooks/use-survey-builder";
 import type { SurveyKeys } from "@/lib/builder/keys";
@@ -70,6 +74,7 @@ const EDITOR_AS_SHEET = "(max-width: 1279px)";
 export function BuilderScreen({
     surveyId,
     initialSettings,
+    initialHead,
     initialElements,
     initialVersion,
     keys,
@@ -81,6 +86,8 @@ export function BuilderScreen({
 }: {
     readonly surveyId: SurveyId;
     readonly initialSettings: SurveySettings;
+    /** The survey's own title and intro — every language, not one of them. */
+    readonly initialHead: AuthoredSurveyHead;
     /** The stored document — every language, not one of them. */
     readonly initialElements: readonly AuthoredElement[];
     readonly initialVersion: number;
@@ -112,6 +119,7 @@ export function BuilderScreen({
 
     const builder = useSurveyBuilder({
         surveyId,
+        initialHead,
         initialElements,
         initialVersion,
         keys,
@@ -126,9 +134,18 @@ export function BuilderScreen({
         locale === settings.locale
             ? []
             : builder.stored
-                  .filter(element => missingTranslations(element, locale) > 0)
+                  .filter(
+                      element =>
+                          missingTranslations(elementTexts(element), locale) > 0
+                  )
                   .map(element => element.id)
     );
+
+    // The same question of the survey's own head, which is a row in that list
+    // and is short of a translation the same way a question can be.
+    const headUntranslated =
+        locale !== settings.locale &&
+        missingTranslations(headTexts(builder.storedHead), locale) > 0;
 
     // The same question asked of every language at once, for the publish
     // dialog: which of the ones this survey is offered in are still short of a
@@ -136,7 +153,11 @@ export function BuilderScreen({
     const untranslatedLocales = settings.locales.filter(
         candidate =>
             candidate !== settings.locale &&
-            missingTranslationCount(builder.stored, candidate) > 0
+            missingTranslationCount(
+                builder.storedHead,
+                builder.stored,
+                candidate
+            ) > 0
     );
 
     // A new element's words go into the survey's own language, since that is
@@ -159,9 +180,9 @@ export function BuilderScreen({
         setSheetOpen(true);
     }
 
-    function select(id: QuestionId) {
+    function select(id: BuilderSelection) {
         builder.select(id);
-        // On a narrow viewport the editor is a sheet, and selecting an element
+        // On a narrow viewport the editor is a sheet, and selecting something
         // is the only thing that would open it.
         setSheetOpen(true);
     }
@@ -170,21 +191,26 @@ export function BuilderScreen({
         <TranslationProvider
             locale={locale}
             source={settings.locale}
-            element={builder.selectedStored}
+            texts={builder.selectedTexts}
             copy={activeCopy}
         >
             <EditorPanel
-                selected={builder.selected}
+                target={
+                    builder.selected === null
+                        ? { kind: "head", head: builder.head }
+                        : { kind: "element", element: builder.selected }
+                }
                 elements={builder.elements}
                 keys={builder.keys}
                 insetHeader={asSheet}
                 onChange={builder.replace}
+                onHeadChange={builder.replaceHead}
                 onDuplicate={() => {
-                    if (builder.selectedId === null) return;
+                    if (builder.selectedId === HEAD) return;
                     builder.duplicate(builder.selectedId);
                 }}
                 onDelete={() => {
-                    if (builder.selectedId === null) return;
+                    if (builder.selectedId === HEAD) return;
                     builder.remove(builder.selectedId);
                     setSheetOpen(false);
                 }}
@@ -195,7 +221,10 @@ export function BuilderScreen({
     return (
         <CollectedAnswersProvider count={responseCount}>
             <AppBar
-                title={settings.title}
+                // The head as it reads in the language being edited, so the
+                // bar answers a rename immediately and shows the fallback
+                // while a translation is unfinished.
+                title={builder.shownHead.title}
                 metaOnNarrow
                 meta={
                     <SaveIndicator
@@ -272,15 +301,21 @@ export function BuilderScreen({
                     elements={builder.shown}
                     untranslated={untranslated}
                     selectedId={builder.selectedId}
+                    headTitle={builder.shownHead.title}
+                    headSelected={builder.selectedId === HEAD}
+                    headUntranslated={headUntranslated}
+                    onSelectHead={() => select(HEAD)}
                     onSelect={select}
                     onMove={builder.move}
                     className="hidden w-[268px] shrink-0 border-r md:flex"
                 />
 
                 <ElementCanvas
+                    head={builder.shownHead}
                     elements={builder.shown}
                     selectedId={builder.selectedId}
                     onSelect={select}
+                    onSelectHead={() => select(HEAD)}
                     className="flex-1"
                 />
 

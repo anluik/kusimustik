@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    AuthoredSurveyHeadSchema,
+    AuthoredSurveySchema,
     LOCALES,
     SURVEY_STATUSES,
     SurveyElementsSchema,
     SurveySchema
 } from "@/domain/survey";
-import { survey } from "@/domain/test-fixtures";
+import { authoredSurvey, survey } from "@/domain/test-fixtures";
 
 describe("SurveySchema", () => {
     it("round-trips the fixture survey", () => {
@@ -152,5 +154,67 @@ describe("the languages a survey is offered in", () => {
             SurveySchema.safeParse({ ...survey, locales: ["et", "en", "ru"] })
                 .success
         ).toBe(true);
+    });
+});
+
+describe("the two shapes of a survey's own words", () => {
+    it("stores the title as a map and renders it as a string", () => {
+        expect(SurveySchema.safeParse(survey).success).toBe(true);
+        expect(AuthoredSurveySchema.safeParse(authoredSurvey).success).toBe(
+            true
+        );
+    });
+
+    it("refuses each shape the other's title", () => {
+        // The two are built from one pair of field objects, so this is what
+        // would break first if they ever drifted apart.
+        expect(
+            AuthoredSurveySchema.safeParse({
+                ...authoredSurvey,
+                title: "Maine"
+            }).success
+        ).toBe(false);
+        expect(
+            SurveySchema.safeParse({ ...survey, title: { et: "Maine" } })
+                .success
+        ).toBe(false);
+    });
+
+    it("refuses a title written in no language at all", () => {
+        // Not a translation state: a survey nobody can name is a document
+        // nothing can render, and it is what the builder holds its save on.
+        expect(AuthoredSurveyHeadSchema.safeParse({ title: {} }).success).toBe(
+            false
+        );
+        expect(
+            AuthoredSurveyHeadSchema.safeParse({ title: { et: "" } }).success
+        ).toBe(false);
+    });
+
+    it("applies the length limit per language rather than in total", () => {
+        const long = "x".repeat(300);
+        expect(
+            AuthoredSurveyHeadSchema.safeParse({
+                title: { et: long, ru: long }
+            }).success
+        ).toBe(true);
+        expect(
+            AuthoredSurveyHeadSchema.safeParse({
+                title: { et: `${long}x` }
+            }).success
+        ).toBe(false);
+    });
+
+    it("treats an intro nobody has written as absent, not as empty text", () => {
+        expect(
+            AuthoredSurveyHeadSchema.safeParse({ title: { et: "Maine" } })
+                .success
+        ).toBe(true);
+        expect(
+            AuthoredSurveyHeadSchema.safeParse({
+                title: { et: "Maine" },
+                description: {}
+            }).success
+        ).toBe(false);
     });
 });

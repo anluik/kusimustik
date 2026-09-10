@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { SurveyIdSchema } from "@/domain/ids";
-import { resolveElements } from "@/domain/localize";
+import { resolveElements, resolveSurveyTitle } from "@/domain/localize";
 import { requireSessionUser } from "@/lib/auth/session";
 import { listResponses } from "@/lib/db/responses";
 import { getSurvey } from "@/lib/db/surveys";
@@ -63,7 +63,7 @@ export async function GET(
         responses,
         labels
     );
-    const name = csvFileName(record.survey.title, new Date());
+    const name = csvFileName(resolveSurveyTitle(record.survey), new Date());
 
     return new Response(file, {
         headers: {

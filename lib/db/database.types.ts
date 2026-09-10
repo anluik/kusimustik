@@ -272,32 +272,32 @@ export type Database = {
       survey_versions: {
         Row: {
           created_at: string
-          description: string | null
+          description: Json | null
           elements: Json
           locale: string
           locales: string[]
           survey_id: string
-          title: string
+          title: Json
           version: number
         }
         Insert: {
           created_at?: string
-          description?: string | null
+          description?: Json | null
           elements: Json
           locale: string
           locales?: string[]
           survey_id: string
-          title: string
+          title: Json
           version: number
         }
         Update: {
           created_at?: string
-          description?: string | null
+          description?: Json | null
           elements?: Json
           locale?: string
           locales?: string[]
           survey_id?: string
-          title?: string
+          title?: Json
           version?: number
         }
         Relationships: [
@@ -321,7 +321,7 @@ export type Database = {
         Row: {
           closed_at: string | null
           created_at: string
-          description: string | null
+          description: Json | null
           elements: Json
           id: string
           locale: string
@@ -331,7 +331,7 @@ export type Database = {
           published_version: number | null
           slug: string | null
           status: string
-          title: string
+          title: Json
           updated_at: string
           version: number
           wave_group_id: string
@@ -340,7 +340,7 @@ export type Database = {
         Insert: {
           closed_at?: string | null
           created_at?: string
-          description?: string | null
+          description?: Json | null
           elements?: Json
           id?: string
           locale?: string
@@ -350,7 +350,7 @@ export type Database = {
           published_version?: number | null
           slug?: string | null
           status?: string
-          title: string
+          title: Json
           updated_at?: string
           version?: number
           wave_group_id?: string
@@ -359,7 +359,7 @@ export type Database = {
         Update: {
           closed_at?: string | null
           created_at?: string
-          description?: string | null
+          description?: Json | null
           elements?: Json
           id?: string
           locale?: string
@@ -369,7 +369,7 @@ export type Database = {
           published_version?: number | null
           slug?: string | null
           status?: string
-          title?: string
+          title?: Json
           updated_at?: string
           version?: number
           wave_group_id?: string
@@ -421,7 +421,7 @@ export type Database = {
       get_runner_survey: {
         Args: { p_slug: string }
         Returns: {
-          description: string
+          description: Json
           elements: Json
           id: string
           locale: string
@@ -429,7 +429,7 @@ export type Database = {
           published_version: number
           slug: string
           status: string
-          title: string
+          title: Json
           version: number
           wave_group_id: string
           wave_label: string

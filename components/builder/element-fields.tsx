@@ -9,6 +9,7 @@ import {
     useReferenceText,
     useTranslationTarget
 } from "@/components/builder/translation";
+import type { TextPath } from "@/domain/localize";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -211,6 +212,103 @@ function KeyField({
     );
 }
 
+/**
+ * One translated text field, and the two rules DECISIONS 031 wrote for every
+ * one of them.
+ *
+ * **The placeholder is the reference text**: the sentence being translated
+ * from, shown in grey behind an empty field rather than in a second column the
+ * panel has no room for. **A blank is an error only when no language has the
+ * text**: a title with no Russian is a normal state on the way to a finished
+ * translation and falls back, while a title written in no language at all is a
+ * document nothing can render.
+ *
+ * Both live here rather than at each call site, because the survey's own
+ * header block asks exactly the same two questions of exactly the same
+ * `TextPath`s as a question does — and two copies of this rule would be two
+ * places to get it subtly different.
+ */
+export function TextPathField({
+    id,
+    label,
+    path,
+    value,
+    placeholder,
+    requiredError,
+    onChange
+}: {
+    readonly id: string;
+    readonly label: string;
+    readonly path: TextPath;
+    readonly value: string;
+    /** Shown when no language has this text; the reference wins when one does. */
+    readonly placeholder: string;
+    /** Given only for a field that must be written in *some* language. */
+    readonly requiredError?: string;
+    readonly onChange: (value: string) => void;
+}) {
+    const reference = useReferenceText();
+    const error =
+        requiredError !== undefined &&
+        value.trim() === "" &&
+        reference(path) === undefined
+            ? requiredError
+            : undefined;
+
+    return (
+        <Field id={id} label={label} {...(error !== undefined && { error })}>
+            <Input
+                id={id}
+                value={value}
+                placeholder={reference(path) ?? placeholder}
+                autoComplete="off"
+                aria-invalid={error !== undefined}
+                {...(error !== undefined && {
+                    "aria-describedby": `${id}-error`
+                })}
+                onChange={event => onChange(event.currentTarget.value)}
+                className="h-[30px] rounded text-xs"
+            />
+        </Field>
+    );
+}
+
+/** The same, for the fields that run to a paragraph. Never required. */
+export function TextPathArea({
+    id,
+    label,
+    path,
+    value,
+    placeholder,
+    help,
+    rows = 2,
+    onChange
+}: {
+    readonly id: string;
+    readonly label: string;
+    readonly path: TextPath;
+    readonly value: string;
+    readonly placeholder: string;
+    readonly help?: string;
+    readonly rows?: number;
+    readonly onChange: (value: string) => void;
+}) {
+    const reference = useReferenceText();
+
+    return (
+        <Field id={id} label={label} {...(help !== undefined && { help })}>
+            <Textarea
+                id={id}
+                value={value}
+                placeholder={reference(path) ?? placeholder}
+                rows={rows}
+                onChange={event => onChange(event.currentTarget.value)}
+                className="min-h-14 rounded py-1.5 text-xs"
+            />
+        </Field>
+    );
+}
+
 export function ElementFields({
     element,
     siblings,
@@ -232,60 +330,32 @@ export function ElementFields({
     const t = useTranslations("Builder.editor");
     const tErrors = useTranslations("Builder.errors");
 
-    const reference = useReferenceText();
-
-    const titleError =
-        element.title.trim() === "" && reference("title") === undefined
-            ? tErrors("titleRequired")
-            : undefined;
-
     return (
         <>
-            <Field
+            <TextPathField
                 id={fieldId(element, "title")}
                 label={titleLabel}
-                {...(titleError !== undefined && { error: titleError })}
-            >
-                <Input
-                    id={fieldId(element, "title")}
-                    value={element.title}
-                    placeholder={reference("title") ?? titlePlaceholder}
-                    autoComplete="off"
-                    aria-invalid={titleError !== undefined}
-                    {...(titleError !== undefined && {
-                        "aria-describedby": `${fieldId(element, "title")}-error`
-                    })}
-                    onChange={event => {
-                        const title = event.currentTarget.value;
-                        onChange({
-                            ...element,
-                            title,
-                            key: nextKeyFor(element, title, siblings, keys)
-                        });
-                    }}
-                    className="h-[30px] rounded text-xs"
-                />
-            </Field>
+                path="title"
+                value={element.title}
+                placeholder={titlePlaceholder}
+                requiredError={tErrors("titleRequired")}
+                onChange={title =>
+                    onChange({
+                        ...element,
+                        title,
+                        key: nextKeyFor(element, title, siblings, keys)
+                    })
+                }
+            />
 
-            <Field
+            <TextPathArea
                 id={fieldId(element, "description")}
                 label={t("descriptionLabel")}
-            >
-                <Textarea
-                    id={fieldId(element, "description")}
-                    value={element.description ?? ""}
-                    placeholder={
-                        reference("description") ?? t("descriptionPlaceholder")
-                    }
-                    rows={2}
-                    onChange={event =>
-                        onChange(
-                            withDescription(element, event.currentTarget.value)
-                        )
-                    }
-                    className="min-h-14 rounded py-1.5 text-xs"
-                />
-            </Field>
+                path="description"
+                value={element.description ?? ""}
+                placeholder={t("descriptionPlaceholder")}
+                onChange={value => onChange(withDescription(element, value))}
+            />
 
             <KeyField
                 element={element}

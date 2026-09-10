@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { localizedText } from "@/domain/content";
 
 import { authorElement } from "@/domain/localize";
 import type { SurveyElement } from "@/domain/question";
@@ -57,7 +58,7 @@ beforeAll(async () => {
     owner = await createTestUser("projection");
     survey = await createSurvey(owner.db, {
         ownerId: owner.id,
-        title: "Projection",
+        title: localizedText("et", "Projection"),
         elements: stored([intro, role, recommend, city])
     });
 });
@@ -205,7 +206,7 @@ describe("survey_questions follows the elements column", () => {
         // could clear. See the 20260908120000 migration.
         const fresh = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Key handover",
+            title: localizedText("et", "Key handover"),
             elements: stored([shortTextQuestion("linn")])
         });
         const replacement = shortTextQuestion("linn");
@@ -233,7 +234,7 @@ describe("survey_questions follows the elements column", () => {
         // the backstop for a client that does not.
         const fresh = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Reserved key",
+            title: localizedText("et", "Reserved key"),
             elements: stored([npsQuestion("recommend")])
         });
         const answered = fresh.survey.elements[0];
@@ -270,7 +271,7 @@ describe("survey_questions follows the elements column", () => {
         const question = npsQuestion("recommend");
         const fresh = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Translated",
+            title: localizedText("et", "Translated"),
             locale: "et",
             elements: [
                 {
@@ -300,7 +301,7 @@ describe("survey_questions follows the elements column", () => {
     it("falls back when the survey's own language is the one that is missing", async () => {
         const fresh = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Untranslated",
+            title: localizedText("et", "Untranslated"),
             locale: "ru",
             elements: [
                 {
@@ -319,7 +320,7 @@ describe("survey_questions follows the elements column", () => {
         const id = survey.survey.id;
         const doomed = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Doomed",
+            title: localizedText("et", "Doomed"),
             elements: stored([npsQuestion("recommend")])
         });
         await owner.db.from("surveys").delete().eq("id", doomed.survey.id);

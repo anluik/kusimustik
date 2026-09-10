@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { localizedText } from "@/domain/content";
 
 import { duplicateSurvey } from "@/domain/duplicate";
 import { SurveySlugSchema } from "@/domain/survey";
@@ -51,7 +52,7 @@ afterAll(async () => {
 async function draft(title: string): Promise<SurveyRecord> {
     return createSurvey(owner.db, {
         ownerId: owner.id,
-        title,
+        title: localizedText("et", title),
         elements: stored([npsQuestion("recommend"), shortTextQuestion("city")])
     });
 }
@@ -82,7 +83,7 @@ describe("publishing", () => {
     it("collides across owners too, since the link space is global", async () => {
         const theirs = await createSurvey(other.db, {
             ownerId: other.id,
-            title: "Tööandja maine uuring",
+            title: localizedText("et", "Tööandja maine uuring"),
             elements: stored([npsQuestion("recommend")])
         });
         const published = await publishSurveyDerivingSlug(other.db, theirs);
@@ -123,7 +124,7 @@ describe("publishing", () => {
             owner.db,
             survey.survey.id,
             published.version,
-            { title: "Hoopis teine nimi" }
+            { title: localizedText("et", "Hoopis teine nimi") }
         );
 
         expect(renamed.survey.slug).toBe(slug);
@@ -134,7 +135,7 @@ describe("survey_stats", () => {
     it("counts answerable elements and excludes statements", async () => {
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Loendamine",
+            title: localizedText("et", "Loendamine"),
             elements: stored([
                 statementElement("intro"),
                 npsQuestion("recommend"),
@@ -152,7 +153,7 @@ describe("survey_stats", () => {
         const city = shortTextQuestion("city");
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Vastuste loendamine",
+            title: localizedText("et", "Vastuste loendamine"),
             elements: stored([recommend, city])
         });
         const published = await publishSurveyDerivingSlug(owner.db, survey);
@@ -202,7 +203,7 @@ describe("duplication as the next wave", () => {
         const recommend = npsQuestion("recommend");
         const source = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Iga-aastane uuring",
+            title: localizedText("et", "Iga-aastane uuring"),
             waveLabel: "2025",
             elements: stored([role, recommend])
         });
@@ -242,7 +243,7 @@ describe("deletion", () => {
         const recommend = npsQuestion("recommend");
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Kustutatav",
+            title: localizedText("et", "Kustutatav"),
             elements: stored([recommend])
         });
         await publishSurveyDerivingSlug(owner.db, survey);
@@ -296,7 +297,7 @@ describe("survey locales", () => {
     it("defaults to the language the survey is written in", async () => {
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Ainult eesti keeles",
+            title: localizedText("et", "Ainult eesti keeles"),
             locale: "et"
         });
 
@@ -316,7 +317,7 @@ describe("survey locales", () => {
                 .from("surveys")
                 .insert({
                     owner_id: owner.id,
-                    title: "Kolmes keeles",
+                    title: { en: "Kolmes keeles" },
                     locale: "en",
                     locales: ["ru", "ru", "et"]
                 })
@@ -330,7 +331,7 @@ describe("survey locales", () => {
     it("puts the new authoring language back into the set", async () => {
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Keelevahetus",
+            title: localizedText("et", "Keelevahetus"),
             locale: "et"
         });
 
@@ -347,7 +348,7 @@ describe("survey locales", () => {
     it("counts as a definition change, because the runner's picker follows it", async () => {
         const survey = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Uus keel",
+            title: localizedText("et", "Uus keel"),
             locale: "et"
         });
 

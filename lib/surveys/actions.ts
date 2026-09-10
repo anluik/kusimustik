@@ -3,14 +3,16 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 
+import { localizedText } from "@/domain/content";
 import { duplicateSurvey } from "@/domain/duplicate";
 import { SurveyIdSchema } from "@/domain/ids";
 import type { SurveyId } from "@/domain/ids";
 import { AuthoredElementSchema } from "@/domain/question";
 import {
+    AuthoredSurveyDescriptionSchema,
     AuthoredSurveySchema,
+    AuthoredSurveyTitleSchema,
     LOCALES,
-    SurveyDescriptionSchema,
     SurveyLocalesSchema,
     SurveyTitleSchema,
     WaveLabelSchema
@@ -54,9 +56,6 @@ const CreateInputSchema = z.object({
 });
 export type CreateSurveyInput = z.input<typeof CreateInputSchema>;
 
-const RenameInputSchema = IdInputSchema.extend({ title: SurveyTitleSchema });
-export type RenameSurveyInput = z.input<typeof RenameInputSchema>;
-
 const DuplicateInputSchema = IdInputSchema.extend({
     /** Empty means "no label"; the copy then simply has none. */
     waveLabel: WaveLabelSchema.nullable()
@@ -97,7 +96,10 @@ export async function createSurveyAction(
         const db = await createServerDb();
         const created = await createSurvey(db, {
             ownerId: user.id,
-            title: parsed.data.title,
+            // Authored rather than merged: the dialog asks which language the
+            // survey is being written in, and a survey that does not exist yet
+            // has no translation to merge into.
+            title: localizedText(parsed.data.locale, parsed.data.title),
             locale: parsed.data.locale
         });
 
@@ -106,48 +108,36 @@ export async function createSurveyAction(
     });
 }
 
-export async function renameSurveyAction(
-    input: RenameSurveyInput
-): Promise<SurveyActionResult> {
-    return runAction("failed", async () => {
-        const parsed = RenameInputSchema.safeParse(input);
-        if (!parsed.success) return failed("invalidInput");
+// There is deliberately no rename action. A survey's title is content now, not
+// metadata: it is the header block at the top of the builder and it saves with
+// the rest of the document. A one-field dialog reachable from the survey list
+// could only ever write one language, and writing the column outright would
+// replace every translation of the title with a single string — silently, from
+// a menu item labelled "rename". Deleting it leaves exactly one writer, so the
+// mistake has nowhere to happen. See docs/DECISIONS.md 034.
 
-        const found = await withSurvey(parsed.data.surveyId);
-        if (!found.ok) return failed(found.error);
-
-        try {
-            await updateSurveyDefinition(
-                found.db,
-                parsed.data.surveyId,
-                found.record.version,
-                { title: parsed.data.title }
-            );
-        } catch (error) {
-            // Another tab saved between the read above and this write. The
-            // owner refetches and tries again rather than clobbering it.
-            if (error instanceof DbConflictError) return failed("conflict");
-            throw error;
-        }
-
-        refresh();
-        return ok(undefined);
-    });
-}
-
-const SaveElementsInputSchema = IdInputSchema.extend({
+const SaveDocumentInputSchema = IdInputSchema.extend({
     /** The version the builder last read; see `updateSurveyDefinition`. */
     expectedVersion: z.int().positive(),
+    title: AuthoredSurveyTitleSchema,
+    /** Null means "no intro"; the runner then shows none. */
+    description: AuthoredSurveyDescriptionSchema.nullable(),
     elements: z.array(AuthoredElementSchema)
 });
-export type SaveSurveyElementsInput = z.input<typeof SaveElementsInputSchema>;
+export type SaveSurveyDocumentInput = z.input<typeof SaveDocumentInputSchema>;
 
 /**
- * The builder's autosave.
+ * The builder's autosave: the survey's own head and every element, together.
  *
- * The document is re-parsed twice on purpose: once as an array of elements,
- * and once as the whole survey it would become, because the rules that matter
- * most here — no two questions sharing a `key`, none sharing an `id` — are
+ * They travel as one because the author edits them as one. The header block is
+ * the first thing in the element list and its fields are in the same panel as
+ * a question's (docs/DECISIONS.md 034), so a separate save for the title would
+ * be a second version token, a second dirty state and a second thing that can
+ * fail — on a surface whose whole promise is that it saves itself.
+ *
+ * The document is re-parsed twice on purpose: once field by field above, and
+ * once as the whole survey it would become, because the rules that matter most
+ * here — no two questions sharing a `key`, none sharing an `id` — are
  * survey-level and live on `AuthoredSurveySchema`. A client that skipped the
  * builder entirely gets the same answer as one that used it.
  *
@@ -161,13 +151,15 @@ export type SaveSurveyElementsInput = z.input<typeof SaveElementsInputSchema>;
  * other, and the new version comes back so the builder can carry on saving
  * without a refetch. Nothing is revalidated: this fires while the owner is
  * typing, and refreshing the router under an open editor on every keystroke's
- * worth of debounce would be all cost.
+ * worth of debounce would be all cost. The price is that the survey list can
+ * show a title one navigation stale — the same staleness its question count
+ * and its "muudetud" timestamp have always had.
  */
-export async function saveSurveyElementsAction(
-    input: SaveSurveyElementsInput
+export async function saveSurveyDocumentAction(
+    input: SaveSurveyDocumentInput
 ): Promise<SurveyActionResult<{ version: number }>> {
     return runAction("failed", async () => {
-        const parsed = SaveElementsInputSchema.safeParse(input);
+        const parsed = SaveDocumentInputSchema.safeParse(input);
         if (!parsed.success) return failed("invalidInput");
 
         const found = await withSurvey(parsed.data.surveyId);
@@ -175,6 +167,10 @@ export async function saveSurveyElementsAction(
 
         const candidate = AuthoredSurveySchema.safeParse({
             ...found.record.survey,
+            title: parsed.data.title,
+            ...(parsed.data.description !== null && {
+                description: parsed.data.description
+            }),
             elements: parsed.data.elements
         });
         if (!candidate.success) return failed("invalidInput");
@@ -184,7 +180,11 @@ export async function saveSurveyElementsAction(
                 found.db,
                 parsed.data.surveyId,
                 parsed.data.expectedVersion,
-                { elements: candidate.data.elements }
+                {
+                    title: candidate.data.title,
+                    description: parsed.data.description,
+                    elements: candidate.data.elements
+                }
             );
             return ok({ version: saved.version });
         } catch (error) {
@@ -197,9 +197,6 @@ export async function saveSurveyElementsAction(
 const SettingsInputSchema = IdInputSchema.extend({
     /** The version the builder last read; see `updateSurveyDefinition`. */
     expectedVersion: z.int().positive(),
-    title: SurveyTitleSchema,
-    /** Empty means "no description"; the runner then shows none. */
-    description: SurveyDescriptionSchema.nullable(),
     locale: z.literal(LOCALES),
     /** Every language the survey is offered in; always includes `locale`. */
     locales: SurveyLocalesSchema,
@@ -209,21 +206,23 @@ const SettingsInputSchema = IdInputSchema.extend({
 export type SaveSurveySettingsInput = z.input<typeof SettingsInputSchema>;
 
 /**
- * The survey-level settings the builder owns: its title, the language it is
- * written in, the languages it is offered in, and which wave of its group it
- * is.
+ * The survey-level settings the builder owns: the language it is written in,
+ * the languages it is offered in, and which wave of its group it is.
+ *
+ * Its title and its intro used to be here and are not any more — they are
+ * respondent-facing content, so they are the header block at the top of the
+ * document and they save with it (docs/DECISIONS.md 034). What is left is
+ * genuinely settings: three things about the survey rather than three things
+ * it says.
  *
  * It carries `expectedVersion` and returns the new one for the same reason
- * the autosave does — the title and the locale are part of the definition, so
- * saving them bumps the version out from under the builder, which would then
- * lose its next autosave to a conflict it did not cause.
+ * the autosave does — the locale is part of the definition, so saving it bumps
+ * the version out from under the builder, which would then lose its next
+ * autosave to a conflict it did not cause.
  *
  * `waveLabel` is deliberately not part of the definition: it names a wave for
  * comparison rather than changing what a respondent is asked, so editing it
  * alone leaves the version — and therefore the published snapshot — alone.
- *
- * The description *is* part of it: the runner renders it above the first
- * question, so changing it changes what a respondent reads.
  */
 export async function saveSurveySettingsAction(
     input: SaveSurveySettingsInput
@@ -235,23 +234,18 @@ export async function saveSurveySettingsAction(
         const found = await withSurvey(parsed.data.surveyId);
         if (!found.ok) return failed(found.error);
 
-        // An emptied description is *no* description rather than an empty
-        // string, the same rule `element-patch.ts` follows one level down: the
-        // survey is JSONB read back through `AuthoredSurveySchema`, where
-        // absent and present-but-empty are different things. Null on the wire,
-        // absent in the document, and `null` in the patch so the column is
-        // cleared.
-        //
         // Changing the locale does not re-key the document's text: the words
         // stay where the author put them and `resolveSurvey` falls back to
         // them, so the survey reads exactly as it did before the switch.
         // Dropping a language does not delete its translations either — the
         // author can put it back and find their work where they left it, and
         // the alternative is a switch that silently destroys a week of it.
+        //
+        // The head is spread through from the server's own record, untouched:
+        // this action does not edit the survey's words and must not be a place
+        // one could be lost.
         const candidate = AuthoredSurveySchema.safeParse({
             ...found.record.survey,
-            title: parsed.data.title,
-            description: parsed.data.description ?? undefined,
             locale: parsed.data.locale,
             locales: parsed.data.locales,
             ...(parsed.data.waveLabel !== null && {
@@ -266,8 +260,6 @@ export async function saveSurveySettingsAction(
                 parsed.data.surveyId,
                 parsed.data.expectedVersion,
                 {
-                    title: candidate.data.title,
-                    description: parsed.data.description,
                     locale: candidate.data.locale,
                     locales: candidate.data.locales,
                     waveLabel: parsed.data.waveLabel
@@ -275,8 +267,8 @@ export async function saveSurveySettingsAction(
             );
 
             // Unlike the autosave, this is a deliberate submit and not a
-            // keystroke: the app bar title, the survey list and the runner's
-            // language all follow from it.
+            // keystroke: the survey list and the runner's language both follow
+            // from it.
             refresh();
             return ok({ version: saved.version });
         } catch (error) {

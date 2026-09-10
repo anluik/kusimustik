@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { SurveyLocale } from "@/domain/content";
 import { duplicateSurvey } from "@/domain/duplicate";
+import type { AuthoredSurvey } from "@/domain/survey";
 import { AuthoredSurveySchema } from "@/domain/survey";
 import { authoredSurvey as survey } from "@/domain/test-fixtures";
 
@@ -52,10 +53,26 @@ describe("duplicateSurvey", () => {
     });
 
     it("keeps the source title unless one is given — a new wave is the same survey", () => {
-        expect(copy.title).toBe(survey.title);
+        expect(copy.title).toEqual(survey.title);
         expect(
-            duplicateSurvey(survey, { title: "Product feedback (2027)" }).title
-        ).toBe("Product feedback (2027)");
+            duplicateSurvey(survey, {
+                title: { et: "Product feedback (2027)" }
+            }).title
+        ).toEqual({ et: "Product feedback (2027)" });
+    });
+
+    it("carries every language of the title into the next wave", () => {
+        // The whole reason the option is locale-keyed: a survey translated
+        // into three is duplicated in three, not reduced to one.
+        const multilingual: AuthoredSurvey = {
+            ...survey,
+            locales: ["et", "ru"],
+            title: { et: "Maine", ru: "Репутация" }
+        };
+        expect(duplicateSurvey(multilingual).title).toEqual({
+            et: "Maine",
+            ru: "Репутация"
+        });
     });
 
     it("takes a new wave label, and drops the old one when asked", () => {

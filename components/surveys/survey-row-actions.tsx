@@ -7,7 +7,6 @@ import { useState } from "react";
 
 import { ConfirmActionDialog } from "@/components/surveys/confirm-action-dialog";
 import { DuplicateSurveyDialog } from "@/components/surveys/duplicate-survey-dialog";
-import { RenameSurveyDialog } from "@/components/surveys/rename-survey-dialog";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -25,7 +24,7 @@ import {
 } from "@/lib/surveys/actions";
 import type { SurveyListItem } from "@/lib/surveys/list";
 
-type RowDialog = "duplicate" | "rename" | "publish" | "close" | "delete";
+type RowDialog = "duplicate" | "publish" | "close" | "delete";
 
 /**
  * DESIGN.md §5: one actions menu serves both row kinds, and only the first
@@ -82,12 +81,6 @@ export function SurveyRowActions({
                         onSelect={() => setDialog("duplicate")}
                     >
                         {isWave ? t("newWave") : t("duplicate")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                        className="rounded text-xs"
-                        onSelect={() => setDialog("rename")}
-                    >
-                        {t("rename")}
                     </DropdownMenuItem>
                     {/* DESIGN §6: an item that is contextually unavailable
                         stays in the menu rather than disappearing, so the
@@ -148,13 +141,6 @@ export function SurveyRowActions({
                 isWave={isWave}
                 open={dialog === "duplicate"}
                 onOpenChange={open => setDialog(open ? "duplicate" : null)}
-            />
-
-            <RenameSurveyDialog
-                surveyId={survey.id}
-                currentTitle={survey.title}
-                open={dialog === "rename"}
-                onOpenChange={open => setDialog(open ? "rename" : null)}
             />
 
             <ConfirmActionDialog

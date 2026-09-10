@@ -2,17 +2,23 @@ import { z } from "zod";
 
 import type { SurveyId, WaveGroupId } from "@/domain/ids";
 import { QuestionIdSchema, SurveyIdSchema } from "@/domain/ids";
-import { resolveSurvey } from "@/domain/localize";
+import {
+    resolveHead,
+    resolveSurvey,
+    resolveSurveyTitle
+} from "@/domain/localize";
 import type { AuthoredElement } from "@/domain/question";
 import { AuthoredElementSchema, ELEMENT_TYPES } from "@/domain/question";
+import type { LocalizedText } from "@/domain/content";
 import type { AuthoredSurvey, Survey, SurveyLocale } from "@/domain/survey";
 import {
+    AuthoredSurveyDescriptionSchema,
     AuthoredSurveySchema,
+    AuthoredSurveyTitleSchema,
     LOCALES,
     SURVEY_STATUSES,
     SurveyLocalesSchema,
     SurveySlugSchema,
-    SurveyTitleSchema,
     WaveLabelSchema
 } from "@/domain/survey";
 import { proposeSlug } from "@/domain/slug";
@@ -92,8 +98,15 @@ export type SurveyQuestion = z.infer<typeof SurveyQuestionSchema>;
 
 export const NewSurveySchema = z.object({
     ownerId: z.uuid(),
-    title: SurveyTitleSchema,
-    description: z.string().max(2000).optional(),
+    /**
+     * The stored shape, not one language of it — `duplicateSurvey` hands its
+     * source's title straight through, and a plain string here would reduce a
+     * survey written in three languages to one on the way into next year's
+     * wave. That is the year-long-fuse data loss DECISIONS 003 exists to
+     * prevent, and 034 keeps it prevented for the head as well.
+     */
+    title: AuthoredSurveyTitleSchema,
+    description: AuthoredSurveyDescriptionSchema.optional(),
     locale: z.literal(LOCALES).default("et"),
     /**
      * Omit and the database fills in `[locale]`: a survey is offered in the
@@ -109,9 +122,10 @@ export type NewSurvey = z.input<typeof NewSurveySchema>;
 
 /** The definition columns as they come back from PostgREST or the public RPC. */
 type DefinitionColumns = {
+    /** Locale-keyed since 20260911120000; parsed by the domain on the way out. */
+    title: unknown;
+    description: unknown;
     id: string;
-    title: string;
-    description: string | null;
     status: string;
     slug: string | null;
     locale: string;
@@ -148,6 +162,43 @@ function surveyInput(row: DefinitionColumns) {
     };
 }
 
+/**
+ * The survey's own words plus the language they are read in, as the row holds
+ * them. Parsed on its own so a *summary* — which has no `elements` and so
+ * cannot go through `AuthoredSurveySchema` — is still held to the same rules.
+ */
+const StoredHeadSchema = z.object({
+    locale: z.literal(LOCALES),
+    title: AuthoredSurveyTitleSchema,
+    description: AuthoredSurveyDescriptionSchema.optional()
+});
+
+/**
+ * The survey's title and intro in the language it was *written* in.
+ *
+ * This is the second place the repository resolves rather than handing back
+ * the stored document, and the reason is the mirror of `getRunnerSurveyBySlug`'s
+ * (docs/DECISIONS.md 030, 034): every consumer of a summary is an owner
+ * surface — the survey list, its row menu, the wave grouping, the search fold
+ * — and every one of them wants the same single answer. The translation is
+ * for the respondent, and the survey's name in the owner's index does not move
+ * when they switch the app's language.
+ */
+function ownLanguage(
+    row: Pick<DefinitionColumns, "id" | "locale" | "title" | "description">
+) {
+    const head = parseRow(
+        StoredHeadSchema,
+        {
+            locale: row.locale,
+            title: row.title,
+            ...(row.description !== null && { description: row.description })
+        },
+        `survey ${row.id}`
+    );
+    return resolveHead(head, head.locale);
+}
+
 function toSurvey(row: DefinitionColumns): AuthoredSurvey {
     return parseRow(AuthoredSurveySchema, surveyInput(row), `survey ${row.id}`);
 }
@@ -170,12 +221,13 @@ function toRecord(row: RecordColumns): SurveyRecord {
 }
 
 function toSummary(row: Omit<RecordColumns, "elements">): SurveySummary {
+    const head = ownLanguage(row);
     return parseRow(
         SurveySummarySchema,
         {
             id: row.id,
-            title: row.title,
-            description: row.description,
+            title: head.title,
+            description: head.description ?? null,
             status: row.status,
             slug: row.slug,
             locale: row.locale,
@@ -355,8 +407,9 @@ export async function createSurvey(
 }
 
 export type SurveyDefinitionPatch = {
-    readonly title?: string;
-    readonly description?: string | null;
+    /** The stored shape: every language, never one of them. */
+    readonly title?: LocalizedText;
+    readonly description?: LocalizedText | null;
     readonly locale?: Survey["locale"];
     /** The languages the survey is offered in; the trigger normalises them. */
     readonly locales?: readonly Survey["locale"][];
@@ -466,7 +519,11 @@ export async function publishSurveyDerivingSlug(
     db: Db,
     record: SurveyRecord
 ): Promise<SurveyRecord> {
-    const { id, slug, title } = record.survey;
+    const { id, slug } = record.survey;
+    // Derived from the language the survey is *written* in. A slug is
+    // machine-facing and joins nothing to a translation, so adding a Russian
+    // title must not move the public link.
+    const title = resolveSurveyTitle(record.survey);
 
     // Already has one: it is in circulation and is not up for renegotiation.
     if (slug !== null) return publishSurvey(db, id, slug);
