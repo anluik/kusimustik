@@ -20,7 +20,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import {
     Select,
     SelectContent,
@@ -31,26 +30,27 @@ import {
 import { orderLocales } from "@/domain/content";
 import type { SurveyLocale } from "@/domain/content";
 import type { SurveyId } from "@/domain/ids";
-import {
-    SurveyDescriptionSchema,
-    SurveyLocalesSchema,
-    SurveyTitleSchema,
-    WaveLabelSchema
-} from "@/domain/survey";
+import { SurveyLocalesSchema, WaveLabelSchema } from "@/domain/survey";
 import { UI_LOCALES } from "@/lib/i18n/locales";
 import { saveSurveySettingsAction } from "@/lib/surveys/actions";
 import type { SurveyActionError } from "@/lib/surveys/errors";
 
 /**
- * The settings that belong to the survey rather than to any one element: its
- * title, the paragraph shown above the first question, the language it is
- * written in, the languages it is offered in, and which wave of its group it
- * is.
+ * The settings that belong to the survey rather than to anything it says: the
+ * language it is written in, the languages it is offered in, and which wave of
+ * its group it is.
+ *
+ * Its title and the paragraph above the first question used to be here. They
+ * are content, not settings — a respondent reads both — so they are the header
+ * block at the top of the element list now, and they translate and autosave
+ * with the rest of the document (docs/DECISIONS.md 034). Keeping them here
+ * would have meant a second language switcher, inside a dialog that covers the
+ * one in the app bar.
  *
  * A dialog with an explicit submit rather than the panel's keystroke-by-
- * keystroke autosave, because two of the three change what a respondent sees
- * at the public link — and because the save bumps the version, which the
- * builder has to be handed back rather than discover as a conflict.
+ * keystroke autosave, because the language set changes what the public link
+ * offers — and because the save bumps the version, which the builder has to be
+ * handed back rather than discover as a conflict.
  *
  * The schemas are the domain's, not copies: the same rules decide what this
  * form rejects and what the action accepts. An empty wave label is *no* label,
@@ -64,8 +64,6 @@ import type { SurveyActionError } from "@/lib/surveys/errors";
  * until the author writes one. See docs/DECISIONS.md 031.
  */
 const FormSchema = z.object({
-    title: SurveyTitleSchema,
-    description: SurveyDescriptionSchema,
     locale: z.literal(UI_LOCALES),
     locales: SurveyLocalesSchema,
     waveLabel: z.union([WaveLabelSchema, z.literal("")])
@@ -73,8 +71,6 @@ const FormSchema = z.object({
 type FormValues = z.infer<typeof FormSchema>;
 
 export type SurveySettings = {
-    readonly title: string;
-    readonly description: string | undefined;
     readonly locale: FormValues["locale"];
     /** Canonically ordered, and always containing `locale`. */
     readonly locales: readonly SurveyLocale[];
@@ -106,8 +102,6 @@ export function SurveySettingsDialog({
     const [error, setError] = useState<SurveyActionError | null>(null);
 
     const current: FormValues = {
-        title: settings.title,
-        description: settings.description ?? "",
         locale: settings.locale,
         locales: [...settings.locales],
         waveLabel: settings.waveLabel ?? ""
@@ -133,16 +127,11 @@ export function SurveySettingsDialog({
     function onSubmit(values: FormValues) {
         setError(null);
         const waveLabel = values.waveLabel === "" ? null : values.waveLabel;
-        // Empty is *no* description, not an empty paragraph in the runner.
-        const description =
-            values.description.trim() === "" ? null : values.description;
 
         startTransition(async () => {
             const result = await saveSurveySettingsAction({
                 surveyId,
                 expectedVersion: version,
-                title: values.title,
-                description,
                 locale: values.locale,
                 locales: [...values.locales],
                 waveLabel
@@ -155,8 +144,6 @@ export function SurveySettingsDialog({
 
             onSaved(
                 {
-                    title: values.title,
-                    description: description ?? undefined,
                     locale: values.locale,
                     locales: values.locales,
                     waveLabel: waveLabel ?? undefined
@@ -201,41 +188,6 @@ export function SurveySettingsDialog({
                     onSubmit={form.handleSubmit(onSubmit)}
                     className="grid gap-2.5"
                 >
-                    <div className="grid gap-1.5">
-                        {label("survey-settings-title", t("titleLabel"))}
-                        <Input
-                            id="survey-settings-title"
-                            autoFocus
-                            autoComplete="off"
-                            placeholder={t("titlePlaceholder")}
-                            aria-invalid={
-                                form.formState.errors.title !== undefined
-                            }
-                            className="h-[30px] rounded text-xs"
-                            {...form.register("title")}
-                        />
-                    </div>
-
-                    <div className="grid gap-1.5">
-                        {label(
-                            "survey-settings-description",
-                            t("descriptionLabel")
-                        )}
-                        <Textarea
-                            id="survey-settings-description"
-                            rows={3}
-                            placeholder={t("descriptionPlaceholder")}
-                            aria-invalid={
-                                form.formState.errors.description !== undefined
-                            }
-                            className="min-h-16 rounded py-1.5 text-xs"
-                            {...form.register("description")}
-                        />
-                        <p className="text-[11px] leading-[1.35] text-muted-foreground">
-                            {t("descriptionHelp")}
-                        </p>
-                    </div>
-
                     {/* `Controller` rather than `watch()`: the latter returns
                         a function React Compiler cannot memoize, so it opts
                         the whole component out of compilation. One controller

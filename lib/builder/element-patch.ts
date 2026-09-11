@@ -1,3 +1,4 @@
+import type { SurveyHead } from "@/domain/survey";
 import type {
     LongTextQuestion,
     MultiChoiceQuestion,
@@ -29,6 +30,21 @@ export function withDescription(
     value: string
 ): SurveyElement {
     const next: SurveyElement = { ...element };
+    if (value.trim() === "") delete next.description;
+    else next.description = value;
+    return next;
+}
+
+/**
+ * The same rule for the survey's own intro, which is the same kind of optional
+ * paragraph one level up. Written here rather than inlined in the header
+ * block, so "emptied means absent" has one home in the builder.
+ */
+export function withHeadDescription(
+    head: SurveyHead,
+    value: string
+): SurveyHead {
+    const next: SurveyHead = { ...head };
     if (value.trim() === "") delete next.description;
     else next.description = value;
     return next;

@@ -13,7 +13,12 @@ import type {
     ChoiceOption,
     SurveyElement
 } from "@/domain/question";
-import type { AuthoredSurvey, Survey } from "@/domain/survey";
+import type {
+    AuthoredSurvey,
+    AuthoredSurveyHead,
+    Survey,
+    SurveyHead
+} from "@/domain/survey";
 
 /**
  * The two directions between a stored survey and one language of it. Nothing
@@ -90,6 +95,71 @@ type ResolvedReader = {
         value: string | undefined
     ) => LocalizedText | undefined;
 };
+
+// --- The readers ------------------------------------------------------------
+//
+// One per behaviour, and the only place each behaviour is written down. The
+// walkers below say which of a shape's fields are words; these say what to do
+// with one. Keeping them apart is what lets an element and the survey's own
+// head — two entirely different shapes — share every behaviour between them.
+
+/** The language asked for, the survey's own, then whatever was written. */
+const resolvingReader = (
+    locale: SurveyLocale,
+    fallback: SurveyLocale
+): AuthoredReader => ({
+    one: (_path, text) => resolveText(text, locale, fallback),
+    maybe: (_path, text) => resolveOptionalText(text, locale, fallback)
+});
+
+/** Resolving with the fallback switched off; see `projectElement`. */
+const projectingReader = (locale: SurveyLocale): AuthoredReader => ({
+    one: (_path, text) => text[locale] ?? "",
+    maybe: (_path, text) => text?.[locale]
+});
+
+/** Keeps the text rather than reading it; see `elementTexts`. */
+const collectingReader = (
+    into: Map<TextPath, LocalizedText>
+): AuthoredReader => ({
+    one: (path, text) => {
+        into.set(path, text);
+        return "";
+    },
+    maybe: (path, text) => {
+        if (text !== undefined) into.set(path, text);
+        return undefined;
+    }
+});
+
+/** Every string filed under one language and nothing under the others. */
+const authoringReader = (locale: SurveyLocale): ResolvedReader => ({
+    one: (_path, value) => localizedText(locale, value),
+    // An emptied optional field is *no* field, the rule `element-patch.ts`
+    // follows one level down: text nobody wrote is not a translation.
+    maybe: (_path, value) =>
+        value === undefined || value.trim() === ""
+            ? undefined
+            : localizedText(locale, value)
+});
+
+/**
+ * One language written into text that already has others.
+ *
+ * `one` can return the empty map — the last language of a required field
+ * cleared — which no schema accepts. That is deliberate: it is the builder's
+ * signal to hold the save rather than store a document nobody can read.
+ */
+const mergingReader = (
+    texts: ReadonlyMap<TextPath, LocalizedText>,
+    locale: SurveyLocale
+): ResolvedReader => ({
+    one: (path, value) => withLocale(texts.get(path), locale, value),
+    maybe: (path, value) => {
+        const merged = withLocale(texts.get(path), locale, value ?? "");
+        return isEmptyText(merged) ? undefined : merged;
+    }
+});
 
 // --- The two switches -------------------------------------------------------
 
@@ -305,10 +375,34 @@ export function resolveSurvey(
     survey: AuthoredSurvey,
     locale: SurveyLocale = survey.locale
 ): Survey {
+    // Destructured rather than spread whole: the head's stored maps must not
+    // survive into a resolved survey, and a spread would leave them there for
+    // `resolveHead` to overwrite only where it happened to write something.
+    const { title, description, elements, ...rest } = survey;
     return {
-        ...survey,
-        elements: resolveElements(survey.elements, locale, survey.locale)
+        ...rest,
+        ...resolveHead(
+            { title, ...optional("description", description) },
+            locale,
+            survey.locale
+        ),
+        elements: resolveElements(elements, locale, survey.locale)
     };
+}
+
+/**
+ * The survey's name in one language — its own unless told otherwise.
+ *
+ * The one convenience this file exports for a caller that wants a single
+ * string and nothing else: the owner's list, their browser tab, the CSV's
+ * filename. It exists so that none of those has to reach into a
+ * `LocalizedText`, which is the rule the whole file is here to keep.
+ */
+export function resolveSurveyTitle(
+    survey: AuthoredSurvey,
+    locale: SurveyLocale = survey.locale
+): string {
+    return resolveText(survey.title, locale, survey.locale);
 }
 
 export function resolveElements(
@@ -324,10 +418,7 @@ export function resolveElement(
     locale: SurveyLocale,
     fallback: SurveyLocale = locale
 ): SurveyElement {
-    return mapToResolved(element, {
-        one: (_path, text) => resolveText(text, locale, fallback),
-        maybe: (_path, text) => resolveOptionalText(text, locale, fallback)
-    });
+    return mapToResolved(element, resolvingReader(locale, fallback));
 }
 
 // --- Authoring --------------------------------------------------------------
@@ -336,7 +427,15 @@ export function authorSurvey(
     survey: Survey,
     locale: SurveyLocale = survey.locale
 ): AuthoredSurvey {
-    return { ...survey, elements: authorElements(survey.elements, locale) };
+    const { title, description, elements, ...rest } = survey;
+    return {
+        ...rest,
+        ...authorHead(
+            { title, ...optional("description", description) },
+            locale
+        ),
+        elements: authorElements(elements, locale)
+    };
 }
 
 export function authorElements(
@@ -350,15 +449,7 @@ export function authorElement(
     element: SurveyElement,
     locale: SurveyLocale
 ): AuthoredElement {
-    return mapToAuthored(element, {
-        one: (_path, value) => localizedText(locale, value),
-        // An emptied optional field is *no* field, the rule `element-patch.ts`
-        // follows one level down: text nobody wrote is not a translation.
-        maybe: (_path, value) =>
-            value === undefined || value.trim() === ""
-                ? undefined
-                : localizedText(locale, value)
-    });
+    return mapToAuthored(element, authoringReader(locale));
 }
 
 // --- Projecting and merging: the builder's pair ------------------------------
@@ -382,10 +473,7 @@ export function projectElement(
     element: AuthoredElement,
     locale: SurveyLocale
 ): SurveyElement {
-    return mapToResolved(element, {
-        one: (_path, text) => text[locale] ?? "",
-        maybe: (_path, text) => text?.[locale]
-    });
+    return mapToResolved(element, projectingReader(locale));
 }
 
 export function projectElements(
@@ -414,15 +502,7 @@ export function mergeElement(
     edited: SurveyElement,
     locale: SurveyLocale
 ): AuthoredElement {
-    const texts = elementTexts(stored);
-
-    return mapToAuthored(edited, {
-        one: (path, value) => withLocale(texts.get(path), locale, value),
-        maybe: (path, value) => {
-            const merged = withLocale(texts.get(path), locale, value ?? "");
-            return isEmptyText(merged) ? undefined : merged;
-        }
-    });
+    return mapToAuthored(edited, mergingReader(elementTexts(stored), locale));
 }
 
 export function mergeElements(
@@ -439,6 +519,92 @@ export function mergeElements(
     });
 }
 
+// --- The survey's own head --------------------------------------------------
+//
+// The survey's title and the paragraph above the first question. They live in
+// columns rather than in `elements` — the title is what names the survey in
+// the owner's list, in their tab and in the CSV's filename — but they are
+// respondent-facing words, so they are locale-keyed and they translate exactly
+// as an element's do. See docs/DECISIONS.md 034.
+//
+// The two walkers below take no `switch`: the head is not a union, and there
+// is no variant of it that could be forgotten. That is the one thing they do
+// not share with `mapToResolved`, which is written the way it is precisely so
+// that adding an element type breaks this file first.
+//
+// `"title"` and `"description"` are already `TextPath`s, so a head and an
+// element are addressed identically — which is what lets the reference
+// lookups and the untranslated counts below have one body between them.
+
+function mapHeadToResolved(
+    head: AuthoredSurveyHead,
+    text: AuthoredReader
+): SurveyHead {
+    // Built field by field rather than spread over `head`, so that projecting
+    // can make an untranslated description *vanish*: a spread would put the
+    // stored map back after the reader had dropped it.
+    return {
+        title: text.one("title", head.title),
+        ...optional("description", text.maybe("description", head.description))
+    };
+}
+
+function mapHeadToAuthored(
+    head: SurveyHead,
+    text: ResolvedReader
+): AuthoredSurveyHead {
+    return {
+        title: text.one("title", head.title),
+        ...optional("description", text.maybe("description", head.description))
+    };
+}
+
+export function resolveHead(
+    head: AuthoredSurveyHead,
+    locale: SurveyLocale,
+    fallback: SurveyLocale = locale
+): SurveyHead {
+    return mapHeadToResolved(head, resolvingReader(locale, fallback));
+}
+
+export function projectHead(
+    head: AuthoredSurveyHead,
+    locale: SurveyLocale
+): SurveyHead {
+    return mapHeadToResolved(head, projectingReader(locale));
+}
+
+export function authorHead(
+    head: SurveyHead,
+    locale: SurveyLocale
+): AuthoredSurveyHead {
+    return mapHeadToAuthored(head, authoringReader(locale));
+}
+
+/**
+ * One language of the head written back into the stored one.
+ *
+ * As `mergeElement`, and with the same consequence: clearing the last language
+ * of the title yields the empty map, which `AuthoredSurveyHeadSchema` refuses.
+ * That is what holds the builder's save rather than storing a survey with no
+ * name in any language.
+ */
+export function mergeHead(
+    stored: AuthoredSurveyHead,
+    edited: SurveyHead,
+    locale: SurveyLocale
+): AuthoredSurveyHead {
+    return mapHeadToAuthored(edited, mergingReader(headTexts(stored), locale));
+}
+
+export function headTexts(
+    head: AuthoredSurveyHead
+): ReadonlyMap<TextPath, LocalizedText> {
+    const texts = new Map<TextPath, LocalizedText>();
+    mapHeadToResolved(head, collectingReader(texts));
+    return texts;
+}
+
 // --- What the author has and has not written --------------------------------
 
 /**
@@ -453,60 +619,66 @@ export function elementTexts(
     element: AuthoredElement
 ): ReadonlyMap<TextPath, LocalizedText> {
     const texts = new Map<TextPath, LocalizedText>();
-    mapToResolved(element, {
-        one: (path, text) => {
-            texts.set(path, text);
-            return "";
-        },
-        maybe: (path, text) => {
-            if (text !== undefined) texts.set(path, text);
-            return undefined;
-        }
-    });
+    mapToResolved(element, collectingReader(texts));
     return texts;
 }
 
 /**
- * What each of an element's fields says today, for a reader in `locale`.
+ * What each field of whatever is being edited says today, for a reader in
+ * `locale`.
  *
  * The builder shows these as placeholders while translating: the author sees
  * the sentence they are translating *from* in grey behind an empty field,
  * which is the whole of the "without the editor panel doubling in size"
  * requirement in PLAN Phase 12.
+ *
+ * It takes the texts rather than the element they came from, so that the same
+ * body serves an element and the survey's own head — the two are addressed by
+ * the same `TextPath`s, and a second implementation would be a second place to
+ * get the fallback wrong. Callers pass `elementTexts(element)` or
+ * `headTexts(head)`.
  */
 export function referenceTexts(
-    element: AuthoredElement,
+    texts: ReadonlyMap<TextPath, LocalizedText>,
     locale: SurveyLocale,
     fallback: SurveyLocale
 ): ReadonlyMap<TextPath, string> {
     return new Map(
-        [...elementTexts(element)].map(([path, text]) => [
+        [...texts].map(([path, text]) => [
             path,
             resolveText(text, locale, fallback)
         ])
     );
 }
 
-/** How many of an element's fields have no text in `locale`. */
+/** How many of those fields have no text in `locale`. */
 export function missingTranslations(
-    element: AuthoredElement,
+    texts: ReadonlyMap<TextPath, LocalizedText>,
     locale: SurveyLocale
 ): number {
     let missing = 0;
-    for (const text of elementTexts(element).values()) {
+    for (const text of texts.values()) {
         if (text[locale] === undefined) missing += 1;
     }
     return missing;
 }
 
-/** The same, over a whole document. */
+/**
+ * The same over a whole survey — its head and every element.
+ *
+ * Summed per part rather than over one flat map, because the paths only
+ * identify a field *within* a shape: every element has a `"title"`, and so
+ * does the head.
+ */
 export function missingTranslationCount(
+    head: AuthoredSurveyHead,
     elements: readonly AuthoredElement[],
     locale: SurveyLocale
 ): number {
     return elements.reduce(
-        (total, element) => total + missingTranslations(element, locale),
-        0
+        (total, element) =>
+            total + missingTranslations(elementTexts(element), locale),
+        missingTranslations(headTexts(head), locale)
     );
 }
 

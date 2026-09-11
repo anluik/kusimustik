@@ -98,7 +98,6 @@
             "collapse": "Peida lained",
             "duplicate": "Dubleeri",
             "newWave": "Uus laine",
-            "rename": "Nimeta ümber",
             "results": "Vaata tulemusi",
             "publish": "Avalda",
             "publishBlocked": "0 küsimust",
@@ -124,12 +123,6 @@
             "localeLabel": "Küsitluse keel",
             "localeHelp": "Keel, milles vastaja küsitlust näeb. Rakenduse keelt see ei muuda.",
             "submit": "Loo küsitlus"
-        },
-        "rename": {
-            "title": "Nimeta ümber",
-            "body": "Uus nimi on nähtav ka vastajale.",
-            "titleLabel": "Pealkiri",
-            "submit": "Salvesta"
         },
         "duplicate": {
             "title": "Dubleeri küsitlus",
@@ -173,7 +166,8 @@
             "empty": {
                 "title": "Ühtegi küsimust veel pole",
                 "body": "Lisa esimene küsimus. Siin saad neid hiljem ümber tõsta."
-            }
+            },
+            "head": "Küsitluse päis"
         },
         "add": {
             "label": "Lisa küsimus",
@@ -185,7 +179,8 @@
             "empty": {
                 "title": "Eelvaade on tühi",
                 "body": "Lisa küsimus ja näed siin, mida vastaja loeb."
-            }
+            },
+            "headBadge": "Päis"
         },
         "preview": {
             "dropdownPlaceholder": "Vali…",
@@ -222,10 +217,6 @@
             "allowOtherLabel": "Luba oma vastus («Muu»)",
             "otherLabelLabel": "«Muu» silt",
             "otherLabelPlaceholder": "Muu",
-            "empty": {
-                "title": "Ükski element pole valitud",
-                "body": "Vali element vasakult nimekirjast või eelvaatest."
-            },
             "duplicate": "Dubleeri",
             "duplicateLabel": "Dubleeri element «{title}»",
             "keyPlaceholder": "nt rahulolu_uldine",
@@ -277,7 +268,13 @@
             "scaleMinLabel": "Silt alguses ({step})",
             "scaleMaxLabel": "Silt lõpus ({step})",
             "scaleLabelPlaceholder": "nt Ei nõustu üldse",
-            "npsHelp": "NPS-i skaala on alati {min}–{max} ja soovitajad, passiivsed ning mittesoovitajad arvutatakse sellest. Muuta saad ainult sõnastust."
+            "npsHelp": "NPS-i skaala on alati {min}–{max} ja soovitajad, passiivsed ning mittesoovitajad arvutatakse sellest. Muuta saad ainult sõnastust.",
+            "headTitle": "Küsitluse päis",
+            "surveyTitleLabel": "Pealkiri",
+            "surveyTitlePlaceholder": "nt Töötajate rahulolu 2026",
+            "surveyDescriptionLabel": "Tutvustus",
+            "surveyDescriptionPlaceholder": "Paar lauset, mida vastaja loeb enne esimest küsimust",
+            "surveyDescriptionHelp": "Vabatahtlik. Kuvatakse vastajale küsitluse alguses."
         },
         "publish": {
             "publish": "Avalda",
@@ -298,7 +295,8 @@
             "optionRequired": "Valik ei saa olla tühi.",
             "otherLabelRequired": "Sildile tuleb tekst kirjutada.",
             "keyInvalid": "Võti peab algama tähega ning tohib sisaldada ainult väiketähti, numbreid ja alakriipse.",
-            "keyTaken": "See võti kuulub juba mõnele teisele küsimusele."
+            "keyTaken": "See võti kuulub juba mõnele teisele küsimusele.",
+            "surveyTitleRequired": "Küsitlusel peab olema pealkiri."
         },
         "save": {
             "label": "Salvestamise olek",
@@ -331,12 +329,7 @@
         "settings": {
             "label": "Küsitluse seaded",
             "title": "Küsitluse seaded",
-            "body": "Need kehtivad kogu küsitluse kohta, mitte ühe küsimuse kohta.",
-            "titleLabel": "Pealkiri",
-            "titlePlaceholder": "nt Töötajate rahulolu 2026",
-            "descriptionLabel": "Tutvustus",
-            "descriptionPlaceholder": "Paar lauset, mida vastaja loeb enne esimest küsimust",
-            "descriptionHelp": "Vabatahtlik. Kuvatakse vastajale küsitluse alguses.",
+            "body": "Küsitluse keel, keeled ja laine. Pealkirja ja tutvustust muudad päiseplokis, küsimuste kohal.",
             "localeLabel": "Küsitluse keel",
             "localeHelp": "Keel, milles vastaja küsitlust näeb. Rakenduse keelt see ei muuda.",
             "localesLabel": "Küsitluse keeled",

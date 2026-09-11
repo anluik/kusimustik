@@ -98,7 +98,6 @@
             "collapse": "Hide waves",
             "duplicate": "Duplicate",
             "newWave": "New wave",
-            "rename": "Rename",
             "results": "View results",
             "publish": "Publish",
             "publishBlocked": "0 questions",
@@ -124,12 +123,6 @@
             "localeLabel": "Survey language",
             "localeHelp": "The language respondents see the survey in. It does not change the app's language.",
             "submit": "Create survey"
-        },
-        "rename": {
-            "title": "Rename",
-            "body": "The new name is visible to respondents too.",
-            "titleLabel": "Title",
-            "submit": "Save"
         },
         "duplicate": {
             "title": "Duplicate survey",
@@ -173,7 +166,8 @@
             "empty": {
                 "title": "No questions yet",
                 "body": "Add the first question. You can reorder them here later."
-            }
+            },
+            "head": "Survey header"
         },
         "add": {
             "label": "Add question",
@@ -185,7 +179,8 @@
             "empty": {
                 "title": "Nothing to preview",
                 "body": "Add a question and you will see what the respondent reads."
-            }
+            },
+            "headBadge": "Header"
         },
         "preview": {
             "dropdownPlaceholder": "Choose…",
@@ -222,10 +217,6 @@
             "allowOtherLabel": "Allow a written answer (“Other”)",
             "otherLabelLabel": "“Other” label",
             "otherLabelPlaceholder": "Other",
-            "empty": {
-                "title": "Nothing selected",
-                "body": "Pick an element from the list on the left, or from the preview."
-            },
             "duplicate": "Duplicate",
             "duplicateLabel": "Duplicate element “{title}”",
             "keyPlaceholder": "e.g. satisfaction_overall",
@@ -277,7 +268,13 @@
             "scaleMinLabel": "Label at the low end ({step})",
             "scaleMaxLabel": "Label at the high end ({step})",
             "scaleLabelPlaceholder": "e.g. Strongly disagree",
-            "npsHelp": "The NPS scale is always {min}–{max}, and promoters, passives and detractors follow from it. Only the wording is yours to set."
+            "npsHelp": "The NPS scale is always {min}–{max}, and promoters, passives and detractors follow from it. Only the wording is yours to set.",
+            "headTitle": "Survey header",
+            "surveyTitleLabel": "Title",
+            "surveyTitlePlaceholder": "e.g. Employee satisfaction 2026",
+            "surveyDescriptionLabel": "Intro",
+            "surveyDescriptionPlaceholder": "A sentence or two the respondent reads before the first question",
+            "surveyDescriptionHelp": "Optional. Shown to the respondent at the start of the survey."
         },
         "publish": {
             "publish": "Publish",
@@ -298,7 +295,8 @@
             "optionRequired": "An option cannot be empty.",
             "otherLabelRequired": "The label needs some text.",
             "keyInvalid": "A key starts with a letter and holds only lowercase letters, digits and underscores.",
-            "keyTaken": "Another question in this survey already has that key."
+            "keyTaken": "Another question in this survey already has that key.",
+            "surveyTitleRequired": "A survey needs a title."
         },
         "save": {
             "label": "Save status",
@@ -331,12 +329,7 @@
         "settings": {
             "label": "Survey settings",
             "title": "Survey settings",
-            "body": "These apply to the whole survey rather than to one question.",
-            "titleLabel": "Title",
-            "titlePlaceholder": "e.g. Employee satisfaction 2026",
-            "descriptionLabel": "Intro",
-            "descriptionPlaceholder": "A sentence or two the respondent reads before the first question",
-            "descriptionHelp": "Optional. Shown to the respondent at the top of the survey.",
+            "body": "The survey's language, its languages and its wave. The title and intro are edited in the header block, above the questions.",
             "localeLabel": "Survey language",
             "localeHelp": "The language a respondent sees the survey in. It does not change the app's language.",
             "localesLabel": "Survey languages",

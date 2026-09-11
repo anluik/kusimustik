@@ -1,3 +1,4 @@
+import type { LocalizedText } from "@/domain/content";
 import {
     newQuestionId,
     newSurveyId,
@@ -9,8 +10,15 @@ import { AuthoredSurveySchema } from "@/domain/survey";
 import type { AuthoredSurvey } from "@/domain/survey";
 
 export type DuplicateSurveyOptions = {
-    /** Defaults to the source title: a new wave is the same survey, run again. */
-    readonly title?: string;
+    /**
+     * Defaults to the source title: a new wave is the same survey, run again.
+     *
+     * Locale-keyed, like the column it lands in — so a survey written in three
+     * languages is duplicated in three. A plain string here would quietly
+     * reduce next year's wave to one language, which is the year-long-fuse
+     * data loss DECISIONS 003 exists to prevent.
+     */
+    readonly title?: LocalizedText;
     /** A new label for the copy. `null` clears it; omitted keeps the source's. */
     readonly waveLabel?: string | null;
     /**

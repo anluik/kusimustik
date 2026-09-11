@@ -1,3 +1,4 @@
+import { localizedText } from "@/domain/content";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { surveyId as toSurveyId } from "@/domain/ids";
@@ -158,7 +159,7 @@ describe("funnel access control", () => {
         const question = singleChoiceQuestion("q1");
         const created = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Funnel fixture",
+            title: localizedText("et", "Funnel fixture"),
             elements: stored([question, npsQuestion("q2")])
         });
         surveyId = created.survey.id;
@@ -250,7 +251,7 @@ describe("a session that abandoned and then submitted", () => {
         owner = await createTestUser("funnel-abandon");
         const created = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Abandon fixture",
+            title: localizedText("et", "Abandon fixture"),
             elements: stored([singleChoiceQuestion("q1")])
         });
         surveyId = created.survey.id;

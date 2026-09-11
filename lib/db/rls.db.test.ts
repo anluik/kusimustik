@@ -1,3 +1,4 @@
+import { localizedText } from "@/domain/content";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { ResponseId, SurveyId } from "@/domain/ids";
@@ -56,7 +57,7 @@ beforeAll(async () => {
 
     const published = await createSurvey(owner.db, {
         ownerId: owner.id,
-        title: "Published survey",
+        title: localizedText("et", "Published survey"),
         elements: stored([choice, nps])
     });
     publishedSlug = testSlug("published");
@@ -66,14 +67,14 @@ beforeAll(async () => {
 
     const draft = await createSurvey(owner.db, {
         ownerId: owner.id,
-        title: "Draft survey",
+        title: localizedText("et", "Draft survey"),
         elements: stored([draftNps])
     });
     draftId = draft.survey.id;
 
     const closed = await createSurvey(owner.db, {
         ownerId: owner.id,
-        title: "Closed survey",
+        title: localizedText("et", "Closed survey"),
         elements: stored([closedNps])
     });
     closedSlug = testSlug("closed");

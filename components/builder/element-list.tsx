@@ -19,7 +19,8 @@ import {
     useSortable,
     verticalListSortingStrategy
 } from "@dnd-kit/sortable";
-import { GripVertical, TriangleAlert } from "lucide-react";
+import { GripVertical, Heading, TriangleAlert } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -32,6 +33,7 @@ import {
     TooltipTrigger
 } from "@/components/ui/tooltip";
 import type { QuestionId } from "@/domain/ids";
+import type { BuilderSelection } from "@/lib/builder/document";
 import type { SurveyElement } from "@/domain/question";
 import { cn } from "@/lib/utils";
 
@@ -80,24 +82,74 @@ function UntranslatedMark() {
     );
 }
 
+/**
+ * Icon, name, and the untranslated mark. Takes them rather than an element,
+ * because the first row of this list is the survey's own header block, which
+ * has no `type` to look an icon up by.
+ */
 function RowContent({
-    element,
+    icon: Icon,
+    title,
     untranslated
 }: {
-    readonly element: SurveyElement;
-    /** Something on this element has no text in the language being edited. */
+    readonly icon: LucideIcon;
+    readonly title: string;
+    /** Something here has no text in the language being edited. */
     readonly untranslated: boolean;
 }) {
-    const Icon = ELEMENT_ICONS[element.type];
-
     return (
         <>
             <Icon aria-hidden className="size-3.5 shrink-0 text-input" />
             <span className="min-w-0 flex-1 truncate text-xs leading-none">
-                {element.title}
+                {title}
             </span>
             {untranslated && <UntranslatedMark />}
         </>
+    );
+}
+
+/**
+ * The survey's own title and intro, as the first row of the list.
+ *
+ * Above question 1 and outside the sortable context: it is the head, it is
+ * always there and it never moves. Keeping it out of `elements` is also what
+ * keeps every drag index honest — the reorder handlers below index into that
+ * array, so a row prepended to it would land every drop one position out.
+ *
+ * It keeps `ROW`'s `pl-7` despite having no drag handle in that gutter, so its
+ * icon lines up with the questions beneath it.
+ */
+function HeadRow({
+    title,
+    selected,
+    untranslated,
+    onSelect
+}: {
+    readonly title: string;
+    readonly selected: boolean;
+    readonly untranslated: boolean;
+    readonly onSelect: () => void;
+}) {
+    return (
+        <div className="border-b p-2">
+            <button
+                type="button"
+                onClick={onSelect}
+                aria-current={selected}
+                className={cn(
+                    ROW,
+                    "hover:bg-muted focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none",
+                    selected &&
+                        "bg-muted font-medium shadow-[inset_2px_0_0_var(--primary)]"
+                )}
+            >
+                <RowContent
+                    icon={Heading}
+                    title={title}
+                    untranslated={untranslated}
+                />
+            </button>
+        </div>
     );
 }
 
@@ -181,7 +233,11 @@ function ElementRow({
                     isDragging && "text-input"
                 )}
             >
-                <RowContent element={element} untranslated={untranslated} />
+                <RowContent
+                    icon={ELEMENT_ICONS[element.type]}
+                    title={element.title}
+                    untranslated={untranslated}
+                />
             </button>
         </li>
     );
@@ -190,13 +246,23 @@ function ElementRow({
 export function ElementList({
     elements,
     selectedId,
+    headTitle,
+    headSelected,
+    headUntranslated,
+    onSelectHead,
     untranslated,
     onSelect,
     onMove,
     className
 }: {
     readonly elements: readonly SurveyElement[];
-    readonly selectedId: QuestionId | null;
+    readonly selectedId: BuilderSelection;
+    /** The survey's own name, resolved — what the head row shows. */
+    readonly headTitle: string;
+    readonly headSelected: boolean;
+    /** The head has text with no translation in the language being edited. */
+    readonly headUntranslated: boolean;
+    readonly onSelectHead: () => void;
     /** Elements with something still to translate; empty unless translating. */
     readonly untranslated: ReadonlySet<QuestionId>;
     readonly onSelect: (id: QuestionId) => void;
@@ -264,7 +330,17 @@ export function ElementList({
         <div className={cn("flex min-h-0 flex-col bg-sidebar", className)}>
             <PanelHeader
                 title={t("elements.title")}
+                // Still the question count: the head is not one of them.
                 meta={t("elements.count", { count: elements.length })}
+            />
+
+            {/* Outside the branch below, so a survey with no questions yet
+                still shows its own title rather than an empty panel. */}
+            <HeadRow
+                title={headTitle}
+                selected={headSelected}
+                untranslated={headUntranslated}
+                onSelect={onSelectHead}
             />
 
             {elements.length === 0 ? (
@@ -325,7 +401,8 @@ export function ElementList({
                                 )}
                             >
                                 <RowContent
-                                    element={dragging}
+                                    icon={ELEMENT_ICONS[dragging.type]}
+                                    title={dragging.title}
                                     untranslated={untranslated.has(dragging.id)}
                                 />
                             </div>

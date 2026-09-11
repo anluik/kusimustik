@@ -2,14 +2,14 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-import type { SurveyLocale } from "@/domain/content";
+import type { LocalizedText, SurveyLocale } from "@/domain/content";
 import { referenceTexts, type TextPath } from "@/domain/localize";
-import type { AuthoredElement } from "@/domain/question";
 import type { ElementCopy } from "@/lib/builder/element-copy";
 
 /**
- * Which language the editor panel is editing, and what the element being
- * edited says in the language it is being translated from.
+ * Which language the editor panel is editing, and what the thing being edited
+ * — a question, or the survey's own header block — says in the language it is
+ * being translated from.
  *
  * This is the whole of PLAN Phase 12's "without the editor panel doubling in
  * size": the panel keeps its one column of fields and switches which language
@@ -35,15 +35,13 @@ type TranslationTarget = {
     /** Editing anything other than the survey's own language. */
     readonly translating: boolean;
     /**
-     * What each field of the element being edited says to a reader today —
+     * What each field of whatever is being edited says to a reader today —
      * this language if it is written, the survey's own if not.
      */
     readonly reference: ReadonlyMap<TextPath, string>;
     /** The words a new option or label is born with, in `locale`. */
     readonly copy: ElementCopy;
 };
-
-const EMPTY: ReadonlyMap<TextPath, string> = new Map();
 
 /**
  * There is no sensible default for the seed words, so the context holds none:
@@ -55,14 +53,22 @@ const TranslationContext = createContext<TranslationTarget | null>(null);
 export function TranslationProvider({
     locale,
     source,
-    element,
+    texts,
     copy,
     children
 }: {
     readonly locale: SurveyLocale;
     readonly source: SurveyLocale;
-    /** The element the panel is editing; null when nothing is selected. */
-    readonly element: AuthoredElement | null;
+    /**
+     * The stored text of whatever the panel is editing, addressed by path.
+     *
+     * The texts rather than the thing they came from, because the panel edits
+     * two shapes now: a question and the survey's own header block. Both are
+     * keyed by the same `TextPath`s, so this provider does not have to know
+     * which it is looking at — and that is the whole of what it took to give
+     * the header block the translation surface the nine editors already had.
+     */
+    readonly texts: ReadonlyMap<TextPath, LocalizedText>;
     /** The seed words in `locale`; see `lib/builder/element-copy.ts`. */
     readonly copy: ElementCopy;
     readonly children: ReactNode;
@@ -72,13 +78,10 @@ export function TranslationProvider({
             locale,
             source,
             translating: locale !== source,
-            reference:
-                element === null
-                    ? EMPTY
-                    : referenceTexts(element, locale, source),
+            reference: referenceTexts(texts, locale, source),
             copy
         }),
-        [locale, source, element, copy]
+        [locale, source, texts, copy]
     );
 
     return <TranslationContext value={value}>{children}</TranslationContext>;

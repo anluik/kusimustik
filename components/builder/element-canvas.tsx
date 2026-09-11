@@ -9,6 +9,9 @@ import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { QuestionId } from "@/domain/ids";
+import type { SurveyHead } from "@/domain/survey";
+import { HEAD } from "@/lib/builder/document";
+import type { BuilderSelection } from "@/lib/builder/document";
 import { isAnswerableElement, type SurveyElement } from "@/domain/question";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +39,63 @@ import { cn } from "@/lib/utils";
  * button is invalid. The overlay is the last child, so it takes the clicks
  * without the content having to opt out of them.
  */
+
+/**
+ * The survey's own title and intro, drawn as the respondent meets them: first,
+ * above every question. It is the only card with no number and no preview —
+ * there is nothing to answer — and the only one that cannot be moved.
+ *
+ * `data-element-id="head"` rather than a second lookup: the sentinel is a
+ * string precisely so the scroll-into-view effect below stays one query for
+ * both kinds of selection.
+ */
+function HeadCard({
+    head,
+    selected,
+    onSelect
+}: {
+    readonly head: SurveyHead;
+    readonly selected: boolean;
+    readonly onSelect: () => void;
+}) {
+    const t = useTranslations("Builder.canvas");
+
+    return (
+        <li data-element-id={HEAD}>
+            <Card
+                className={cn(
+                    "relative gap-2.5 overflow-visible rounded border py-3 ring-0",
+                    selected && "border-primary ring-[3px] ring-ring/18"
+                )}
+            >
+                {selected && (
+                    <Badge className="absolute -top-2 left-3 h-4 rounded px-1.5 font-mono text-[9px] leading-none tracking-[0.04em] uppercase">
+                        {t("headBadge")}
+                    </Badge>
+                )}
+
+                <div className="flex flex-col gap-1 px-3">
+                    <h2 className="text-[15px] leading-[1.4] font-medium">
+                        {head.title}
+                    </h2>
+                    {head.description !== undefined && (
+                        <p className="text-xs leading-[1.35] text-muted-foreground">
+                            {head.description}
+                        </p>
+                    )}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={onSelect}
+                    aria-label={head.title}
+                    aria-current={selected}
+                    className="absolute inset-0 rounded focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none"
+                />
+            </Card>
+        </li>
+    );
+}
 
 function CanvasCard({
     element,
@@ -118,14 +178,19 @@ function CanvasCard({
 }
 
 export function ElementCanvas({
+    head,
     elements,
     selectedId,
     onSelect,
+    onSelectHead,
     className
 }: {
+    /** The survey's own words, resolved: what a respondent would read today. */
+    readonly head: SurveyHead;
     readonly elements: readonly SurveyElement[];
-    readonly selectedId: QuestionId | null;
+    readonly selectedId: BuilderSelection;
     readonly onSelect: (id: QuestionId) => void;
+    readonly onSelectHead: () => void;
     readonly className?: string;
 }) {
     const t = useTranslations("Builder.canvas");
@@ -147,7 +212,6 @@ export function ElementCanvas({
     // does not move when it does looks like nothing happened. `nearest` leaves
     // a card that is already on screen exactly where it is.
     useEffect(() => {
-        if (selectedId === null) return;
         listRef.current
             ?.querySelector(`[data-element-id="${selectedId}"]`)
             ?.scrollIntoView({ block: "nearest" });
@@ -155,8 +219,28 @@ export function ElementCanvas({
 
     return (
         <div ref={listRef} className={cn("min-w-0 overflow-y-auto", className)}>
-            {elements.length === 0 ? (
-                <div className="mx-auto w-full max-w-[640px] p-4">
+            {/* Always drawn: every survey has a head, so the empty state below
+                follows it rather than replacing the whole canvas. An empty
+                survey now shows its own title instead of nothing. */}
+            <ul className="mx-auto flex w-full max-w-[640px] flex-col gap-3 px-4 pt-4">
+                <HeadCard
+                    head={head}
+                    selected={selectedId === HEAD}
+                    onSelect={onSelectHead}
+                />
+                {elements.map(element => (
+                    <CanvasCard
+                        key={element.id}
+                        element={element}
+                        position={positions.get(element.id) ?? null}
+                        selected={element.id === selectedId}
+                        onSelect={() => onSelect(element.id)}
+                    />
+                ))}
+            </ul>
+
+            <div className="mx-auto w-full max-w-[640px] p-4">
+                {elements.length === 0 && (
                     <div className="overflow-hidden rounded border bg-card">
                         <EmptyState
                             title={t("empty.title")}
@@ -170,20 +254,8 @@ export function ElementCanvas({
                             }
                         />
                     </div>
-                </div>
-            ) : (
-                <ul className="mx-auto flex w-full max-w-[640px] flex-col gap-3 p-4">
-                    {elements.map(element => (
-                        <CanvasCard
-                            key={element.id}
-                            element={element}
-                            position={positions.get(element.id) ?? null}
-                            selected={element.id === selectedId}
-                            onSelect={() => onSelect(element.id)}
-                        />
-                    ))}
-                </ul>
-            )}
+                )}
+            </div>
         </div>
     );
 }

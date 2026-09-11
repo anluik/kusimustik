@@ -6,11 +6,13 @@
 -- between the waves so the charts have something to show; they are derived from
 -- the response number rather than random(), so `pnpm db:reset` is reproducible.
 --
--- Every piece of respondent-facing text in the documents below is a
--- locale-keyed map ({"et": "..."}), which is what surveys.elements holds from
--- the 20260909120000 migration onward. These two waves are Estonian and
--- translated into nothing, which is what the migration left every survey
--- looking like. See docs/DECISIONS.md 030.
+-- Every piece of respondent-facing text below is a locale-keyed map
+-- ({"et": "..."}) — the documents from the 20260909120000 migration onward, and
+-- the surveys' own titles and intros from 20260911120000. These two waves are
+-- Estonian and translated into nothing, which is what those migrations left
+-- every survey looking like. Deliberately single-language: this seed is a
+-- shared fixture that two Playwright projects and the db suite assert on in
+-- parallel. See docs/DECISIONS.md 030 and 034.
 --
 -- Sign in as owner@kusimustik.test / password123.
 
@@ -47,8 +49,8 @@ insert into public.surveys (id, owner_id, title, description, status, slug, loca
                             wave_group_id, wave_label, elements, published_at)
 values ('00000000-0000-4000-8000-0000000000a1',
         '00000000-0000-4000-8000-000000000001',
-        'Teenuse rahulolu-uuring',
-        'Iga-aastane rahulolu-uuring.',
+        '{"et": "Teenuse rahulolu-uuring"}'::jsonb,
+        '{"et": "Iga-aastane rahulolu-uuring."}'::jsonb,
         'published', 'rahulolu-2025', 'et',
         '00000000-0000-4000-8000-00000000000f',
         '2025',
@@ -161,8 +163,8 @@ insert into public.surveys (id, owner_id, title, description, status, slug, loca
                             wave_group_id, wave_label, elements, published_at)
 values ('00000000-0000-4000-8000-0000000000a2',
         '00000000-0000-4000-8000-000000000001',
-        'Teenuse rahulolu-uuring',
-        'Iga-aastane rahulolu-uuring.',
+        '{"et": "Teenuse rahulolu-uuring"}'::jsonb,
+        '{"et": "Iga-aastane rahulolu-uuring."}'::jsonb,
         'published', 'rahulolu-2026', 'et',
         '00000000-0000-4000-8000-00000000000f',
         '2026',

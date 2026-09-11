@@ -55,7 +55,10 @@ beforeAll(async () => {
     owner = await createTestUser("runner-locale");
     survey = await createSurvey(owner.db, {
         ownerId: owner.id,
-        title: "Kakskeelne",
+        // The survey's own words are locale-keyed too (034), and half
+        // translated, which is what the fallback below is about.
+        title: { et: "Kakskeelne", ru: "Двуязычный" },
+        description: { et: "Vastamine võtab kolm minutit." },
         locale: "et",
         locales: ["et", "ru"],
         elements: [both, estonianOnly]
@@ -89,6 +92,18 @@ describe("getRunnerSurveyBySlug", () => {
             "Город",
             "Tänav"
         ]);
+    });
+
+    it("resolves the survey's own title and intro too, not just its questions", async () => {
+        // The bug this whole change exists to fix: an Estonian survey read in
+        // Russian used to be Russian everywhere except the header and the
+        // paragraph above the first question.
+        const found = await getRunnerSurveyBySlug(anonClient(), slug, "ru");
+
+        expect(found?.survey.title).toBe("Двуязычный");
+        // The intro has no Russian, so it falls back to the survey's own
+        // language rather than leaving the page with a blank at the top.
+        expect(found?.survey.description).toBe("Vastamine võtab kolm minutit.");
     });
 
     it("keeps `survey.locale` the language the survey was written in", async () => {

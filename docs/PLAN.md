@@ -275,7 +275,7 @@ Three sessions, not one:
 
 **Done when:** ~~every existing survey still renders identically, the domain tests cover a question with a missing translation falling back to the survey's own locale, and a respondent following `/k/[slug]` to a survey offered in three languages can pick one.~~ **Met.**
 
-**What this phase leaves behind.** A survey's own `title` and `description` are untranslated columns (030) and the runner shows both to the respondent, so a Russian reading of an Estonian survey has Estonian in the header and in the opening paragraph. The workaround is a `statement` element, which is part of the document and translates. Translating the two columns is a schema change with a migration behind it — a decision of its own, as 030 said it would be, and the obvious next thing this phase invites.
+4. ~~The survey's own title and intro.~~ **Done** — DECISIONS 034. They were the one thing 030 left as plain columns, and the runner shows both to the respondent, so a Russian reading of an Estonian survey had Estonian in the header and in the opening paragraph. They are locale-keyed now — and they stopped being *settings*: they are the survey's **header block**, the first row of the element list above question 1, translated and autosaved with the rest of the document. The settings dialog keeps the language the survey is written in, the languages it is offered in, and the wave label; the survey list's rename dialog is gone, which leaves exactly one writer of the title.
 
 ---
 

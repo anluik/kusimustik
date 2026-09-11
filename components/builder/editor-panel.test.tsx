@@ -6,7 +6,7 @@ import { CollectedAnswersProvider } from "@/components/builder/collected-answers
 import { EditorPanel } from "@/components/builder/editor-panel";
 import { TranslationProvider } from "@/components/builder/translation";
 import { MESSAGES, renderWithIntl } from "@/components/test-support";
-import { authorElement } from "@/domain/localize";
+import { authorElement, elementTexts } from "@/domain/localize";
 import type { SurveyLocale } from "@/domain/content";
 import { elementCopy } from "@/lib/builder/element-copy";
 import ruMessages from "@/messages/app/ru.json";
@@ -93,14 +93,15 @@ function StatefulPanel({
             <TranslationProvider
                 locale={locale}
                 source="et"
-                element={authorElement(element, "et")}
+                texts={elementTexts(authorElement(element, "et"))}
                 copy={elementCopy(ELEMENT_COPY, locale)}
             >
                 <EditorPanel
-                    selected={element}
+                    target={{ kind: "element", element }}
                     elements={[element]}
                     keys={{ policy: "derive", reserved: [] }}
                     onChange={setElement}
+                    onHeadChange={() => {}}
                     onDuplicate={() => {}}
                     onDelete={onDelete}
                 />

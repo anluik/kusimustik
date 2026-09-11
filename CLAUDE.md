@@ -31,9 +31,11 @@ pnpm db:reset       # reset local DB and replay migrations + seed
 - **`domain/` imports nothing.** No React, no Supabase, no Next. It is pure functions and schemas. If you need to reach for a dependency there, stop and ask.
 - **Server-side validation is not optional.** Every mutation re-derives its Zod schema server-side and re-parses. Client validation is a UX nicety only.
 - **`id` and `key` are not interchangeable.** `id` identifies a question within one survey and changes on duplication. `key` is stable across duplication and is what wave comparison joins on. Never key analytics, comparison or export column identity on `id`.
-- **A survey's words are locale-keyed; its identifiers are not.** `surveys.elements` holds the *authored* document — every title, description, label and placeholder is a `LocalizedText` map — and `AuthoredSurveySchema` is what the repository parses. One language of it is a *resolved* survey (`SurveySchema`, plain strings), which is what the runner, the aggregator and the exporter read. `domain/localize.ts` is the only thing that maps between them; never reach into a `LocalizedText` yourself. Keys, ids, option values and slugs are never translated. See docs/DECISIONS.md 030.
+- **A survey's words are locale-keyed; its identifiers are not.** The survey's own title and description *and* everything in `surveys.elements` are the *authored* document — every title, description, label and placeholder is a `LocalizedText` map — and `AuthoredSurveySchema` is what the repository parses. One language of it is a *resolved* survey (`SurveySchema`, plain strings), which is what the runner, the aggregator and the exporter read. `domain/localize.ts` is the only thing that maps between them; never reach into a `LocalizedText` yourself. Keys, ids, option values and slugs are never translated. See docs/DECISIONS.md 030.
 
   `surveys.locale` is the language a survey is *written* in and everything's fallback; `surveys.locales` is the set it is *offered* in, always containing `locale` and normalised by `surveys_before_write()`. The builder holds the authored document and edits one language of it: `projectElement` for what the panel binds to, `mergeElement` for what comes back. Never author over a stored document — that replaces every other translation. See docs/DECISIONS.md 031.
+
+  The survey's own title and intro are the **header block**: the first row of the builder's element list, above question 1, edited in the editor panel and autosaved with the elements through `saveSurveyDocumentAction`. They are not settings, and there is exactly one writer of them — see docs/DECISIONS.md 034. Every owner surface resolves them through the survey's own locale (`resolveSurveyTitle`); only the runner resolves through the respondent's.
 
   **A default that lands in the document is content, not chrome.** A new question's title, an option's label, the "other" label: those go into the survey's language, through `lib/builder/element-copy.ts`, never through `useTranslations()` — which speaks the language the *owner* is reading the app in. See docs/DECISIONS.md 032.
 
@@ -81,9 +83,11 @@ components/ui/       shadcn — do not hand-edit, re-run the CLI (one documented
 components/shell/    app shell — sidebar, app bar, empty state, providers
 components/surveys/  the survey list, its row actions and its dialogs
 components/builder/  the three-panel builder — element list, canvas, editor panel;
-                     translation.tsx is the language the panel edits, the
-                     reference text behind its placeholders, and the seed words
-                     anything it creates is born with
+                     survey-head-fields.tsx is the survey's own title and intro,
+                     the header block at the top of the list; translation.tsx is
+                     the language the panel edits, the reference text behind its
+                     placeholders, and the seed words anything it creates is
+                     born with
 components/          app components
 hooks/               use-survey-builder.ts is the builder's document, its autosave
                      and the seam between the stored document and one language of it;

@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { localizedText } from "@/domain/content";
 
 import { waveGroupId } from "@/domain/ids";
 import type { WaveGroupId } from "@/domain/ids";
@@ -140,7 +141,7 @@ describe("a wave group whose questionnaire changed", () => {
 
         first = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Annual survey",
+            title: localizedText("et", "Annual survey"),
             waveLabel: "2025",
             elements: stored([role2025, recommend2025, city2025, extra2025])
         });
@@ -148,7 +149,7 @@ describe("a wave group whose questionnaire changed", () => {
 
         second = await createSurvey(owner.db, {
             ownerId: owner.id,
-            title: "Annual survey, reworded",
+            title: localizedText("et", "Annual survey, reworded"),
             waveGroupId: group,
             waveLabel: "2026",
             elements: stored([role2026, recommend2026, city2026])

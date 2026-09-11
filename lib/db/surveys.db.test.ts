@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { localizedText } from "@/domain/content";
 
 import {
     anonClient,
@@ -39,7 +40,7 @@ beforeAll(async () => {
     owner = await createTestUser("versions");
     survey = await createSurvey(owner.db, {
         ownerId: owner.id,
-        title: "Versioned",
+        title: localizedText("et", "Versioned"),
         elements: stored([recommend])
     });
     slug = testSlug("versioned");
@@ -79,7 +80,7 @@ describe("survey versioning", () => {
     it("refuses a save made against a stale version", async () => {
         await expect(
             updateSurveyDefinition(owner.db, survey.survey.id, 1, {
-                title: "Written over"
+                title: localizedText("et", "Written over")
             })
         ).rejects.toBeInstanceOf(DbConflictError);
     });
@@ -136,7 +137,7 @@ describe("survey versioning", () => {
             owner.db,
             closed.survey.id,
             closed.version,
-            { title: "Edited after closing" }
+            { title: localizedText("et", "Edited after closing") }
         );
         expect(edited.version).toBe(closed.version + 1);
         expect(edited.publishedVersion).toBe(liveVersion);
@@ -147,6 +148,8 @@ describe("survey versioning", () => {
             .eq("survey_id", closed.survey.id)
             .eq("version", liveVersion ?? 0)
             .single();
-        expect(snapshot.data?.title).toBe("Versioned");
+        // The snapshot is locale-keyed too: a wording a respondent answered
+        // against has to be readable in the language they answered in.
+        expect(snapshot.data?.title).toEqual({ et: "Versioned" });
     });
 });

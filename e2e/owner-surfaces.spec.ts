@@ -66,7 +66,16 @@ test("publishing and the link are both reachable without leaving the builder", a
 
     // Nothing to publish yet, so nothing offers to: the empty canvas already
     // says the first question comes next.
-    await expect(page.getByRole("button", { name: /^Avalda/ })).toHaveCount(0);
+    //
+    // Scoped to the app bar, where the control lives: the builder's header
+    // block puts the survey's own name on a row and on a card, and this
+    // survey is called "Avaldamise vool".
+    //
+    // By element rather than by the `banner` role — the bar is inside
+    // `SidebarInset`, which is a `<main>`, so it is not a landmark. It is
+    // still the only `<header>` on the page; the panel headers are `div`s.
+    const bar = page.locator("header");
+    await expect(bar.getByRole("button", { name: /^Avalda/ })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Lisa küsimus" }).click();
     await page.getByRole("menuitem", { name: "Üks valik" }).click();
@@ -74,7 +83,7 @@ test("publishing and the link are both reachable without leaving the builder", a
     // The count is the builder's own, so the control appears without a reload
     // — but it stays unavailable until autosave has put the question on the
     // server, because that is the document publishing acts on.
-    const publish = page.getByRole("button", { name: /^Avalda/ });
+    const publish = bar.getByRole("button", { name: /^Avalda/ });
     await expect(publish).toBeVisible();
     await expect(publish).toBeEnabled();
 
@@ -90,7 +99,7 @@ test("publishing and the link are both reachable without leaving the builder", a
     // Published: the bar hands over the link instead of asking again.
     const link = page.getByRole("textbox", { name: /avalik link/i });
     await expect(link).toHaveValue("/k/avaldamise-vool", { timeout: 15_000 });
-    await expect(page.getByRole("button", { name: /^Avalda/ })).toHaveCount(0);
+    await expect(bar.getByRole("button", { name: /^Avalda/ })).toHaveCount(0);
 });
 
 test("a published survey with nothing to answer asks nobody anything", async ({
@@ -105,7 +114,7 @@ test("a published survey with nothing to answer asks nobody anything", async ({
         .from("surveys")
         .insert({
             owner_id: OWNER_ID,
-            title: "Tühjaks tehtud",
+            title: { et: "Tühjaks tehtud" },
             status: "published",
             slug: "tuhjaks-tehtud",
             locale: "et",

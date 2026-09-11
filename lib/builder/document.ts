@@ -1,8 +1,9 @@
 import { assertNever } from "@/domain/assert-never";
 import type { SurveyLocale } from "@/domain/content";
 import type { QuestionId } from "@/domain/ids";
-import { mergeElement } from "@/domain/localize";
+import { mergeElement, mergeHead } from "@/domain/localize";
 import type { AuthoredElement, SurveyElement } from "@/domain/question";
+import type { AuthoredSurveyHead, SurveyHead } from "@/domain/survey";
 
 /**
  * The builder's document and every edit that can be made to it, as a pure
@@ -25,14 +26,27 @@ import type { AuthoredElement, SurveyElement } from "@/domain/question";
  * without rendering anything.
  */
 
+/**
+ * The survey's own head, as a thing that can be selected.
+ *
+ * A string sentinel rather than a wrapper object, and it cannot collide with
+ * an element: a `QuestionId` is a branded uuid. Being a string is also what
+ * lets the canvas keep one `[data-element-id="..."]` lookup for both.
+ */
+export const HEAD = "head";
+
+export type BuilderSelection = QuestionId | typeof HEAD;
+
 export type BuilderDocument = {
+    /** The survey's title and the paragraph above the first question. */
+    readonly head: AuthoredSurveyHead;
     readonly elements: readonly AuthoredElement[];
-    readonly selectedId: QuestionId | null;
+    readonly selectedId: BuilderSelection;
     readonly revision: number;
 };
 
 export type BuilderAction =
-    | { readonly kind: "select"; readonly id: QuestionId | null }
+    | { readonly kind: "select"; readonly id: BuilderSelection }
     /** Appended at the end and selected, so the editor follows the owner. */
     | { readonly kind: "add"; readonly element: AuthoredElement }
     | { readonly kind: "remove"; readonly id: QuestionId }
@@ -57,18 +71,25 @@ export type BuilderAction =
           readonly kind: "replace";
           readonly element: SurveyElement;
           readonly locale: SurveyLocale;
+      }
+    /** The same, for the survey's own words. See docs/DECISIONS.md 034. */
+    | {
+          readonly kind: "replaceHead";
+          readonly head: SurveyHead;
+          readonly locale: SurveyLocale;
       };
 
-/** The first element is selected, because a builder opening on nothing has
- *  nothing in its editor panel and reads as broken. */
+/**
+ * The head is selected, because it is the first thing in the list and the
+ * first thing a respondent reads. It is also why nothing can be selected any
+ * more: every survey has a head, so the editor panel always has something in
+ * it and the "nothing selected" state it used to open on is gone.
+ */
 export function initialDocument(
+    head: AuthoredSurveyHead,
     elements: readonly AuthoredElement[]
 ): BuilderDocument {
-    return {
-        elements,
-        selectedId: elements[0]?.id ?? null,
-        revision: 0
-    };
+    return { head, elements, selectedId: HEAD, revision: 0 };
 }
 
 /**
@@ -78,9 +99,9 @@ export function initialDocument(
  */
 export function findElement<T extends { readonly id: QuestionId }>(
     elements: readonly T[],
-    id: QuestionId | null
+    id: BuilderSelection
 ): T | null {
-    if (id === null) return null;
+    if (id === HEAD) return null;
     return elements.find(element => element.id === id) ?? null;
 }
 
@@ -116,8 +137,8 @@ export function moveItem<T>(
 function selectionAfterRemoval(
     remaining: readonly AuthoredElement[],
     index: number
-): QuestionId | null {
-    return (remaining[index] ?? remaining[index - 1])?.id ?? null;
+): BuilderSelection {
+    return (remaining[index] ?? remaining[index - 1])?.id ?? HEAD;
 }
 
 export function documentReducer(
@@ -131,6 +152,7 @@ export function documentReducer(
 
         case "add":
             return {
+                ...state,
                 elements: [...state.elements, action.element],
                 selectedId: action.element.id,
                 revision: state.revision + 1
@@ -146,6 +168,7 @@ export function documentReducer(
                 (_, position) => position !== index
             );
             return {
+                ...state,
                 elements,
                 selectedId:
                     state.selectedId === action.id
@@ -162,6 +185,7 @@ export function documentReducer(
             if (index === -1) return state;
 
             return {
+                ...state,
                 elements: [
                     ...state.elements.slice(0, index + 1),
                     action.copy,
@@ -199,6 +223,13 @@ export function documentReducer(
             );
             return { ...state, elements, revision: state.revision + 1 };
         }
+
+        case "replaceHead":
+            return {
+                ...state,
+                head: mergeHead(state.head, action.head, action.locale),
+                revision: state.revision + 1
+            };
 
         default:
             return assertNever(action, "builder action");
