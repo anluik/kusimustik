@@ -12,6 +12,9 @@ import {
     SidebarHeader
 } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/auth/session";
+import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/shell/brand-mark";
+import { LABEL, META, TITLE } from "@/components/type";
 
 /**
  * DESIGN.md §5, "App shell". The workspace header is deliberately not a
@@ -24,16 +27,15 @@ export async function AppSidebar({ user }: { readonly user: SessionUser }) {
 
     return (
         <Sidebar collapsible="icon" className="border-sidebar-border">
-            <SidebarHeader className="h-11 flex-row items-center gap-2 border-b px-3 py-0">
-                <span
-                    aria-hidden
-                    className="size-5 shrink-0 rounded-[3px] bg-primary"
-                />
+            <SidebarHeader className="h-12 flex-row items-center gap-2.5 border-b px-3 py-0">
+                <BrandMark className="text-primary" />
                 <span className="grid min-w-0 group-data-[collapsible=icon]:hidden">
-                    <span className="truncate text-[13px] leading-[1.2] font-semibold">
+                    <span className={cn(TITLE, "truncate")}>
                         {meta("title")}
                     </span>
-                    <span className="truncate font-mono text-[11px] leading-none text-muted-foreground">
+                    <span
+                        className={cn(META, "truncate text-muted-foreground")}
+                    >
                         {t("personalWorkspace")}
                     </span>
                 </span>
@@ -41,7 +43,7 @@ export async function AppSidebar({ user }: { readonly user: SessionUser }) {
 
             <SidebarContent className="px-2 py-3">
                 <SidebarGroup className="gap-2 p-0">
-                    <SidebarGroupLabel className="h-auto px-3 font-mono text-[10px] leading-none tracking-[0.07em] uppercase">
+                    <SidebarGroupLabel className={LABEL}>
                         {t("workspace")}
                     </SidebarGroupLabel>
                     <NavMain />

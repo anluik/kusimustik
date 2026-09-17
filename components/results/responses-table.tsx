@@ -12,7 +12,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { AnswerCell } from "@/components/results/answer-cell";
-import { LABEL, META } from "@/components/results/type";
+import { LABEL, META } from "@/components/type";
 import { Input } from "@/components/ui/input";
 import {
     Table,
@@ -140,7 +140,7 @@ export function ResponsesTable({
                     onChange={event => setQuery(event.target.value)}
                     aria-label={t("search")}
                     placeholder={t("search")}
-                    className="h-[30px] max-w-64 rounded text-xs"
+                    className="h-[30px] max-w-64 rounded-lg text-xs"
                 />
                 <span className={cn(META, "text-muted-foreground")}>
                     {t("rowCount", {
@@ -152,7 +152,7 @@ export function ResponsesTable({
 
             {/* DESIGN: wide content scrolls inside its own container; the page
                 body never scrolls horizontally. */}
-            <div className="overflow-x-auto rounded border">
+            <div className="overflow-x-auto rounded-lg border">
                 <Table>
                     <caption className="sr-only">{t("caption")}</caption>
                     <TableHeader>

@@ -33,6 +33,7 @@ import {
     validateAnswer
 } from "@/lib/runner/validation";
 import { cn } from "@/lib/utils";
+import { DISPLAY } from "@/components/type";
 
 /**
  * The runner. All questions on one page (docs/PLAN.md Phase 6), which is the
@@ -284,7 +285,13 @@ export function RunnerScreen({
                 a11yLabel={t("progressLabel")}
             />
 
-            <main className="mx-auto flex w-full max-w-[640px] flex-1 flex-col gap-3 px-3.5 py-3.5">
+            <main className="mx-auto flex w-full max-w-[620px] flex-1 flex-col gap-3.5 px-4 py-6">
+                {/* The survey's own name, where the respondent meets it: the
+                    header above is 48px of chrome with a count in it, and a
+                    name that only ever appears truncated in a bar is not a
+                    title. DESIGN §4. */}
+                <h1 className={cn(DISPLAY, "text-balance")}>{survey.title}</h1>
+
                 {/* Above the description and every question: a respondent who
                     cannot read the page has to meet this before they meet
                     anything else. It is in the flow rather than in the pinned
@@ -298,7 +305,7 @@ export function RunnerScreen({
                 />
 
                 {survey.description !== undefined && (
-                    <p className="text-[14px] leading-[1.35] text-muted-foreground">
+                    <p className="text-[16px] leading-[1.5] text-pretty text-muted-foreground">
                         {survey.description}
                     </p>
                 )}
@@ -315,7 +322,7 @@ export function RunnerScreen({
                     />
                 ))}
 
-                <p className="text-[14px] leading-[1.35] text-muted-foreground">
+                <p className="text-[14px] leading-[1.45] text-muted-foreground">
                     {t("anonymous")}
                 </p>
 
@@ -323,7 +330,7 @@ export function RunnerScreen({
             </main>
 
             <footer className="sticky bottom-0 border-t bg-survey-background/95 backdrop-blur">
-                <div className="mx-auto flex w-full max-w-[640px] flex-col gap-2 px-3.5 py-3">
+                <div className="mx-auto flex w-full max-w-[620px] flex-col gap-2 px-4 py-3">
                     {(blocked || status.kind === "failed") && (
                         <p
                             role="alert"
@@ -331,7 +338,7 @@ export function RunnerScreen({
                         >
                             <span
                                 aria-hidden
-                                className="mt-1.5 size-1.5 shrink-0 rounded-4xl bg-destructive"
+                                className="mt-1.5 size-1.5 shrink-0 rounded-full bg-destructive"
                             />
                             {status.kind === "failed"
                                 ? errors(status.error)
@@ -345,7 +352,7 @@ export function RunnerScreen({
                         onClick={() => void submit()}
                         disabled={busy || terminal}
                         className={cn(
-                            "min-h-12 w-full rounded-survey text-[15px] font-medium",
+                            "min-h-12 w-full rounded-survey text-[15px] font-medium shadow-xs",
                             "bg-survey-primary text-survey-primary-foreground hover:bg-survey-primary/90"
                         )}
                     >
@@ -414,11 +421,11 @@ function RunnerHeader({
 
     return (
         <header className="sticky top-0 z-10 border-b bg-survey-background/95 backdrop-blur">
-            <div className="mx-auto flex h-13 w-full max-w-[640px] items-center gap-3 px-3.5">
-                <h1 className="min-w-0 flex-1 truncate text-[15px] leading-[1.4] font-medium">
+            <div className="mx-auto flex h-12 w-full max-w-[620px] items-center gap-3 px-4">
+                <p className="min-w-0 flex-1 truncate text-[14px] leading-none font-medium">
                     {title}
-                </h1>
-                <span className="shrink-0 font-mono text-[11px] leading-none text-muted-foreground tabular-nums">
+                </p>
+                <span className="shrink-0 text-[14px] leading-none text-muted-foreground tabular-nums">
                     {label}
                 </span>
             </div>

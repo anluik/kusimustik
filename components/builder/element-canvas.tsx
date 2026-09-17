@@ -14,6 +14,7 @@ import { HEAD } from "@/lib/builder/document";
 import type { BuilderSelection } from "@/lib/builder/document";
 import { isAnswerableElement, type SurveyElement } from "@/domain/question";
 import { cn } from "@/lib/utils";
+import { TAG, TITLE } from "@/components/type";
 
 /**
  * The centre panel: the survey as the respondent will meet it, and the second
@@ -64,22 +65,27 @@ function HeadCard({
         <li data-element-id={HEAD}>
             <Card
                 className={cn(
-                    "relative gap-2.5 overflow-visible rounded border py-3 ring-0",
+                    "relative gap-2.5 overflow-visible rounded-survey border border-border/70 py-3.5 shadow-xs ring-0",
                     selected && "border-primary ring-[3px] ring-ring/18"
                 )}
             >
                 {selected && (
-                    <Badge className="absolute -top-2 left-3 h-4 rounded px-1.5 font-mono text-[9px] leading-none tracking-[0.04em] uppercase">
+                    <Badge
+                        className={cn(
+                            TAG,
+                            "absolute -top-2.5 left-3 h-[20px] rounded-full px-2"
+                        )}
+                    >
                         {t("headBadge")}
                     </Badge>
                 )}
 
                 <div className="flex flex-col gap-1 px-3">
-                    <h2 className="text-[15px] leading-[1.4] font-medium">
+                    <h2 className={cn(TITLE, "text-[20px] text-pretty")}>
                         {head.title}
                     </h2>
                     {head.description !== undefined && (
-                        <p className="text-xs leading-[1.35] text-muted-foreground">
+                        <p className="text-[13px] leading-[1.5] text-pretty text-muted-foreground">
                             {head.description}
                         </p>
                     )}
@@ -90,7 +96,7 @@ function HeadCard({
                     onClick={onSelect}
                     aria-label={head.title}
                     aria-current={selected}
-                    className="absolute inset-0 rounded focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none"
+                    className="absolute inset-0 rounded-survey focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none"
                 />
             </Card>
         </li>
@@ -116,20 +122,25 @@ function CanvasCard({
         <li data-element-id={element.id}>
             <Card
                 className={cn(
-                    "relative gap-2.5 overflow-visible rounded border py-3 ring-0",
+                    "relative gap-2.5 overflow-visible rounded-survey border border-border/70 py-3.5 shadow-xs ring-0",
                     selected && "border-primary ring-[3px] ring-ring/18"
                 )}
             >
                 {selected && (
-                    <Badge className="absolute -top-2 left-3 h-4 rounded px-1.5 font-mono text-[9px] leading-none tracking-[0.04em] uppercase">
+                    <Badge
+                        className={cn(
+                            TAG,
+                            "absolute -top-2.5 left-3 h-[20px] rounded-full px-2"
+                        )}
+                    >
                         {typeName(element.type)}
                     </Badge>
                 )}
 
                 <div className="flex flex-col gap-1 px-3">
-                    <h3 className="text-[15px] leading-[1.4] font-medium">
+                    <h3 className="text-[16px] leading-[1.4] font-medium">
                         {position !== null && (
-                            <span className="mr-1.5 font-mono text-muted-foreground tabular-nums">
+                            <span className="mr-1.5 text-muted-foreground tabular-nums">
                                 {position}.
                             </span>
                         )}
@@ -170,7 +181,7 @@ function CanvasCard({
                     onClick={onSelect}
                     aria-label={element.title}
                     aria-current={selected}
-                    className="absolute inset-0 rounded focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none"
+                    className="absolute inset-0 rounded-lg focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none"
                 />
             </Card>
         </li>
@@ -241,7 +252,7 @@ export function ElementCanvas({
 
             <div className="mx-auto w-full max-w-[640px] p-4">
                 {elements.length === 0 && (
-                    <div className="overflow-hidden rounded border bg-card">
+                    <div className="overflow-hidden rounded-lg border bg-card">
                         <EmptyState
                             title={t("empty.title")}
                             body={t("empty.body")}

@@ -34,13 +34,13 @@ export function ThemeToggle() {
         >
             <TabsList
                 aria-label={t("label")}
-                className="grid h-7 w-full grid-cols-3 rounded p-0.5"
+                className="grid h-7 w-full grid-cols-3 rounded-lg p-0.5"
             >
                 {THEMES.map(option => (
                     <TabsTrigger
                         key={option}
                         value={option}
-                        className="h-6 rounded text-xs leading-none"
+                        className="h-6 rounded-lg text-xs leading-none"
                     >
                         {t(option)}
                     </TabsTrigger>

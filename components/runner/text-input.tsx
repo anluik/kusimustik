@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
  */
 
 const FIELD =
-    "w-full rounded-survey border border-input bg-survey-card px-3 py-2.5 text-[14px] leading-[1.35] outline-none focus-visible:border-survey-primary focus-visible:ring-[3px] focus-visible:ring-ring/18";
+    "w-full rounded-survey border border-input bg-survey-card px-3.5 py-2.5 text-[15px] leading-[1.35] outline-none focus-visible:border-survey-primary focus-visible:ring-[3px] focus-visible:ring-ring/18";
 
 export function ShortTextInput(
     props: InputProps<ShortTextQuestion, AnswerValueFor<"short_text">>
@@ -114,7 +114,7 @@ function TextField<
             {limit !== undefined && (
                 <span
                     className={cn(
-                        "self-end font-mono text-[11px] leading-none tabular-nums",
+                        "self-end text-[14px] leading-none tabular-nums",
                         text.length > limit
                             ? "text-destructive"
                             : "text-muted-foreground"

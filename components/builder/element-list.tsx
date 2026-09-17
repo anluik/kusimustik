@@ -49,7 +49,7 @@ import { cn } from "@/lib/utils";
  */
 
 /** DESIGN §4: a dense row is 32px, and the drag handle may go to 28. */
-const ROW = "flex h-8 w-full items-center gap-2 rounded pr-2 pl-7 text-left";
+const ROW = "flex h-8 w-full items-center gap-2 rounded-lg pr-2 pl-7 text-left";
 
 /**
  * The one thing this row says beyond the element's name: that some of it has
@@ -212,7 +212,7 @@ function ElementRow({
                 ref={setActivatorNodeRef}
                 type="button"
                 aria-label={t("elements.dragHandle", { title: element.title })}
-                className="absolute top-0 left-0 z-10 flex h-8 w-6 cursor-grab touch-none items-center justify-center rounded text-input focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none active:cursor-grabbing"
+                className="absolute top-0 left-0 z-10 flex h-8 w-6 cursor-grab touch-none items-center justify-center rounded-lg text-input focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none active:cursor-grabbing"
                 {...attributes}
                 {...listeners}
             >

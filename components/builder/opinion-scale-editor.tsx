@@ -74,7 +74,7 @@ export function OpinionScaleEditor({
                         )
                     )
                 }
-                className="h-[30px] rounded text-xs"
+                className="h-[30px] rounded-lg text-xs"
             />
         </Field>
     );
@@ -102,16 +102,16 @@ export function OpinionScaleEditor({
                         <SelectTrigger
                             id={fieldId(question, "max")}
                             size="sm"
-                            className="w-full rounded text-xs"
+                            className="w-full rounded-lg text-xs"
                         >
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="rounded">
+                        <SelectContent className="rounded-lg">
                             {LENGTHS.map(length => (
                                 <SelectItem
                                     key={length}
                                     value={String(length)}
-                                    className="rounded text-xs"
+                                    className="rounded-lg text-xs"
                                 >
                                     {t("scaleSteps", {
                                         min: OPINION_SCALE_MIN,

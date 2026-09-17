@@ -43,7 +43,7 @@ export function DropdownInput({
                     )
                 }
                 className={cn(
-                    "min-h-12 w-full appearance-none rounded-survey border border-input bg-survey-card py-2 pr-10 pl-3 text-[14px] leading-[1.35] outline-none",
+                    "min-h-12 w-full appearance-none rounded-survey border border-input bg-survey-card py-2 pr-10 pl-3 text-[15px] leading-[1.35] outline-none",
                     "focus-visible:border-survey-primary focus-visible:ring-[3px] focus-visible:ring-ring/18",
                     chosen === "" && "text-muted-foreground"
                 )}

@@ -22,7 +22,7 @@ export default async function WaveGroupLoading() {
                 label={t("loading")}
                 className={cn("flex flex-col gap-3 p-4", PAGE_WIDTH)}
             >
-                <div className="flex flex-col gap-px overflow-hidden rounded border">
+                <div className="flex flex-col gap-px overflow-hidden rounded-lg border">
                     <Skeleton className="h-[30px] rounded-none" />
                     {Array.from({ length: 3 }, (_, index) => (
                         <Skeleton

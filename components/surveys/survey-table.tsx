@@ -24,6 +24,7 @@ import { ROUTES } from "@/lib/routes";
 import { describeTimestamp } from "@/lib/surveys/format";
 import type { SurveyListItem, SurveyListRow } from "@/lib/surveys/list";
 import { cn } from "@/lib/utils";
+import { LABEL, META, ROW_TITLE, TAG, TITLE } from "@/components/type";
 
 /**
  * The survey list.
@@ -45,7 +46,7 @@ import { cn } from "@/lib/utils";
 /** Columns that give way to the restatement inside the first cell. */
 const WIDE_ONLY = "hidden sm:table-cell";
 
-const MONO_META = "font-mono text-[11px] leading-none text-muted-foreground";
+const MONO_META = cn(META, "text-muted-foreground");
 
 /**
  * The first column, which absorbs whatever width the others do not need.
@@ -64,10 +65,6 @@ const TITLE_LINK =
     // then setting the width of the first column on every screen.
     "min-w-0 truncate rounded-xs hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none";
 
-/** DESIGN §2: the Label level — Mono 10px, uppercase, wide tracking. */
-const COLUMN_LABEL =
-    "h-[30px] bg-muted font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase";
-
 function Dot() {
     return <span aria-hidden>·</span>;
 }
@@ -78,13 +75,18 @@ function MetaLine({ parts }: { readonly parts: readonly ReactNode[] }) {
     if (present.length === 0) return null;
 
     return (
-        <span className={cn(MONO_META, "flex min-w-0 items-center gap-1.5")}>
+        // Wraps rather than truncating each fragment: the column's width no
+        // longer depends on this line (the table is `table-fixed`), and
+        // "lainesee… · 2 lai… · 3 küsim…" told a phone reader nothing.
+        <span
+            className={cn(MONO_META, "flex flex-wrap items-center gap-x-1.5")}
+        >
             {present.map((part, index) => (
                 // The parts are a fixed, ordered set per row kind, so the index
                 // is a stable identity here rather than a placeholder for one.
-                <span key={index} className="flex min-w-0 items-center gap-1.5">
+                <span key={index} className="flex items-center gap-1.5">
                     {index > 0 && <Dot />}
-                    <span className="min-w-0 truncate">{part}</span>
+                    {part}
                 </span>
             ))}
         </span>
@@ -130,7 +132,7 @@ function ResponseCount({ survey }: { readonly survey: SurveyListItem }) {
     const neverCollected = survey.responseCount === 0 && survey.slug === null;
 
     return (
-        <span className="font-mono text-[11px] leading-none tabular-nums">
+        <span className={cn(META, "tabular-nums")}>
             {neverCollected
                 ? t("noResponses")
                 : format.number(survey.responseCount)}
@@ -212,16 +214,13 @@ function StandaloneRow({
     readonly now: Date;
 }) {
     return (
-        <TableRow className="h-[46px] hover:bg-muted">
+        <TableRow className="h-[52px] transition-colors hover:bg-muted">
             <TableCell className={cn("px-3 py-1.5", TITLE_CELL)}>
                 <div className="flex min-w-0 flex-col gap-1">
                     <div className="flex min-w-0 items-center gap-2">
                         <Link
                             href={ROUTES.builder(survey.id)}
-                            className={cn(
-                                TITLE_LINK,
-                                "text-[13px] leading-[1.2] font-medium"
-                            )}
+                            className={cn(TITLE_LINK, TITLE, "text-[15px]")}
                         >
                             {survey.title}
                         </Link>
@@ -265,7 +264,7 @@ function WaveRow({
     const format = useFormatter();
 
     return (
-        <TableRow className="h-[42px] hover:bg-muted">
+        <TableRow className="h-[46px] transition-colors hover:bg-muted">
             {/* DESIGN §3: a nested wave row is 8px of padding plus a 12px
                 indent carried by a border-l rule, so the nesting is structural
                 rather than a guessed margin. */}
@@ -276,7 +275,8 @@ function WaveRow({
                             href={ROUTES.builder(wave.id)}
                             className={cn(
                                 TITLE_LINK,
-                                "w-[8ch] shrink-0 font-mono text-[11px] leading-none"
+                                ROW_TITLE,
+                                "w-[8ch] shrink-0 tabular-nums"
                             )}
                         >
                             {wave.waveLabel ?? t("unlabelledWave")}
@@ -314,7 +314,7 @@ function WaveRow({
                 <SurveyStatusBadge status={wave.status} />
             </TableCell>
             <TableCell className="px-3 text-right">
-                <span className="font-mono text-[11px] leading-none tabular-nums">
+                <span className={cn(META, "tabular-nums")}>
                     {format.number(wave.responseCount)}
                 </span>
             </TableCell>
@@ -345,7 +345,7 @@ function GroupRow({
     if (newest === undefined) return null;
 
     return (
-        <TableRow className="h-[46px] bg-muted/40 hover:bg-muted">
+        <TableRow className="h-[52px] bg-muted/30 transition-colors hover:bg-muted">
             <TableCell className={cn("py-1.5 pr-3 pl-1", TITLE_CELL)}>
                 <div className="flex min-w-0 items-start gap-1">
                     <button
@@ -355,7 +355,7 @@ function GroupRow({
                         aria-label={
                             expanded ? tActions("collapse") : tActions("expand")
                         }
-                        className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none"
+                        className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none"
                     >
                         <ChevronRight
                             aria-hidden
@@ -371,16 +371,16 @@ function GroupRow({
                                 wave is the one an owner means by its name. */}
                             <Link
                                 href={ROUTES.builder(newest.id)}
-                                className={cn(
-                                    TITLE_LINK,
-                                    "text-[13px] leading-[1.2] font-medium"
-                                )}
+                                className={cn(TITLE_LINK, TITLE, "text-[15px]")}
                             >
                                 {row.title}
                             </Link>
                             <Badge
                                 variant="outline"
-                                className="h-5 shrink-0 rounded border-transparent bg-accent px-1.5 font-mono text-[9px] leading-none tracking-[0.04em] text-accent-foreground uppercase"
+                                className={cn(
+                                    TAG,
+                                    "h-5 shrink-0 rounded-lg border-transparent bg-accent px-1.5 text-accent-foreground"
+                                )}
                             >
                                 {t("waveBadge")}
                             </Badge>
@@ -410,7 +410,7 @@ function GroupRow({
                     : t("allClosed")}
             </TableCell>
             <TableCell className="px-3 text-right">
-                <span className="font-mono text-[11px] leading-none font-medium tabular-nums">
+                <span className={cn(META, "font-medium tabular-nums")}>
                     {format.number(row.responseCount)}
                 </span>
             </TableCell>
@@ -425,14 +425,17 @@ function GroupRow({
                         asChild
                         variant="outline"
                         size="sm"
-                        className="h-[26px] rounded px-2 font-mono text-[10px] tracking-[0.04em] uppercase"
+                        className={cn(
+                            LABEL,
+                            "h-[28px] rounded-lg px-2 text-foreground"
+                        )}
                     >
-                        <Link href={ROUTES.compare(row.waveGroupId)}>
+                        <Link
+                            href={ROUTES.compare(row.waveGroupId)}
+                            aria-label={tActions("compare")}
+                        >
                             <GitCompareArrows aria-hidden />
                             <span className="hidden sm:inline">
-                                {tActions("compare")}
-                            </span>
-                            <span className="sr-only sm:hidden">
                                 {tActions("compare")}
                             </span>
                         </Link>
@@ -466,39 +469,41 @@ export function SurveyTable({
     }
 
     return (
-        <Table>
+        <Table
+            // With auto layout a cell's content is its own minimum —
+            // `truncate` inside it does not let it shrink — so a long survey
+            // name held the first column open and pushed the response count
+            // and the row actions past the right edge of a phone. Fixed
+            // layout gives every other column the width declared on its
+            // header and hands the rest to the title, which truncates (§4).
+            className="table-fixed"
+        >
             <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                    <TableHead className={cn(COLUMN_LABEL, "px-3")}>
+                    <TableHead className={cn(LABEL, "px-3")}>
                         {t("survey")}
                     </TableHead>
                     <TableHead
-                        className={cn(
-                            COLUMN_LABEL,
-                            "w-[132px] px-3",
-                            WIDE_ONLY
-                        )}
+                        className={cn(LABEL, "w-[132px] px-3", WIDE_ONLY)}
                     >
                         {t("status")}
                     </TableHead>
                     <TableHead
                         className={cn(
-                            COLUMN_LABEL,
-                            "w-[104px] px-3 text-right"
+                            LABEL,
+                            "w-[76px] px-2 text-right sm:w-[104px] sm:px-3"
                         )}
                     >
                         {t("responses")}
                     </TableHead>
                     <TableHead
-                        className={cn(
-                            COLUMN_LABEL,
-                            "w-[136px] px-3",
-                            WIDE_ONLY
-                        )}
+                        className={cn(LABEL, "w-[136px] px-3", WIDE_ONLY)}
                     >
                         {t("updated")}
                     </TableHead>
-                    <TableHead className={cn(COLUMN_LABEL, "w-[52px] px-2")}>
+                    <TableHead
+                        className={cn(LABEL, "w-[84px] px-2 sm:w-[124px]")}
+                    >
                         <span className="sr-only">{t("actions")}</span>
                     </TableHead>
                 </TableRow>

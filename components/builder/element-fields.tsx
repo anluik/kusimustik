@@ -23,6 +23,7 @@ import {
     withOther,
     withOtherLabel
 } from "@/lib/builder/element-patch";
+import { LABEL } from "@/components/type";
 
 /**
  * The fields every element has: its title, its help text, and — for the eight
@@ -62,9 +63,7 @@ export function EditorSection({
 }) {
     return (
         <div className="flex flex-col gap-2 border-t pt-3">
-            <span className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase">
-                {label}
-            </span>
+            <span className={LABEL}>{label}</span>
             {children}
         </div>
     );
@@ -125,7 +124,7 @@ export function TextPathField({
                     "aria-describedby": `${id}-error`
                 })}
                 onChange={event => onChange(event.currentTarget.value)}
-                className="h-[30px] rounded text-xs"
+                className="h-[30px] rounded-lg text-xs"
             />
         </Field>
     );
@@ -161,7 +160,7 @@ export function TextPathArea({
                 placeholder={reference(path) ?? placeholder}
                 rows={rows}
                 onChange={event => onChange(event.currentTarget.value)}
-                className="min-h-14 rounded py-1.5 text-xs"
+                className="min-h-14 rounded-lg py-1.5 text-xs"
             />
         </Field>
     );
@@ -312,7 +311,7 @@ export function OtherToggle({
                                 )
                             )
                         }
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     />
                 </Field>
             )}

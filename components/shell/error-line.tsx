@@ -17,7 +17,7 @@ export function ErrorLine({ message }: { readonly message: string | null }) {
         >
             <span
                 aria-hidden
-                className="mt-1 size-1.5 shrink-0 rounded-4xl bg-destructive"
+                className="mt-1 size-1.5 shrink-0 rounded-full bg-destructive"
             />
             {message}
         </p>

@@ -22,6 +22,7 @@ import type { SurveyId } from "@/domain/ids";
 import { WaveLabelSchema } from "@/domain/survey";
 import { duplicateSurveyAction } from "@/lib/surveys/actions";
 import type { SurveyActionError } from "@/lib/surveys/errors";
+import { LABEL } from "@/components/type";
 
 /** An empty box means "no label", which is a legitimate answer, not an error. */
 const FormSchema = z.object({
@@ -86,7 +87,7 @@ export function DuplicateSurveyDialog({
                 else close();
             }}
         >
-            <DialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+            <DialogContent className="gap-3 rounded-lg p-3.5 sm:max-w-md">
                 <DialogHeader className="gap-1">
                     <DialogTitle className="text-[13px] leading-[1.2] font-semibold">
                         {isWave ? t("titleWave") : t("title")}
@@ -104,7 +105,7 @@ export function DuplicateSurveyDialog({
                     <div className="grid gap-1.5">
                         <Label
                             htmlFor={`duplicate-${surveyId}`}
-                            className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase"
+                            className={LABEL}
                         >
                             {t("waveLabelLabel")}
                         </Label>
@@ -116,10 +117,10 @@ export function DuplicateSurveyDialog({
                             aria-invalid={
                                 form.formState.errors.waveLabel !== undefined
                             }
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                             {...form.register("waveLabel")}
                         />
-                        <p className="text-[11px] leading-[1.35] text-muted-foreground">
+                        <p className="text-[12px] leading-[1.4] text-muted-foreground">
                             {t("waveLabelHelp")}
                         </p>
                     </div>
@@ -133,7 +134,7 @@ export function DuplicateSurveyDialog({
                             size="sm"
                             disabled={pending}
                             onClick={close}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {tCommon("cancel")}
                         </Button>
@@ -141,7 +142,7 @@ export function DuplicateSurveyDialog({
                             type="submit"
                             size="sm"
                             disabled={pending}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("submit")}
                         </Button>

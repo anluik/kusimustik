@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/lib/auth/actions";
 import { ROUTES } from "@/lib/routes";
+import { cn } from "@/lib/utils";
+import { LABEL, META } from "@/components/type";
 
 /** First letters of the display name, or of the email when there is none. */
 function initials(name: string | null, email: string | null): string {
@@ -40,10 +42,15 @@ export function UserMenu({
         <DropdownMenu>
             <DropdownMenuTrigger
                 aria-label={t("label")}
-                className="flex h-11 w-full items-center gap-2 rounded px-2 text-left outline-none hover:bg-sidebar-accent focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/18"
+                className="flex h-11 w-full items-center gap-2 rounded-lg px-2 text-left outline-none hover:bg-sidebar-accent focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/18"
             >
-                <Avatar className="size-6 shrink-0 rounded">
-                    <AvatarFallback className="rounded bg-accent font-mono text-[10px] text-accent-foreground">
+                <Avatar className="size-6 shrink-0 rounded-lg">
+                    <AvatarFallback
+                        className={cn(
+                            LABEL,
+                            "rounded-lg bg-accent text-accent-foreground"
+                        )}
+                    >
                         {initials(name, email)}
                     </AvatarFallback>
                 </Avatar>
@@ -52,7 +59,12 @@ export function UserMenu({
                         {name ?? email}
                     </span>
                     {name !== null && email !== null && (
-                        <span className="truncate font-mono text-[11px] leading-none text-muted-foreground">
+                        <span
+                            className={cn(
+                                META,
+                                "truncate text-muted-foreground"
+                            )}
+                        >
                             {email}
                         </span>
                     )}
@@ -66,7 +78,7 @@ export function UserMenu({
             <DropdownMenuContent
                 side="top"
                 align="start"
-                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded"
+                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
             >
                 <ThemeMenuItems />
                 <DropdownMenuSeparator />

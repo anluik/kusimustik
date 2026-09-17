@@ -153,7 +153,7 @@ export function EditorPanel({
                             aria-label={t("duplicateLabel", {
                                 title: target.element.title
                             })}
-                            className="h-7 rounded px-1.5 text-xs text-muted-foreground"
+                            className="h-7 rounded-lg px-1.5 text-xs text-muted-foreground"
                         >
                             <Copy aria-hidden />
                             {t("duplicate")}
@@ -198,7 +198,7 @@ export function EditorPanel({
                         aria-label={t("deleteLabel", {
                             title: target.element.title
                         })}
-                        className="h-[30px] w-full justify-start rounded px-1.5 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        className="h-[30px] w-full justify-start rounded-lg px-1.5 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     >
                         <Trash aria-hidden />
                         {t("delete")}
@@ -211,7 +211,7 @@ export function EditorPanel({
                 which closes on click, is right here where
                 `ConfirmActionDialog` could not use it. */}
             <AlertDialog open={confirming} onOpenChange={setConfirming}>
-                <AlertDialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+                <AlertDialogContent className="gap-3 rounded-lg p-3.5 sm:max-w-md">
                     <AlertDialogHeader className="gap-1">
                         <AlertDialogTitle className="text-[13px] leading-[1.2] font-semibold">
                             {t("deleteWarning.title")}
@@ -230,7 +230,7 @@ export function EditorPanel({
                     <AlertDialogFooter className="gap-2">
                         <AlertDialogCancel
                             size="sm"
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("deleteWarning.cancel")}
                         </AlertDialogCancel>
@@ -238,7 +238,7 @@ export function EditorPanel({
                             size="sm"
                             variant="destructive"
                             onClick={onDelete}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("deleteWarning.confirm")}
                         </AlertDialogAction>

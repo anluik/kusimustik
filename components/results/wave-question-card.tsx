@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useWaveName } from "@/components/comparisons/wave-name";
 import { ChartSwitcher } from "@/components/results/chart-switcher";
 import { SummaryBody } from "@/components/results/question-card";
-import { LABEL, META, PANEL_HEAD, TAG } from "@/components/results/type";
+import { LABEL, META, QUESTION, TAG } from "@/components/type";
 import { WaveCategoryChart } from "@/components/results/wave-category-chart";
 import type { WaveSeries } from "@/components/results/wave-category-chart";
 import { WaveTrendChart } from "@/components/results/wave-trend-chart";
@@ -114,18 +114,18 @@ export function WaveQuestionCard({
     return (
         <Card
             id={`row-${row.id}`}
-            className="scroll-mt-16 gap-3 rounded px-3.5 py-3"
+            className="scroll-mt-16 gap-3.5 rounded-xl px-4 py-3.5"
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 flex-col gap-1.5">
-                    <span className={cn(LABEL, "text-muted-foreground")}>
+                    <span className={cn(LABEL, "tabular-nums")}>
                         {format.number(position)}
                     </span>
-                    <h3 className={PANEL_HEAD}>{row.question.title}</h3>
+                    <h3 className={QUESTION}>{row.question.title}</h3>
                     <div className="flex flex-wrap items-center gap-2">
                         <Badge
                             variant="secondary"
-                            className={cn(TAG, "h-4 rounded px-1")}
+                            className={cn(TAG, "h-[20px] rounded-full px-2")}
                         >
                             {typeName(row.question.type)}
                         </Badge>

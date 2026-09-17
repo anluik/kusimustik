@@ -9,7 +9,7 @@ import { MatrixChart } from "@/components/results/matrix-chart";
 import { NpsBands } from "@/components/results/nps-bands";
 import { RampBarChart, RampStackedBar } from "@/components/results/ramp-chart";
 import { TextResponses } from "@/components/results/text-responses";
-import { LABEL, META, PANEL_HEAD, TAG } from "@/components/results/type";
+import { LABEL, META, QUESTION, TAG } from "@/components/type";
 import { useElementTypeName } from "@/components/builder/element-type";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -80,18 +80,18 @@ export function QuestionCard({
     return (
         <Card
             id={`question-${question.id}`}
-            className="scroll-mt-16 gap-3 rounded px-3.5 py-3"
+            className="scroll-mt-16 gap-3.5 rounded-xl px-4 py-3.5"
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 flex-col gap-1.5">
-                    <span className={cn(LABEL, "text-muted-foreground")}>
+                    <span className={cn(LABEL, "tabular-nums")}>
                         {format.number(position)}
                     </span>
-                    <h3 className={PANEL_HEAD}>{question.title}</h3>
+                    <h3 className={QUESTION}>{question.title}</h3>
                     <div className="flex flex-wrap items-center gap-2">
                         <Badge
                             variant="secondary"
-                            className={cn(TAG, "h-4 rounded px-1")}
+                            className={cn(TAG, "h-[20px] rounded-full px-2")}
                         >
                             {typeName(question.type)}
                         </Badge>

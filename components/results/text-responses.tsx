@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { META } from "@/components/results/type";
+import { META } from "@/components/type";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +52,7 @@ export function TextResponses({
                     // stable identity available.
                     <li
                         key={`${index}-${response.slice(0, 24)}`}
-                        className="rounded bg-muted px-2.5 py-2 text-xs leading-[1.35] break-words whitespace-pre-wrap"
+                        className="rounded-lg bg-muted px-2.5 py-2 text-xs leading-[1.35] break-words whitespace-pre-wrap"
                     >
                         {response}
                     </li>
@@ -65,7 +65,7 @@ export function TextResponses({
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                         onClick={() => setExpanded(open => !open)}
                     >
                         {expanded ? t("showLess") : t("showAll")}

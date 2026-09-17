@@ -118,11 +118,11 @@ function Scale({
                     <label
                         key={step}
                         className={cn(
-                            "relative flex h-12 cursor-pointer items-center justify-center rounded-survey border text-[14px] leading-none tabular-nums transition-colors",
+                            "relative flex h-12 cursor-pointer items-center justify-center rounded-survey border text-[15px] leading-none tabular-nums transition-colors",
                             "has-[:focus-visible]:border-survey-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/18",
                             selected === step
                                 ? "border-[1.5px] border-survey-primary bg-survey-accent font-medium text-survey-accent-foreground"
-                                : "border-input hover:bg-muted/60"
+                                : "border-input hover:bg-muted/60 active:bg-muted"
                         )}
                     >
                         <input
@@ -139,9 +139,11 @@ function Scale({
             </div>
 
             {(minLabel !== undefined || maxLabel !== undefined) && (
-                <div className="flex justify-between gap-3 text-[11px] leading-[1.35] text-muted-foreground">
-                    <span>{minLabel ?? ""}</span>
-                    <span className="text-right">{maxLabel ?? ""}</span>
+                <div className="flex justify-between gap-3 text-[14px] leading-[1.35] text-muted-foreground">
+                    <span className="text-pretty">{minLabel ?? ""}</span>
+                    <span className="text-right text-pretty">
+                        {maxLabel ?? ""}
+                    </span>
                 </div>
             )}
         </div>

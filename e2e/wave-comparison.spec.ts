@@ -21,16 +21,32 @@ test.skip(({ isMobile }) => isMobile === true, "an owner-desktop surface");
 /** From supabase/seed.sql: the seeded comparison's NPS row. */
 const NPS_ROW = "30000000-0000-4000-8000-000000000008";
 
+/**
+ * Opens the seeded survey's wave group, by its own row.
+ *
+ * Scoped to the row on purpose: the seed has two wave groups, so a bare
+ * compare control is ambiguous. It used to match nothing at all instead —
+ * the control rendered its label twice, once visible and once `sr-only`, so
+ * its accessible name was "VõrdleVõrdle" and both specs here failed. The
+ * label is now `aria-label` plus one visible span, and this locator says
+ * which group it means.
+ */
 async function openGroup(page: Page): Promise<void> {
     await page.goto("/surveys");
-    await page.getByRole("link", { name: "Võrdle" }).click();
+    await page
+        .getByRole("row", { name: /Teenuse rahulolu/ })
+        .getByRole("link", { name: "Võrdle" })
+        .click();
     await page.waitForURL(/\/waves\/[0-9a-f-]{36}$/);
 }
 
 test("reads the seeded comparison from the survey list", async ({ page }) => {
     await openGroup(page);
 
-    await page.getByRole("link", { name: "2025 – 2026" }).click();
+    // Exact: the spec below builds comparisons over the same waves, and a
+    // prefix match would also find "2025 – 2026 2" — including one left
+    // behind by a run that failed before its cleanup.
+    await page.getByRole("link", { name: "2025 – 2026", exact: true }).click();
     await page.waitForURL(/\/comparisons\/[0-9a-f-]{36}$/);
 
     await expect(page.getByRole("link", { name: /2025/ })).toBeVisible();

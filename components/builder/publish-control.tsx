@@ -11,6 +11,8 @@ import type { SurveyLocale } from "@/domain/content";
 import type { SurveyId } from "@/domain/ids";
 import type { SurveyStatus } from "@/domain/survey";
 import { publishSurveyAction } from "@/lib/surveys/actions";
+import { cn } from "@/lib/utils";
+import { META } from "@/components/type";
 
 /**
  * Publishing, and the link, in the place the survey is written.
@@ -85,7 +87,7 @@ export function PublishControl({
         // that copies a link which currently collects nothing.
         if (answerableCount === 0) {
             return (
-                <span className="truncate font-mono text-[11px] leading-none text-destructive">
+                <span className={cn(META, "truncate text-destructive")}>
                     {t("collectingNothing")}
                 </span>
             );
@@ -107,7 +109,7 @@ export function PublishControl({
                 size="sm"
                 disabled={unsaved}
                 onClick={() => setConfirming(true)}
-                className="h-[30px] rounded text-xs"
+                className="h-[30px] rounded-lg text-xs"
             >
                 <Send aria-hidden />
                 {slug === null ? t("publish") : t("republish")}
@@ -125,7 +127,7 @@ export function PublishControl({
                             ? tPublish("body")
                             : tPublish("bodyReopen")}
                         {untranslatedLocales.length > 0 && (
-                            <span className="mt-2 flex items-start gap-1.5 rounded border bg-muted p-2 text-foreground">
+                            <span className="mt-2 flex items-start gap-1.5 rounded-lg border bg-muted p-2 text-foreground">
                                 <TriangleAlert
                                     aria-hidden
                                     className="mt-px size-3.5 shrink-0 text-muted-foreground"

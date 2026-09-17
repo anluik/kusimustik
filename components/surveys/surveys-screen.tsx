@@ -28,6 +28,7 @@ import {
     type SurveyListItem
 } from "@/lib/surveys/list";
 import { cn } from "@/lib/utils";
+import { META } from "@/components/type";
 
 /**
  * The survey list screen.
@@ -108,7 +109,7 @@ export function SurveysScreen({
                         <Button
                             size="sm"
                             onClick={() => setCreating(true)}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("new")}
                         </Button>
@@ -133,7 +134,7 @@ export function SurveysScreen({
                     </div>
                 )}
 
-                <section className="overflow-hidden rounded border bg-card">
+                <section className="overflow-hidden rounded-xl border bg-card">
                     {total === 0 ? (
                         <EmptyState
                             title={t("empty.title")}
@@ -149,7 +150,7 @@ export function SurveysScreen({
                                 <Button
                                     size="sm"
                                     onClick={() => setCreating(true)}
-                                    className="h-[30px] rounded text-xs"
+                                    className="h-[30px] rounded-lg text-xs"
                                 >
                                     {t("empty.action")}
                                 </Button>
@@ -170,7 +171,7 @@ export function SurveysScreen({
                                     size="sm"
                                     variant="outline"
                                     onClick={clearFilters}
-                                    className="h-[30px] rounded text-xs"
+                                    className="h-[30px] rounded-lg text-xs"
                                 >
                                     {t("noResults.action")}
                                 </Button>
@@ -182,7 +183,12 @@ export function SurveysScreen({
                 </section>
 
                 {total > 0 && (
-                    <footer className="flex items-center justify-between px-1 font-mono text-[11px] leading-none text-muted-foreground">
+                    <footer
+                        className={cn(
+                            META,
+                            "flex items-center justify-between px-1 text-muted-foreground"
+                        )}
+                    >
                         <span>
                             {t("footer.shown", {
                                 shown: format.number(shown),
@@ -226,7 +232,7 @@ function SearchField({
                 onChange={event => onChange(event.currentTarget.value)}
                 aria-label={t("label")}
                 placeholder={t("placeholder")}
-                className="h-[30px] w-full rounded pl-7 text-xs sm:w-56"
+                className="h-[30px] w-full rounded-lg pl-7 text-xs sm:w-56"
             />
         </div>
     );
@@ -255,16 +261,16 @@ function StatusFilterSelect({
         >
             <SelectTrigger
                 aria-label={t("label")}
-                className={cn("h-[30px]! w-36 rounded text-xs", className)}
+                className={cn("h-[30px]! w-36 rounded-lg text-xs", className)}
             >
                 <SelectValue />
             </SelectTrigger>
-            <SelectContent className="rounded">
+            <SelectContent className="rounded-lg">
                 {STATUS_FILTERS.map(option => (
                     <SelectItem
                         key={option}
                         value={option}
-                        className="rounded text-xs"
+                        className="rounded-lg text-xs"
                     >
                         {t(option)}
                     </SelectItem>

@@ -3,7 +3,7 @@ import "@/app/globals.css";
 import { NextIntlClientProvider } from "next-intl";
 
 import { ThemeProvider } from "@/components/shell/theme-provider";
-import { sans, mono } from "@/lib/fonts";
+import { display, sans, mono } from "@/lib/fonts";
 import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
 import {
     getRunnerTranslations,
@@ -42,7 +42,7 @@ export default async function RunnerLayout({
     return (
         <html
             lang={locale}
-            className={cn(sans.variable, mono.variable)}
+            className={cn(sans.variable, display.variable, mono.variable)}
             suppressHydrationWarning
         >
             <body className="min-h-svh bg-survey-background font-sans text-foreground antialiased">

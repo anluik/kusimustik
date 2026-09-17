@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 
-import { META } from "@/components/results/type";
+import { META } from "@/components/type";
 import {
     ChartContainer,
     ChartLegend,
@@ -87,25 +87,34 @@ export function WaveCategoryChart({
             <span className="text-muted-foreground">
                 {config[String(name)]?.label ?? t("wave")}
             </span>
-            <span className="ml-auto font-mono tabular-nums">
+            <span className="ml-auto tabular-nums">
                 {typeof value === "number" ? share(value) : "—"}
             </span>
         </>
     );
+
+    // The rounded end is the *data* end, so which corners it is depends on
+    // which way the bar grows.
+    const radius: [number, number, number, number] =
+        orientation === "vertical" ? [3, 3, 0, 0] : [0, 3, 3, 0];
 
     const bars = waves.map((series, index) => (
         <Bar
             key={series.key}
             dataKey={seriesKey(index)}
             fill={`var(--color-${seriesKey(index)})`}
-            radius={2}
+            radius={radius}
+            maxBarSize={orientation === "vertical" ? 40 : 14}
             isAnimationActive={false}
         />
     ));
 
     if (orientation === "vertical") {
         return (
-            <ChartContainer config={config} className="h-[220px] w-full">
+            <ChartContainer
+                config={config}
+                className="h-[220px] w-full max-w-[720px]"
+            >
                 <BarChart data={data} margin={{ top: 8 }}>
                     <XAxis
                         dataKey="label"
@@ -136,7 +145,7 @@ export function WaveCategoryChart({
     return (
         <ChartContainer
             config={config}
-            className="w-full"
+            className="w-full max-w-[720px]"
             style={{
                 height: `${Math.max(
                     rows.length * (waves.length * BAR_HEIGHT + ROW_GAP) + 48,

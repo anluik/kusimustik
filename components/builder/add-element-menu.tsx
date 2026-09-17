@@ -21,6 +21,8 @@ import {
     isCreatableType,
     type CreatableElementType
 } from "@/lib/builder/new-element";
+import { LABEL, TAG } from "@/components/type";
+import { cn } from "@/lib/utils";
 
 /**
  * The builder's primary action, in the app bar so that it is reachable at every
@@ -52,15 +54,17 @@ export function AddElementMenu({
                 <DropdownMenuItem
                     key={type}
                     disabled
-                    // DESIGN §6: disabled is a colour change, never an opacity
-                    // one — opacity stacking breaks the audited contrast.
-                    className="rounded text-xs text-input opacity-100!"
+                    // Coloured, not dimmed: app/globals.css (DESIGN §6).
+                    className="rounded-lg text-xs"
                 >
                     <Icon aria-hidden />
                     <span>{label}</span>
                     <Badge
                         variant="outline"
-                        className="ml-auto h-4 rounded px-1 font-mono text-[9px] leading-none tracking-[0.04em] text-input uppercase"
+                        className={cn(
+                            TAG,
+                            "ml-auto h-4 rounded-lg px-1 text-input"
+                        )}
                     >
                         {tCommon("comingSoon")}
                     </Badge>
@@ -71,7 +75,7 @@ export function AddElementMenu({
         return (
             <DropdownMenuItem
                 key={type}
-                className="rounded text-xs"
+                className="rounded-lg text-xs"
                 onSelect={() => onAdd(type)}
             >
                 <Icon aria-hidden />
@@ -83,13 +87,13 @@ export function AddElementMenu({
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button size="sm" className="h-[30px] rounded text-xs">
+                <Button size="sm" className="h-[30px] rounded-lg text-xs">
                     <Plus aria-hidden />
                     {t("label")}
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded">
-                <DropdownMenuLabel className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase">
+            <DropdownMenuContent align="end" className="w-56 rounded-lg">
+                <DropdownMenuLabel className={LABEL}>
                     {t("menuLabel")}
                 </DropdownMenuLabel>
                 {ELEMENT_TYPES.map(item)}

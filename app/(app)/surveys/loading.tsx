@@ -23,7 +23,7 @@ export default async function SurveysLoading() {
                 label={t("loading")}
                 className={cn("flex flex-col gap-2 p-4", PAGE_WIDTH)}
             >
-                <section className="overflow-hidden rounded border bg-card">
+                <section className="overflow-hidden rounded-lg border bg-card">
                     <SkeletonRows count={6} height="h-[46px]" />
                 </section>
             </LoadingRegion>

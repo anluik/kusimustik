@@ -44,7 +44,7 @@ function WritingShape({ lines = 1 }: { readonly lines?: number }) {
     return (
         <span
             aria-hidden
-            className="block w-full rounded-md border bg-ramp-track"
+            className="block w-full rounded-survey border bg-ramp-track"
             style={{ height: `${lines * 20 + 16}px` }}
         />
     );
@@ -58,7 +58,7 @@ function OptionRow({
     readonly shape: "radio" | "checkbox";
 }) {
     return (
-        <div className="flex min-h-11 items-center gap-2.5 rounded-md border px-3 py-2">
+        <div className="flex min-h-11 items-center gap-2.5 rounded-survey border px-3 py-2">
             <ControlShape shape={shape} />
             <span className="min-w-0 truncate text-[13px] leading-[1.4]">
                 {label}
@@ -126,14 +126,14 @@ function ScalePreview({
                 {steps.map(step => (
                     <span
                         key={step}
-                        className="flex h-11 items-center justify-center rounded-md border text-[13px] leading-none tabular-nums"
+                        className="flex h-11 items-center justify-center rounded-survey border text-[13px] leading-none tabular-nums"
                     >
                         {step}
                     </span>
                 ))}
             </div>
             {(minLabel !== undefined || maxLabel !== undefined) && (
-                <div className="flex justify-between gap-3 text-[11px] leading-[1.35] text-muted-foreground">
+                <div className="flex justify-between gap-3 text-[12px] leading-[1.4] text-muted-foreground">
                     <span className="truncate">{minLabel ?? ""}</span>
                     <span className="truncate text-right">
                         {maxLabel ?? ""}
@@ -221,7 +221,7 @@ function DropdownPreview() {
     const t = useTranslations("Builder.preview");
 
     return (
-        <div className="flex min-h-11 items-center gap-2.5 rounded-md border px-3 py-2">
+        <div className="flex min-h-11 items-center gap-2.5 rounded-survey border px-3 py-2">
             <span className="min-w-0 flex-1 truncate text-[13px] leading-[1.4] text-muted-foreground">
                 {t("dropdownPlaceholder")}
             </span>
@@ -273,7 +273,7 @@ function MatrixPreview({
                 {columns.map(column => (
                     <span
                         key={column.value}
-                        className="truncate pb-1 text-center text-[11px] leading-[1.35] text-muted-foreground"
+                        className="truncate pb-1 text-center text-[12px] leading-[1.4] text-muted-foreground"
                     >
                         {column.label}
                     </span>

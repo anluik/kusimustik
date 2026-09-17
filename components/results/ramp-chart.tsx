@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { Bar, BarChart, Cell, LabelList, XAxis } from "recharts";
 
-import { META } from "@/components/results/type";
+import { LABEL, META } from "@/components/type";
 import {
     ChartContainer,
     ChartTooltip,
@@ -44,7 +44,10 @@ export function RampBarChart({
 
     return (
         <div className="flex flex-col gap-2">
-            <ChartContainer config={config} className="h-[180px] w-full">
+            <ChartContainer
+                config={config}
+                className="h-[180px] w-full max-w-[720px]"
+            >
                 <BarChart data={data} margin={{ top: 16, bottom: 0 }}>
                     <XAxis
                         dataKey="label"
@@ -54,7 +57,12 @@ export function RampBarChart({
                         className={META}
                     />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="count" radius={2} isAnimationActive={false}>
+                    <Bar
+                        dataKey="count"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={56}
+                        isAnimationActive={false}
+                    >
                         {data.map(bar => (
                             <Cell
                                 key={bar.key}
@@ -69,7 +77,7 @@ export function RampBarChart({
                             dataKey="count"
                             position="top"
                             offset={6}
-                            className="fill-foreground font-mono text-[11px]"
+                            className={cn(META, "fill-foreground")}
                         />
                     </Bar>
                 </BarChart>
@@ -115,7 +123,7 @@ export function RampStackedBar({
             <div
                 role="img"
                 aria-label={ariaLabel}
-                className="flex h-10 w-full overflow-hidden rounded border"
+                className="flex h-10 w-full overflow-hidden rounded-lg border"
             >
                 {visible.map(bar => (
                     <div
@@ -127,7 +135,10 @@ export function RampStackedBar({
                             background: rampFill(bar.step),
                             color: rampLabelColor(bar.step)
                         }}
-                        className="flex min-w-0 items-center justify-center border-r border-border/60 font-mono text-[10px] leading-none tabular-nums last:border-r-0"
+                        className={cn(
+                            LABEL,
+                            "flex min-w-0 items-center justify-center border-r border-border/60 tabular-nums last:border-r-0"
+                        )}
                     >
                         <span className="truncate px-1">{bar.label}</span>
                     </div>

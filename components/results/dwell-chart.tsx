@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { Bar, BarChart, Cell, LabelList, XAxis, YAxis } from "recharts";
 
-import { META, PANEL_HEAD } from "@/components/results/type";
+import { META, PANEL_HEAD } from "@/components/type";
 import { Card } from "@/components/ui/card";
 import {
     ChartContainer,
@@ -56,7 +56,7 @@ export function DwellChart({
     const config = { seconds: { label: t("title") } } satisfies ChartConfig;
 
     return (
-        <Card className="gap-3 rounded px-3.5 py-3">
+        <Card className="gap-3 rounded-xl px-4 py-3.5">
             <div className="flex flex-col gap-1">
                 <h3 className={PANEL_HEAD}>{t("title")}</h3>
                 <p className={cn(META, "text-muted-foreground")}>{t("hint")}</p>
@@ -85,7 +85,12 @@ export function DwellChart({
                     />
                     <XAxis dataKey="seconds" type="number" hide />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="seconds" radius={2} isAnimationActive={false}>
+                    <Bar
+                        dataKey="seconds"
+                        radius={[0, 4, 4, 0]}
+                        maxBarSize={18}
+                        isAnimationActive={false}
+                    >
                         {data.map(row => (
                             <Cell
                                 key={row.key}
@@ -103,7 +108,7 @@ export function DwellChart({
                             dataKey="seconds"
                             position="right"
                             offset={6}
-                            className="fill-foreground font-mono text-[11px]"
+                            className={cn(META, "fill-foreground")}
                             formatter={(value: unknown) =>
                                 typeof value === "number"
                                     ? t("seconds", {

@@ -12,6 +12,8 @@ import {
     SidebarMenuItem
 } from "@/components/ui/sidebar";
 import { ROUTES } from "@/lib/routes";
+import { cn } from "@/lib/utils";
+import { TAG } from "@/components/type";
 
 /**
  * `href: null` marks a destination that does not exist yet. DESIGN.md §6:
@@ -39,10 +41,8 @@ export function NavMain() {
                         <SidebarMenuItem key={key}>
                             <SidebarMenuButton
                                 disabled
-                                // DESIGN §6: disabled is a colour change, never
-                                // an opacity one — opacity stacking breaks the
-                                // audited contrast.
-                                className="h-8 cursor-not-allowed gap-1.5 px-3 text-xs text-input opacity-100!"
+                                // Coloured, not dimmed: app/globals.css (DESIGN §6).
+                                className="h-8 gap-1.5 px-3 text-xs"
                                 tooltip={label}
                             >
                                 <Icon aria-hidden />
@@ -50,7 +50,10 @@ export function NavMain() {
                             </SidebarMenuButton>
                             <Badge
                                 variant="outline"
-                                className="pointer-events-none absolute top-1.5 right-2 h-4 rounded px-1 font-mono text-[9px] tracking-[0.04em] text-input uppercase group-data-[collapsible=icon]:hidden"
+                                className={cn(
+                                    TAG,
+                                    "pointer-events-none absolute top-1.5 right-2 h-4 rounded-lg px-1 text-input group-data-[collapsible=icon]:hidden"
+                                )}
                             >
                                 {tCommon("comingSoon")}
                             </Badge>
@@ -70,7 +73,7 @@ export function NavMain() {
                             // DESIGN §5: the active nav item keeps its size and
                             // gains a 2px inset primary rule, so hover never
                             // hides which item is selected.
-                            className="h-8 gap-1.5 rounded px-3 text-xs data-active:shadow-[inset_2px_0_0_var(--primary)]"
+                            className="h-8 gap-1.5 rounded-lg px-3 text-xs data-active:shadow-[inset_2px_0_0_var(--primary)]"
                         >
                             <Link href={href}>
                                 <Icon aria-hidden />

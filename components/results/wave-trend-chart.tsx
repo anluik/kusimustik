@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
-import { META } from "@/components/results/type";
+import { META } from "@/components/type";
 import {
     ChartContainer,
     ChartLegend,
@@ -76,7 +76,7 @@ export function WaveTrendChart({
             <span className="text-muted-foreground">
                 {config[String(name)]?.label ?? t("value")}
             </span>
-            <span className="ml-auto font-mono tabular-nums">
+            <span className="ml-auto tabular-nums">
                 {typeof given === "number" ? value(given) : "—"}
             </span>
         </>

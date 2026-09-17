@@ -70,10 +70,7 @@ import type { GroupWave } from "@/lib/comparisons/group";
 import { toComparisonWaves } from "@/lib/comparisons/group";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-
-const TAG = "font-mono text-[9px] leading-none tracking-[0.04em] uppercase";
-const CAPTION =
-    "font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase";
+import { LABEL, META, TAG } from "@/components/type";
 
 /**
  * The matching editor (DESIGN §5): which question in each wave is the same
@@ -147,7 +144,7 @@ export function MatchingEditor({
             variant="outline"
             size="sm"
             disabled={cannotAdd !== null}
-            className="h-[30px] rounded text-xs"
+            className="h-[30px] rounded-lg text-xs"
         >
             <Plus aria-hidden />
             {t("addWave")}
@@ -173,7 +170,7 @@ export function MatchingEditor({
                     <Button
                         asChild
                         size="sm"
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     >
                         <Link href={ROUTES.comparison(comparisonId)}>
                             {t("done")}
@@ -193,7 +190,7 @@ export function MatchingEditor({
                                 group: comparisonWaves
                             })
                         }
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     >
                         <Sparkles aria-hidden />
                         {t("suggest")}
@@ -214,11 +211,14 @@ export function MatchingEditor({
                                 <TooltipContent>{cannotAdd}</TooltipContent>
                             </Tooltip>
                         )}
-                        <DropdownMenuContent align="start" className="rounded">
+                        <DropdownMenuContent
+                            align="start"
+                            className="rounded-lg"
+                        >
                             {addable.map(wave => (
                                 <DropdownMenuItem
                                     key={wave.surveyId}
-                                    className="rounded text-xs"
+                                    className="rounded-lg text-xs"
                                     onSelect={() =>
                                         dispatch({
                                             kind: "addWave",
@@ -263,7 +263,7 @@ export function MatchingEditor({
                                 style={{ background: colour(wave.surveyId) }}
                                 className="inline-block h-2.5 w-4 shrink-0 rounded-xs border"
                             />
-                            <span className={cn(CAPTION, "truncate")}>
+                            <span className={cn(LABEL, "truncate")}>
                                 {waveName(wave)}
                             </span>
                             <Button
@@ -273,7 +273,7 @@ export function MatchingEditor({
                                     wave: waveName(wave)
                                 })}
                                 onClick={() => setRemoving(wave)}
-                                className="size-6 rounded text-muted-foreground"
+                                className="size-6 rounded-lg text-muted-foreground"
                             >
                                 <X aria-hidden />
                             </Button>
@@ -283,7 +283,7 @@ export function MatchingEditor({
                 </div>
 
                 {document.rows.length === 0 ? (
-                    <Card className="gap-3 rounded px-3.5 py-3">
+                    <Card className="gap-3 rounded-xl px-4 py-3.5">
                         <EmptyState
                             title={t("empty.title")}
                             body={t("empty.body")}
@@ -326,7 +326,7 @@ export function MatchingEditor({
                                 id: newComparisonRowId()
                             })
                         }
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     >
                         <Plus aria-hidden />
                         {t("addRow")}
@@ -334,7 +334,7 @@ export function MatchingEditor({
                 </div>
 
                 {unmatched.length > 0 && (
-                    <Card className="gap-3 rounded px-3.5 py-3">
+                    <Card className="gap-3 rounded-xl px-4 py-3.5">
                         <h2 className="text-[13px] leading-[1.2] font-semibold">
                             {t("unmatchedTitle")}
                         </h2>
@@ -363,7 +363,7 @@ export function MatchingEditor({
                     if (!open) setRemoving(null);
                 }}
             >
-                <AlertDialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+                <AlertDialogContent className="gap-3 rounded-lg p-3.5 sm:max-w-md">
                     <AlertDialogHeader className="gap-1">
                         <AlertDialogTitle className="text-[13px] leading-[1.2] font-semibold">
                             {t("removeWaveTitle")}
@@ -376,7 +376,7 @@ export function MatchingEditor({
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">
-                        <AlertDialogCancel className="h-[30px] rounded text-xs">
+                        <AlertDialogCancel className="h-[30px] rounded-lg text-xs">
                             {tCommon("cancel")}
                         </AlertDialogCancel>
                         <AlertDialogAction
@@ -388,7 +388,7 @@ export function MatchingEditor({
                                     });
                                 }
                             }}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("removeWaveSubmit")}
                         </AlertDialogAction>
@@ -445,7 +445,7 @@ function RowEditor({
         <Card
             aria-label={t("rowLabel", { index })}
             role="group"
-            className="gap-2 rounded px-3 py-2.5"
+            className="gap-2 rounded-lg px-3 py-2.5"
         >
             <div className="flex flex-col gap-2 md:flex-row md:items-center">
                 {waves.map(wave => {
@@ -465,7 +465,7 @@ function RowEditor({
                         >
                             <Label
                                 htmlFor={selectId}
-                                className={cn(CAPTION, "md:sr-only")}
+                                className={cn(LABEL, "md:sr-only")}
                             >
                                 {t("waveSelect", { wave: waveName(wave) })}
                             </Label>
@@ -488,7 +488,7 @@ function RowEditor({
                                     <SelectTrigger
                                         id={selectId}
                                         size="sm"
-                                        className="w-full min-w-0 rounded text-xs"
+                                        className="w-full min-w-0 rounded-lg text-xs"
                                     >
                                         <SelectValue
                                             placeholder={t("notInWave")}
@@ -502,7 +502,7 @@ function RowEditor({
                                     </SelectTrigger>
                                     <SelectContent
                                         position="popper"
-                                        className="max-w-[min(32rem,var(--radix-select-content-available-width))] rounded"
+                                        className="max-w-[min(32rem,var(--radix-select-content-available-width))] rounded-lg"
                                     >
                                         {questions.map(
                                             ({ position, question }) => {
@@ -522,7 +522,7 @@ function RowEditor({
                                                         key={question.id}
                                                         value={question.id}
                                                         disabled={!allowed}
-                                                        className="rounded text-xs data-disabled:text-input data-disabled:opacity-100"
+                                                        className="rounded-lg text-xs"
                                                     >
                                                         <span className="flex min-w-0 flex-col items-start gap-1">
                                                             <span className="flex min-w-0 items-baseline gap-1.5">
@@ -541,7 +541,12 @@ function RowEditor({
                                                                 </span>
                                                             </span>
                                                             {elsewhere && (
-                                                                <span className="font-mono text-[11px] leading-none text-muted-foreground">
+                                                                <span
+                                                                    className={cn(
+                                                                        META,
+                                                                        "text-muted-foreground"
+                                                                    )}
+                                                                >
                                                                     {t(
                                                                         "inOtherRow"
                                                                     )}
@@ -569,7 +574,7 @@ function RowEditor({
                                                 questionId: null
                                             })
                                         }
-                                        className="size-7 shrink-0 rounded text-muted-foreground"
+                                        className="size-7 shrink-0 rounded-lg text-muted-foreground"
                                     >
                                         <X aria-hidden />
                                     </Button>
@@ -587,7 +592,7 @@ function RowEditor({
                         onClick={() =>
                             dispatch({ kind: "removeRow", rowId: row.id })
                         }
-                        className="rounded text-muted-foreground"
+                        className="rounded-lg text-muted-foreground"
                     >
                         <Trash2 aria-hidden />
                     </Button>
@@ -623,9 +628,9 @@ function UnmatchedList({
                     style={{ background: colour }}
                     className="inline-block h-2.5 w-4 rounded-xs border"
                 />
-                <span className={CAPTION}>{waveName(wave)}</span>
+                <span className={LABEL}>{waveName(wave)}</span>
             </div>
-            <ul className="flex flex-col divide-y rounded border">
+            <ul className="flex flex-col divide-y rounded-lg border">
                 {questions.map(question => (
                     <li
                         key={question.id}
@@ -655,7 +660,7 @@ function UnmatchedList({
                                     }
                                 })
                             }
-                            className="h-[26px] shrink-0 rounded px-2 text-xs"
+                            className="h-[26px] shrink-0 rounded-lg px-2 text-xs"
                         >
                             <Plus aria-hidden />
                             {t("addAsRow")}

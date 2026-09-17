@@ -19,7 +19,7 @@ export function SidebarToggle() {
         <Button
             variant="ghost"
             size="icon-sm"
-            className="rounded"
+            className="rounded-lg"
             onClick={toggleSidebar}
         >
             <PanelLeftIcon aria-hidden />

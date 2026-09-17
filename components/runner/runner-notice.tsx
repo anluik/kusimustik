@@ -2,6 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { DISPLAY } from "@/components/type";
 
 /**
  * The runner's terminal screens: the link matched nothing, the survey has
@@ -55,20 +57,20 @@ export function RunnerNotice({
 
     return (
         <main className="grid min-h-svh place-items-center p-3.5">
-            <div className="flex w-full max-w-[420px] flex-col gap-2 rounded-survey border bg-survey-card px-3.5 py-4">
+            <div className="flex w-full max-w-[440px] flex-col gap-2 rounded-survey border border-border/70 bg-survey-card px-5 py-5 shadow-sm">
                 {surveyTitle !== undefined && (
-                    <p className="text-[13px] leading-[1.35] font-medium text-muted-foreground">
+                    <p className="text-[14px] leading-[1.35] font-medium text-muted-foreground">
                         {surveyTitle}
                     </p>
                 )}
-                <h1 className="text-[17px] leading-[1.3] font-semibold">
+                <h1 className={cn(DISPLAY, "text-[24px] text-balance")}>
                     {t("title")}
                 </h1>
-                <p className="text-[14px] leading-[1.35] text-muted-foreground">
+                <p className="text-[15px] leading-[1.5] text-pretty text-muted-foreground">
                     {t("body")}
                 </p>
                 {action !== undefined && (
-                    <div className="mt-1 flex">{action}</div>
+                    <div className="flex pt-1">{action}</div>
                 )}
             </div>
         </main>

@@ -5,6 +5,8 @@ import { hasLocale, useTranslations } from "next-intl";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SurveyLocale } from "@/domain/content";
 import { UI_LOCALES } from "@/lib/i18n/locales";
+import { cn } from "@/lib/utils";
+import { LABEL } from "@/components/type";
 
 /**
  * Which of the survey's languages the builder is editing.
@@ -52,7 +54,7 @@ export function LanguageSwitcher({
         >
             <TabsList
                 aria-label={t("label")}
-                className="h-[30px] rounded p-0.5"
+                className="h-[30px] rounded-lg p-0.5"
             >
                 {locales.map(option => (
                     <TabsTrigger
@@ -65,7 +67,7 @@ export function LanguageSwitcher({
                                   })
                                 : tLanguage(`name.${option}`)
                         }
-                        className="h-[26px] rounded px-2 font-mono text-[10px] leading-none tracking-[0.07em]"
+                        className={cn(LABEL, "h-[26px] rounded-lg px-2")}
                     >
                         {tLanguage(`short.${option}`)}
                     </TabsTrigger>

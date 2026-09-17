@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-import { TAG } from "@/components/results/type";
+import { TAG } from "@/components/type";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ChartKind } from "@/domain/charts";
 import { cn } from "@/lib/utils";
@@ -41,12 +41,12 @@ export function ChartSwitcher({
                 if (kind !== undefined) onChange(kind);
             }}
         >
-            <TabsList aria-label={t("label")} className="h-7 rounded p-0.5">
+            <TabsList aria-label={t("label")} className="h-7 rounded-lg p-0.5">
                 {kinds.map(kind => (
                     <TabsTrigger
                         key={kind}
                         value={kind}
-                        className={cn(TAG, "h-6 rounded px-2")}
+                        className={cn(TAG, "h-6 rounded-lg px-2")}
                     >
                         {t(`kind.${kind}`)}
                     </TabsTrigger>

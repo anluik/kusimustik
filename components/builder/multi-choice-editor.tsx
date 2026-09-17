@@ -63,7 +63,7 @@ export function MultiChoiceEditor({
                         )
                     )
                 }
-                className="h-[30px] rounded text-xs"
+                className="h-[30px] rounded-lg text-xs"
             />
         </Field>
     );
@@ -98,7 +98,7 @@ export function MultiChoiceEditor({
                     {bound("minSelections")}
                     {bound("maxSelections")}
                 </div>
-                <p className="text-[11px] leading-[1.35] text-muted-foreground">
+                <p className="text-[12px] leading-[1.4] text-muted-foreground">
                     {t("selectionsHelp", { count: selectable })}
                 </p>
             </EditorSection>

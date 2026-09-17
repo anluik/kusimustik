@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Label } from "@/components/ui/label";
+import { LABEL } from "@/components/type";
 
 /**
  * One labelled control in the editor panel, with its help line and its error.
@@ -24,22 +25,19 @@ export function Field({
 }) {
     return (
         <div className="grid gap-1.5">
-            <Label
-                htmlFor={id}
-                className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase"
-            >
+            <Label htmlFor={id} className={LABEL}>
                 {label}
             </Label>
             {children}
             {help !== undefined && (
-                <p className="text-[11px] leading-[1.35] text-muted-foreground">
+                <p className="text-[12px] leading-[1.4] text-muted-foreground">
                     {help}
                 </p>
             )}
             {error !== undefined && (
                 <p
                     id={`${id}-error`}
-                    className="text-[11px] leading-[1.35] text-destructive"
+                    className="text-[12px] leading-[1.4] text-destructive"
                 >
                     {error}
                 </p>

@@ -51,7 +51,7 @@ export function MatrixSingleInput({
                     <div key={row.value} className="flex flex-col gap-2">
                         <p
                             id={rowLabelId}
-                            className="text-[14px] leading-[1.35] font-medium"
+                            className="text-[15px] leading-[1.45] font-medium"
                         >
                             {row.label}
                         </p>

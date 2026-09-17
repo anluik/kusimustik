@@ -31,11 +31,14 @@ export default async function ResultsLoading() {
                     ))}
                 </div>
 
-                <Skeleton className="h-8 w-64 rounded" />
+                <Skeleton className="h-8 w-64 rounded-lg" />
 
                 <div className="flex flex-col gap-3">
                     {Array.from({ length: 3 }, (_, index) => (
-                        <Skeleton key={index} className="h-56 rounded border" />
+                        <Skeleton
+                            key={index}
+                            className="h-56 rounded-lg border"
+                        />
                     ))}
                 </div>
             </LoadingRegion>

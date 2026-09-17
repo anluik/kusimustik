@@ -254,7 +254,7 @@ export function BuilderScreen({
                                 asChild
                                 variant="outline"
                                 size="sm"
-                                className="h-[30px] rounded text-xs"
+                                className="h-[30px] rounded-lg text-xs"
                             >
                                 <Link
                                     href={ROUTES.results(surveyId)}
@@ -276,7 +276,7 @@ export function BuilderScreen({
                             size="sm"
                             aria-label={t("settings.label")}
                             onClick={() => setSettingsOpen(true)}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             <Settings2 aria-hidden />
                         </Button>

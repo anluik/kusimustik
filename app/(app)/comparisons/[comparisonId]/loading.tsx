@@ -24,11 +24,14 @@ export default async function ComparisonLoading() {
                 label={t("loading")}
                 className={cn("flex flex-col gap-3 p-4", PAGE_WIDTH)}
             >
-                <Skeleton className="h-[76px] rounded border" />
+                <Skeleton className="h-[76px] rounded-lg border" />
 
                 <div className="flex flex-col gap-3">
                     {Array.from({ length: 3 }, (_, index) => (
-                        <Skeleton key={index} className="h-64 rounded border" />
+                        <Skeleton
+                            key={index}
+                            className="h-64 rounded-lg border"
+                        />
                     ))}
                 </div>
             </LoadingRegion>

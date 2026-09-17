@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl";
 
 import { StatCard } from "@/components/results/stat-card";
-import { TAG } from "@/components/results/type";
+import { TAG } from "@/components/type";
 import type { SurveyId } from "@/domain/ids";
 import { useLiveResponseCount } from "@/hooks/use-live-response-count";
 import type { FunnelTotals } from "@/lib/db/funnel";
