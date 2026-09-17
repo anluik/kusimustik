@@ -54,7 +54,8 @@ function item(
         publishedAt: null,
         closedAt: null,
         responseCount: overrides.responseCount ?? 0,
-        questionCount: overrides.questionCount ?? 0
+        questionCount: overrides.questionCount ?? 0,
+        comparisonCount: 0
     };
 }
 

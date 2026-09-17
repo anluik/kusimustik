@@ -226,7 +226,8 @@ describe("duplication as the next wave", () => {
         expect(created.survey.slug).toBeNull();
         expect(created.survey.waveLabel).toBe("2026");
 
-        // Keys survive so a comparison can join on them; ids do not, because
+        // Keys survive — the lineage a comparison suggests matches from
+        // (DECISIONS 035); ids do not, because
         // question_id is a primary key across the whole projection table.
         expect(created.survey.elements.map(element => element.key)).toEqual([
             "role",

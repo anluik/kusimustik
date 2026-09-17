@@ -148,7 +148,8 @@
             "title": "Delete survey",
             "body": "“{title}” and all of its responses will be permanently deleted. This cannot be undone.",
             "bodyWithResponses": "“{title}” and its {count, plural, one {# response} other {# responses}} will be permanently deleted. This cannot be undone.",
-            "submit": "Delete"
+            "submit": "Delete",
+            "inComparisons": "It is also removed from {count, plural, one {# comparison} other {# comparisons}}."
         },
         "errors": {
             "invalidInput": "Those details are not valid. Check them and try again.",
@@ -198,12 +199,6 @@
                 "cancel": "Keep it",
                 "confirm": "Delete element"
             },
-            "keyLabel": "Key",
-            "keyHelp": {
-                "derive": "Derived from the title until you edit it. The key joins waves and names the CSV columns, so it locks when you publish.",
-                "freeze": "Locked: answers or other waves already point at this key. You can still change it, through the warning.",
-                "translating": "The key is machine-facing rather than something a respondent reads: it is the same in every language, and you edit it in the survey's own."
-            },
             "titleLabel": "Question",
             "titlePlaceholder": "What do you want to ask?",
             "descriptionLabel": "Help text",
@@ -219,14 +214,6 @@
             "otherLabelPlaceholder": "Other",
             "duplicate": "Duplicate",
             "duplicateLabel": "Duplicate element “{title}”",
-            "keyPlaceholder": "e.g. satisfaction_overall",
-            "editKey": "Edit the key",
-            "keyWarning": {
-                "title": "Change the key?",
-                "body": "The key “{key}” already ties this question to the answers given to it and to the other waves. Changing it severs that trend line and renames the CSV column.",
-                "cancel": "Leave it alone",
-                "confirm": "Change it anyway"
-            },
             "statementLabel": "Statement",
             "statementPlaceholder": "The text the respondent reads",
             "statementHelp": "A statement is not answered: it is only shown. It appears in neither the results nor the CSV.",
@@ -294,19 +281,7 @@
             "titleRequired": "A question needs a title.",
             "optionRequired": "An option cannot be empty.",
             "otherLabelRequired": "The label needs some text.",
-            "keyInvalid": "A key starts with a letter and holds only lowercase letters, digits and underscores.",
-            "keyTaken": "Another question in this survey already has that key.",
             "surveyTitleRequired": "A survey needs a title."
-        },
-        "save": {
-            "label": "Save status",
-            "saved": "saved",
-            "saving": "saving…",
-            "pending": "unsaved",
-            "invalid": "unsaved — fix the errors",
-            "failed": "saving failed",
-            "retry": "Try again",
-            "reload": "Reload the page"
         },
         "elementTypes": {
             "statement": "Statement",
@@ -344,6 +319,16 @@
             "sourceOption": "{language} — the survey's own language",
             "rowUntranslated": "Not fully translated"
         }
+    },
+    "Autosave": {
+        "label": "Save status",
+        "saved": "saved",
+        "saving": "saving…",
+        "pending": "unsaved",
+        "invalid": "unsaved — fix the errors",
+        "failed": "saving failed",
+        "retry": "Try again",
+        "reload": "Reload the page"
     },
     "Results": {
         "title": "Results",
@@ -475,18 +460,82 @@
     "Waves": {
         "title": "Wave comparison",
         "backToSurveys": "Back to surveys",
-        "unlabelledWave": "Unlabelled",
         "waves": "{count, plural, one {# wave} other {# waves}}",
         "responses": "{count, plural, one {# response in total} other {# responses in total}}",
-        "omitted": "Showing the {shown} most recent waves; {omitted} older ones are left out.",
+        "list": {
+            "title": "Comparisons",
+            "count": "{count, plural, one {# comparison} other {# comparisons}}",
+            "new": "New comparison",
+            "needsTwoWaves": "A comparison needs at least two waves.",
+            "columns": {
+                "name": "Name",
+                "waves": "Waves",
+                "updated": "Updated"
+            }
+        },
+        "rowActions": {
+            "label": "Comparison actions",
+            "open": "Open",
+            "editMatches": "Edit matches",
+            "rename": "Rename",
+            "delete": "Delete"
+        },
+        "rename": {
+            "title": "Rename comparison",
+            "label": "Name",
+            "submit": "Save"
+        },
+        "delete": {
+            "title": "Delete comparison",
+            "body": "The comparison «{name}» will be deleted. The surveys and their responses are kept.",
+            "submit": "Delete"
+        },
+        "create": {
+            "title": "New comparison",
+            "body": "Choose the waves to compare. Questions that look the same are suggested, and you confirm them.",
+            "name": "Name",
+            "waves": "Waves",
+            "responses": "{count, plural, one {# response} other {# responses}}",
+            "tooFew": "Choose at least two waves.",
+            "tooMany": "Up to {max} waves can be compared at once.",
+            "submit": "Create comparison"
+        },
+        "empty": {
+            "oneWave": {
+                "title": "Comparisons start at the second wave",
+                "body": "This series has one wave. Create a new wave from the survey list, then compare the two."
+            },
+            "noComparisons": {
+                "title": "No comparisons yet",
+                "body": "Compare every wave at once: questions that look the same are suggested and you confirm them. Or choose the waves yourself.",
+                "compareAll": "Compare all waves"
+            },
+            "tooFewWaves": {
+                "title": "This comparison needs another wave",
+                "body": "A wave of this comparison was deleted. Add another wave while editing its matches, or delete the comparison."
+            },
+            "noMatches": {
+                "title": "No matches yet",
+                "body": "This comparison has no matched questions. Edit its matches to choose which questions to compare across the waves."
+            },
+            "noResponses": {
+                "title": "No responses yet",
+                "body": "None of the waves in this comparison has collected a response. Share a wave's public link — the comparison appears here as soon as answers arrive."
+            }
+        },
+        "result": {
+            "editMatches": "Edit matches",
+            "allComparisons": "All comparisons"
+        },
         "question": {
             "comparedWaves": "compared across {count} waves",
             "answered": "{count, plural, one {# answer} other {# answers}}",
-            "notAsked": "Not asked in: {waves}",
-            "notComparable": "Not comparable, the question type changed: {waves}",
+            "notMatched": "No matched question in: {waves}",
+            "notComparable": "No longer comparable, the question changed: {waves}",
+            "removed": "Removed from the survey, shown as last published: {waves}",
             "noAnswers": "No wave has answers to this question yet.",
             "waveNoAnswers": "This wave has no answers to this question.",
-            "noWave": "None of the compared waves asks this question."
+            "noWave": "No wave can show this row right now."
         },
         "chart": {
             "wave": "Wave",
@@ -494,15 +543,40 @@
             "mean": "Mean",
             "score": "NPS"
         },
-        "empty": {
-            "noQuestions": {
-                "title": "Nothing to compare",
-                "body": "The waves in this series have no answerable questions. Add questions in the builder and publish a wave again."
+        "matches": {
+            "title": "Matches",
+            "done": "Done",
+            "suggest": "Suggest matches",
+            "addWave": "Add wave",
+            "addWaveFull": "This comparison already has {max} waves",
+            "noWaveToAdd": "Every wave is already compared",
+            "removeWave": "Remove wave {wave}",
+            "removeWaveTitle": "Remove the wave from the comparison",
+            "removeWaveBody": "Wave {wave} and its matches are removed from this comparison. The survey itself is kept.",
+            "removeWaveSubmit": "Remove",
+            "onlyIncomplete": "Only incomplete",
+            "addRow": "Add row",
+            "removeRow": "Remove row",
+            "notInWave": "Not in this wave",
+            "clear": "Clear the choice for {wave}",
+            "removedQuestion": "A question removed from the survey",
+            "inOtherRow": "in another row, moves here",
+            "rowLabel": "Row {index}",
+            "waveSelect": "Question in {wave}",
+            "unmatchedTitle": "Questions in no row",
+            "addAsRow": "Add as a row",
+            "empty": {
+                "title": "No rows yet",
+                "body": "Suggest matches, or add a row and choose a question from each wave."
             },
-            "noResponses": {
-                "title": "No responses yet",
-                "body": "None of the waves in this series has collected a response. Share a wave's public link — the comparison appears here as soon as answers arrive."
-            }
+            "noneIncomplete": "Every row is complete."
+        },
+        "errors": {
+            "invalidInput": "The input isn't valid. Check it and try again.",
+            "notFound": "The comparison wasn't found. It may have been deleted.",
+            "conflict": "The comparison was changed elsewhere. Reload the page.",
+            "refused": "A question changed in the meantime and no longer fits its row. Reload the page.",
+            "failed": "Something went wrong. Try again."
         }
     },
     "Settings": {

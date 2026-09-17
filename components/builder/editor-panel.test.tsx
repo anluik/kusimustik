@@ -13,7 +13,6 @@ import ruMessages from "@/messages/app/ru.json";
 import type { SurveyElement } from "@/domain/question";
 import type { CreatableElementType } from "@/lib/builder/new-element";
 import { createElement } from "@/lib/builder/new-element";
-import type { SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * The builder's editor panel, rendered.
@@ -32,8 +31,6 @@ import type { SurveyKeys } from "@/lib/builder/keys";
  */
 
 const copy = MESSAGES.app.Builder;
-
-const KEYS: SurveyKeys = { policy: "derive", reserved: [] };
 
 const defaults = {
     title: copy.defaults.questionTitle,
@@ -98,8 +95,6 @@ function StatefulPanel({
             >
                 <EditorPanel
                     target={{ kind: "element", element }}
-                    elements={[element]}
-                    keys={{ policy: "derive", reserved: [] }}
                     onChange={setElement}
                     onHeadChange={() => {}}
                     onDuplicate={() => {}}
@@ -115,7 +110,7 @@ function renderPanel(
     onDelete?: () => void,
     collected = 0
 ) {
-    const element = createElement(type, defaults, [], KEYS);
+    const element = createElement(type, defaults, []);
     return renderWithIntl(
         <StatefulPanel
             initial={element}
@@ -265,10 +260,13 @@ describe.each([
 
         fireEvent.change(title, { target: { value: "Kui rahul oled?" } });
         expect(title.value).toBe("Kui rahul oled?");
+    });
 
-        // The key follows the title until the owner overrides it (DECISIONS
-        // 014), which is the one piece of derived state in the panel.
-        expect(screen.getByText("kui_rahul_oled")).not.toBeNull();
+    it("keeps the question's key to itself", () => {
+        // Keys are internal lineage (docs/DECISIONS.md 035): nothing in the
+        // panel shows one, and retitling never moves it.
+        const { container } = renderPanel(type);
+        expect(container.textContent).not.toMatch(/q_[a-z0-9]{12}/);
     });
 });
 
@@ -376,7 +374,7 @@ describe("the words the panel seeds", () => {
     const seedIn = (locale: SurveyLocale) =>
         renderWithIntl(
             <StatefulPanel
-                initial={createElement("single_choice", defaults, [], KEYS)}
+                initial={createElement("single_choice", defaults, [])}
                 locale={locale}
             />
         );

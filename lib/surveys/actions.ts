@@ -281,7 +281,8 @@ export async function saveSurveySettingsAction(
 /**
  * Duplicating is how a recurring survey gets its next wave: the copy keeps the
  * source's `waveGroupId` and every question `key`, and gets fresh ids, so a
- * year from now the two are still comparable (docs/DECISIONS.md 003). It comes
+ * comparison of the two can suggest each question's successor
+ * (docs/DECISIONS.md 035). It comes
  * back as an unpublished draft with no slug, so it cannot take over the
  * source's public link.
  */

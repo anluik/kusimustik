@@ -17,9 +17,6 @@ import {
     withSelectionBoundsInRange
 } from "@/lib/builder/element-patch";
 import { createElement } from "@/lib/builder/new-element";
-import type { SurveyKeys } from "@/lib/builder/keys";
-
-const KEYS: SurveyKeys = { policy: "derive", reserved: [] };
 
 const defaults = {
     title: "Uus küsimus",
@@ -30,19 +27,19 @@ const defaults = {
 };
 
 function multiChoice(): MultiChoiceQuestion {
-    const element = createElement("multi_choice", defaults, [], KEYS);
+    const element = createElement("multi_choice", defaults, []);
     if (element.type !== "multi_choice") throw new Error("wrong type");
     return element;
 }
 
 function shortText(): ShortTextQuestion {
-    const element = createElement("short_text", defaults, [], KEYS);
+    const element = createElement("short_text", defaults, []);
     if (element.type !== "short_text") throw new Error("wrong type");
     return element;
 }
 
 function scale(): OpinionScaleQuestion {
-    const element = createElement("opinion_scale", defaults, [], KEYS);
+    const element = createElement("opinion_scale", defaults, []);
     if (element.type !== "opinion_scale") throw new Error("wrong type");
     return element;
 }

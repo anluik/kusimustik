@@ -172,14 +172,23 @@ export function SurveyRowActions({
                 open={dialog === "delete"}
                 onOpenChange={open => setDialog(open ? "delete" : null)}
                 title={tDelete("title")}
-                body={
+                body={[
                     survey.responseCount > 0
                         ? tDelete("bodyWithResponses", {
                               title: displayTitle,
                               count: survey.responseCount
                           })
-                        : tDelete("body", { title: displayTitle })
-                }
+                        : tDelete("body", { title: displayTitle }),
+                    // Deleting a wave shrinks the comparisons it is in rather
+                    // than deleting them, and that is worth saying first.
+                    ...(survey.comparisonCount > 0
+                        ? [
+                              tDelete("inComparisons", {
+                                  count: survey.comparisonCount
+                              })
+                          ]
+                        : [])
+                ].join(" ")}
                 confirmLabel={tDelete("submit")}
                 run={() => deleteSurveyAction({ surveyId: survey.id })}
             />

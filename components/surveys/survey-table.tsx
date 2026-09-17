@@ -438,7 +438,8 @@ function GroupRow({
                         </Link>
                     </Button>
                     {/* The menu acts on the newest wave — the live one, and the
-                        one "new wave" has to copy for the keys to line up. */}
+                        one "new wave" should copy, so its questions carry
+                        their lineage into the next wave. */}
                     <SurveyRowActions survey={newest} isWave />
                 </div>
             </TableCell>

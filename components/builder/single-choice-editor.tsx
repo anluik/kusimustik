@@ -13,18 +13,13 @@ import {
     useChoiceListCopy
 } from "@/components/builder/option-list-editor";
 import type { SingleChoiceQuestion, SurveyElement } from "@/domain/question";
-import type { SurveyKeys } from "@/lib/builder/keys";
 
 /** One answer from a list of radio buttons, optionally plus a written one. */
 export function SingleChoiceEditor({
     question,
-    siblings,
-    keys,
     onChange
 }: {
     readonly question: SingleChoiceQuestion;
-    readonly siblings: readonly SurveyElement[];
-    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
@@ -34,8 +29,6 @@ export function SingleChoiceEditor({
         <>
             <ElementFields
                 element={question}
-                siblings={siblings}
-                keys={keys}
                 onChange={onChange}
                 titleLabel={t("titleLabel")}
                 titlePlaceholder={t("titlePlaceholder")}

@@ -12,7 +12,6 @@ import {
     useChoiceListCopy
 } from "@/components/builder/option-list-editor";
 import type { DropdownQuestion, SurveyElement } from "@/domain/question";
-import type { SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * The same single answer as `single_choice`, presented as a select because the
@@ -21,13 +20,9 @@ import type { SurveyKeys } from "@/lib/builder/keys";
  */
 export function DropdownEditor({
     question,
-    siblings,
-    keys,
     onChange
 }: {
     readonly question: DropdownQuestion;
-    readonly siblings: readonly SurveyElement[];
-    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
@@ -37,8 +32,6 @@ export function DropdownEditor({
         <>
             <ElementFields
                 element={question}
-                siblings={siblings}
-                keys={keys}
                 onChange={onChange}
                 titleLabel={t("titleLabel")}
                 titlePlaceholder={t("titlePlaceholder")}

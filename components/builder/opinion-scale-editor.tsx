@@ -26,7 +26,6 @@ import {
     type SurveyElement
 } from "@/domain/question";
 import { withScaleLabel } from "@/lib/builder/element-patch";
-import type { SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * A scale from 1 to `max`, with optional wording at each end.
@@ -46,13 +45,9 @@ const LENGTHS = Array.from(
 
 export function OpinionScaleEditor({
     question,
-    siblings,
-    keys,
     onChange
 }: {
     readonly question: OpinionScaleQuestion;
-    readonly siblings: readonly SurveyElement[];
-    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
@@ -88,8 +83,6 @@ export function OpinionScaleEditor({
         <>
             <ElementFields
                 element={question}
-                siblings={siblings}
-                keys={keys}
                 onChange={onChange}
                 titleLabel={t("titleLabel")}
                 titlePlaceholder={t("titlePlaceholder")}

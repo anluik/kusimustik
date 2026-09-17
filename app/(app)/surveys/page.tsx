@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { SurveysScreen } from "@/components/surveys/surveys-screen";
 import { requireSessionUser } from "@/lib/auth/session";
+import { listComparisonCounts } from "@/lib/db/comparisons";
 import { listSurveyStats, listSurveys } from "@/lib/db/surveys";
 import { createServerDb } from "@/lib/supabase/server";
 import { toListItems } from "@/lib/surveys/list";
@@ -30,14 +31,15 @@ export default async function SurveysPage() {
     await requireSessionUser();
     const db = await createServerDb();
 
-    const [summaries, stats] = await Promise.all([
+    const [summaries, stats, comparisonCounts] = await Promise.all([
         listSurveys(db),
-        listSurveyStats(db)
+        listSurveyStats(db),
+        listComparisonCounts(db)
     ]);
 
     return (
         <SurveysScreen
-            items={toListItems(summaries, stats)}
+            items={toListItems(summaries, stats, comparisonCounts)}
             // Read once here so the server render and the hydrated one cannot
             // disagree about which day "today" is.
             nowIso={new Date().toISOString()}

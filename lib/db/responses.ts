@@ -10,6 +10,7 @@ import {
 } from "@/domain/ids";
 import { LOCALES } from "@/domain/survey";
 import { DbError, unwrap } from "@/lib/db/errors";
+import { readAllPages } from "@/lib/db/paging";
 import {
     JsonObjectSchema,
     TimestampSchema,
@@ -139,21 +140,29 @@ export async function listResponsesBySurvey(
     const ids = [...surveyIds];
     const what = `listResponsesBySurvey(${ids.length} surveys)`;
 
-    const responseRows = unwrap(
-        what,
-        await db
+    // Both reads are paged: either can pass PostgREST's row cap on its own,
+    // and answers pass it first — a thirty-question survey does at about
+    // thirty-four responses. Each is ordered on something that only grows, so
+    // a response submitted while this runs lands behind the cursor.
+    const responseRows = await readAllPages(what, (from, to) =>
+        db
             .from("responses")
             .select("id, survey_id, survey_version, locale, submitted_at")
             .in("survey_id", ids)
             .order("submitted_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to)
     );
 
-    const answerRows = unwrap(
-        `${what} answers`,
-        await db
+    const answerRows = await readAllPages(`${what} answers`, (from, to) =>
+        db
             .from("answers")
             .select("response_id, question_id, value")
             .in("survey_id", ids)
+            .order("created_at", { ascending: true })
+            .order("response_id", { ascending: true })
+            .order("question_id", { ascending: true })
+            .range(from, to)
     );
 
     const byResponse = new Map<string, Record<string, unknown>>();

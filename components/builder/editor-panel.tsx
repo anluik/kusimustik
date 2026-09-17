@@ -33,7 +33,6 @@ import { Button } from "@/components/ui/button";
 import { assertNever } from "@/domain/assert-never";
 import type { SurveyElement } from "@/domain/question";
 import type { SurveyHead } from "@/domain/survey";
-import type { SurveyKeys } from "@/lib/builder/keys";
 import { cn } from "@/lib/utils";
 
 /**
@@ -59,16 +58,12 @@ import { cn } from "@/lib/utils";
 
 function ElementEditor({
     element,
-    siblings,
-    keys,
     onChange
 }: {
     readonly element: SurveyElement;
-    readonly siblings: readonly SurveyElement[];
-    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
-    const shared = { siblings, keys, onChange };
+    const shared = { onChange };
 
     switch (element.type) {
         case "statement":
@@ -105,8 +100,6 @@ export type EditorTarget =
 
 export function EditorPanel({
     target,
-    elements,
-    keys,
     onChange,
     onHeadChange,
     onDuplicate,
@@ -115,8 +108,6 @@ export function EditorPanel({
     className
 }: {
     readonly target: EditorTarget;
-    readonly elements: readonly SurveyElement[];
-    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
     readonly onHeadChange: (head: SurveyHead) => void;
     readonly onDuplicate: () => void;
@@ -180,16 +171,14 @@ export function EditorPanel({
                         />
                     ) : (
                         /* Keyed by element, so selecting a second question of
-                           the same type remounts the editor: its local state
-                           — the key field's open/warned flags — belongs to
-                           the element being edited, not to the panel. The
-                           header block needs no key: there is one of it, and
-                           it has no local state to carry over. */
+                           the same type remounts the editor: any local state
+                           it holds — an option list's drag, a dialog —
+                           belongs to the element being edited, not to the
+                           panel. The header block needs no key: there is one
+                           of it, and it has no local state to carry over. */
                         <ElementEditor
                             key={target.element.id}
                             element={target.element}
-                            siblings={elements}
-                            keys={keys}
                             onChange={onChange}
                         />
                     )}

@@ -148,7 +148,8 @@
             "title": "Kustuta küsitlus",
             "body": "Küsitlus «{title}» ja kõik selle vastused kustutatakse jäädavalt. Seda ei saa tagasi võtta.",
             "bodyWithResponses": "Küsitlus «{title}» ja selle {count, plural, one {# vastus} other {# vastust}} kustutatakse jäädavalt. Seda ei saa tagasi võtta.",
-            "submit": "Kustuta"
+            "submit": "Kustuta",
+            "inComparisons": "Ta eemaldatakse ka {count, plural, one {# võrdlusest} other {# võrdlusest}}."
         },
         "errors": {
             "invalidInput": "Sisestatud andmed ei sobi. Kontrolli ja proovi uuesti.",
@@ -198,12 +199,6 @@
                 "cancel": "Jäta alles",
                 "confirm": "Kustuta element"
             },
-            "keyLabel": "Võti",
-            "keyHelp": {
-                "derive": "Tekib pealkirjast, kuni sa seda ise muudad. Võti seob laineid ja annab CSV veergudele nime, seepärast lukustub see avaldamisel.",
-                "freeze": "Lukustatud: sellele võtmele viitavad juba vastused või teised lained. Muuta saab, aga hoiatuse kaudu.",
-                "translating": "Võti on masinatele, mitte vastajale: see on kõigis keeltes sama ja seda muudad põhikeeles."
-            },
             "titleLabel": "Küsimus",
             "titlePlaceholder": "Mida sa vastajalt küsida tahad?",
             "descriptionLabel": "Abitekst",
@@ -219,14 +214,6 @@
             "otherLabelPlaceholder": "Muu",
             "duplicate": "Dubleeri",
             "duplicateLabel": "Dubleeri element «{title}»",
-            "keyPlaceholder": "nt rahulolu_uldine",
-            "editKey": "Muuda võtit",
-            "keyWarning": {
-                "title": "Kas muuta võtit?",
-                "body": "Võti «{key}» seob seda küsimust juba antud vastuste ja teiste lainetega. Muutmine katkestab selle trendijoone ja annab CSV veerule uue nime.",
-                "cancel": "Jäta muutmata",
-                "confirm": "Muuda siiski"
-            },
             "statementLabel": "Väide",
             "statementPlaceholder": "Tekst, mida vastaja loeb",
             "statementHelp": "Väidet ei vastata: seda ainult näidatakse. Tulemustesse ega CSV-sse see ei jõua.",
@@ -294,19 +281,7 @@
             "titleRequired": "Küsimusel peab olema pealkiri.",
             "optionRequired": "Valik ei saa olla tühi.",
             "otherLabelRequired": "Sildile tuleb tekst kirjutada.",
-            "keyInvalid": "Võti peab algama tähega ning tohib sisaldada ainult väiketähti, numbreid ja alakriipse.",
-            "keyTaken": "See võti kuulub juba mõnele teisele küsimusele.",
             "surveyTitleRequired": "Küsitlusel peab olema pealkiri."
-        },
-        "save": {
-            "label": "Salvestamise olek",
-            "saved": "salvestatud",
-            "saving": "salvestan…",
-            "pending": "salvestamata",
-            "invalid": "salvestamata — paranda vead",
-            "failed": "salvestamine ebaõnnestus",
-            "retry": "Proovi uuesti",
-            "reload": "Laadi leht uuesti"
         },
         "elementTypes": {
             "statement": "Väide",
@@ -344,6 +319,16 @@
             "sourceOption": "{language} — küsitluse põhikeel",
             "rowUntranslated": "Ei ole täielikult tõlgitud"
         }
+    },
+    "Autosave": {
+        "label": "Salvestamise olek",
+        "saved": "salvestatud",
+        "saving": "salvestan…",
+        "pending": "salvestamata",
+        "invalid": "salvestamata — paranda vead",
+        "failed": "salvestamine ebaõnnestus",
+        "retry": "Proovi uuesti",
+        "reload": "Laadi leht uuesti"
     },
     "Results": {
         "title": "Tulemused",
@@ -475,18 +460,82 @@
     "Waves": {
         "title": "Lainete võrdlus",
         "backToSurveys": "Tagasi küsitluste juurde",
-        "unlabelledWave": "Sildita",
         "waves": "{count, plural, one {# laine} other {# lainet}}",
         "responses": "{count, plural, one {# vastus kokku} other {# vastust kokku}}",
-        "omitted": "Näidatakse {shown} viimast lainet; {omitted} vanemat jäi kõrvale.",
+        "list": {
+            "title": "Võrdlused",
+            "count": "{count, plural, one {# võrdlus} other {# võrdlust}}",
+            "new": "Uus võrdlus",
+            "needsTwoWaves": "Võrdluseks on vaja vähemalt kahte lainet.",
+            "columns": {
+                "name": "Nimi",
+                "waves": "Lained",
+                "updated": "Muudetud"
+            }
+        },
+        "rowActions": {
+            "label": "Võrdluse toimingud",
+            "open": "Ava",
+            "editMatches": "Muuda vasteid",
+            "rename": "Nimeta ümber",
+            "delete": "Kustuta"
+        },
+        "rename": {
+            "title": "Nimeta võrdlus ümber",
+            "label": "Nimi",
+            "submit": "Salvesta"
+        },
+        "delete": {
+            "title": "Kustuta võrdlus",
+            "body": "Võrdlus «{name}» kustutatakse. Küsitlused ja nende vastused jäävad alles.",
+            "submit": "Kustuta"
+        },
+        "create": {
+            "title": "Uus võrdlus",
+            "body": "Vali võrreldavad lained. Samad küsimused pakutakse välja, sina kinnitad need.",
+            "name": "Nimi",
+            "waves": "Lained",
+            "responses": "{count, plural, one {# vastus} other {# vastust}}",
+            "tooFew": "Vali vähemalt kaks lainet.",
+            "tooMany": "Korraga saab võrrelda kuni {max} lainet.",
+            "submit": "Loo võrdlus"
+        },
+        "empty": {
+            "oneWave": {
+                "title": "Võrrelda saab alates teisest lainest",
+                "body": "Sellel seerial on üks laine. Loo küsitluste nimekirjas uus laine, siis saad need omavahel võrrelda."
+            },
+            "noComparisons": {
+                "title": "Võrdlusi veel pole",
+                "body": "Võrdle kõiki laineid korraga: samad küsimused pakutakse välja ja sina kinnitad need. Või vali lained ise.",
+                "compareAll": "Võrdle kõiki laineid"
+            },
+            "tooFewWaves": {
+                "title": "Võrdlusel on vaja veel ühte lainet",
+                "body": "Mõni selle võrdluse laine on kustutatud. Lisa vasteid muutes teine laine või kustuta võrdlus."
+            },
+            "noMatches": {
+                "title": "Vasteid veel pole",
+                "body": "Selles võrdluses pole ühtegi küsimuste vastet. Muuda vasteid ja vali, milliseid küsimusi lainete vahel võrrelda."
+            },
+            "noResponses": {
+                "title": "Vastuseid ei ole veel",
+                "body": "Ükski selle võrdluse laine ei ole veel vastuseid kogunud. Jaga mõne laine avalikku linki — võrdlus tekib siia niipea, kui vastused saabuvad."
+            }
+        },
+        "result": {
+            "editMatches": "Muuda vasteid",
+            "allComparisons": "Kõik võrdlused"
+        },
         "question": {
             "comparedWaves": "võrreldud {count} laines",
             "answered": "{count, plural, one {# vastus} other {# vastust}}",
-            "notAsked": "Ei küsitud: {waves}",
-            "notComparable": "Ei ole võrreldav, küsimuse tüüp on muutunud: {waves}",
+            "notMatched": "Vastet pole: {waves}",
+            "notComparable": "Ei ole enam võrreldav, küsimus on muutunud: {waves}",
+            "removed": "Küsitlusest eemaldatud, näidatakse viimase avaldatud kuju järgi: {waves}",
             "noAnswers": "Ükski laine ei ole sellele küsimusele veel vastuseid saanud.",
             "waveNoAnswers": "Selles laines ei ole sellele küsimusele vastatud.",
-            "noWave": "Ükski võrreldav laine seda küsimust ei küsi."
+            "noWave": "Ükski laine ei saa seda rida praegu näidata."
         },
         "chart": {
             "wave": "Laine",
@@ -494,15 +543,40 @@
             "mean": "Keskmine",
             "score": "NPS"
         },
-        "empty": {
-            "noQuestions": {
-                "title": "Võrrelda ei ole midagi",
-                "body": "Selle seeria lainetes ei ole ühtegi vastatavat küsimust. Lisa koostajas küsimusi ja avalda laine uuesti."
+        "matches": {
+            "title": "Vasted",
+            "done": "Valmis",
+            "suggest": "Paku vasteid",
+            "addWave": "Lisa laine",
+            "addWaveFull": "Võrdluses on juba {max} lainet",
+            "noWaveToAdd": "Kõik lained on juba võrdluses",
+            "removeWave": "Eemalda laine {wave}",
+            "removeWaveTitle": "Eemalda laine võrdlusest",
+            "removeWaveBody": "Laine {wave} ja selle vasted eemaldatakse sellest võrdlusest. Küsitlus ise jääb alles.",
+            "removeWaveSubmit": "Eemalda",
+            "onlyIncomplete": "Ainult puudulikud",
+            "addRow": "Lisa rida",
+            "removeRow": "Eemalda rida",
+            "notInWave": "Pole selles laines",
+            "clear": "Eemalda laine {wave} valik",
+            "removedQuestion": "Küsitlusest eemaldatud küsimus",
+            "inOtherRow": "teises reas, tõstetakse siia",
+            "rowLabel": "Rida {index}",
+            "waveSelect": "Küsimus laines {wave}",
+            "unmatchedTitle": "Küsimused, mis pole üheski reas",
+            "addAsRow": "Lisa reana",
+            "empty": {
+                "title": "Ridu veel pole",
+                "body": "Paku vasteid või lisa rida ja vali igast lainest küsimus."
             },
-            "noResponses": {
-                "title": "Vastuseid ei ole veel",
-                "body": "Ükski selle seeria laine ei ole veel vastuseid kogunud. Jaga mõne laine avalikku linki — võrdlus tekib siia niipea, kui vastused saabuvad."
-            }
+            "noneIncomplete": "Kõik read on täielikud."
+        },
+        "errors": {
+            "invalidInput": "Sisestatud andmed ei sobi. Kontrolli ja proovi uuesti.",
+            "notFound": "Võrdlust ei leitud. Võib-olla on see juba kustutatud.",
+            "conflict": "Võrdlust muudeti vahepeal mujal. Laadi leht uuesti.",
+            "refused": "Mõni küsimus on vahepeal muutunud ega sobi enam oma ritta. Laadi leht uuesti.",
+            "failed": "Midagi läks valesti. Proovi uuesti."
         }
     },
     "Settings": {

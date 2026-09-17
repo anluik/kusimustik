@@ -920,3 +920,46 @@ The second half was forced by the first. The two fields lived in the builder's *
 - The runner needed **no change at any call site**. `getRunnerSurveyBySlug` already resolved the whole survey through the respondent's locale, so teaching `resolveSurvey` about the head made the header, the `<title>` and the intro correct for free. That is what 033's shape bought.
 - The compile-time untranslated-string guard in `localize.test.ts` now covers `AuthoredSurvey` as well as its elements, so a future survey-level text column is a build error rather than an Estonian sentence on a Russian page.
 - **Two small regressions, accepted deliberately.** The autosave revalidates nothing — it fires every 700ms while someone types — so the survey list can show a title one navigation stale; that is the staleness its question count and its "muudetud" timestamp have always had, and a `refresh()` on a debounce is not an option. And `localizedTextSchema` does not trim where `SurveyTitleSchema` did, so padding around a title is now stored; a title of nothing but whitespace is still refused, because `withLocale` reads it as absence and the empty map fails to parse.
+
+---
+
+## 035 — Comparison is chosen, not joined; question keys are internal
+
+**Status:** accepted. Supersedes the join rule of 003, the key parts of 014, 015 and 024, and the join and client-side alignment of 029.
+
+**Context.** Wave comparison joined waves on question `key`, and everything the builder did with keys existed to make that join trustworthy: derive the key from the title, follow the title only while the key was provably the derived one, freeze the whole survey once it was published or had a sibling wave, let the owner edit the key behind a warning. Three defects showed the design was guessing rather than knowing:
+
+- **A suffixed key froze at its placeholder.** `nextKeyFor` decided "has a human touched this key?" by asking whether the key still equalled what the title derives to. A key that once took `_2` to dodge a sibling failed that test as soon as the sibling was renamed or deleted, and stopped following its title for good.
+- **Every Cyrillic title derived to `question`.** `deriveQuestionKey` dropped everything outside `[a-z0-9]`, so a Russian survey's keys were `question`, `question_2`… in creation order, and following the title was a no-op.
+- **A new question could take a key a sibling wave used for something else.** `takenKeys` only knew this survey. A question deleted from a draft wave left no tombstone; the next new question derived the same placeholder key and the comparison joined it, silently, to last year's different question — "same key, same type" was the whole test.
+
+The owner's position: the people using this should never see or reason about keys, and what gets compared with what is their call, not an inference.
+
+**Decisions.**
+
+- **A comparison is a saved document the owner builds.** It is named, belongs to one wave group, covers **two to five** waves (five is DESIGN §7's categorical cap, and in a comparison the wave is the category), and is a list of **rows**. A row lines up at most one question from each member wave. Several comparisons per group are allowed; one per series that grows each year is the expected case.
+
+  Rows rather than pairs, deliberately: pairs would have made "add next year's wave" a new comparison and a full re-match every year, and moving from pairs to tuples later is a data migration.
+
+- **The rules are enforced three times.** Every question in a row has the same type, and an `opinion_scale` row the same `max` (`matchVerdict` in `domain/comparison.ts`, exhaustive over the type union). A question appears in at most one row of a comparison. The editor offers a question that breaks the rules as a disabled choice, without an explanation beside it — that is for a help section, if one is ever written. The action re-checks the whole document against freshly loaded definitions; the database refuses a wave from another group, a sixth wave and a type mismatch; and the read re-checks, reporting a row that has become invalid as `mismatched` instead of drawing it.
+
+  **Type equality is not a foreign key.** `sync_survey_questions()` upserts `type`, so a constraint tying a match's type to its row's would make a builder save fail because of a comparison. A comparison may never block editing a survey — it is checked when the comparison is written and when it is read, and nowhere else.
+
+- **Suggestions are starting rows, and only made when asked for.** Creating a comparison, adding a wave to one, and "suggest matches" run `suggestMatches`: first by `key` (which duplication preserves — the lineage), then by identical normalised wording in each wave's own language (which catches a question deleted and re-added). What they produce is saved as ordinary rows. There is no confirmation step: a confirmed and an unconfirmed row would be stored, compared and charted identically, so "confirming" could only hide a badge, and the owner's review is the matching editor itself. Nothing is suggested on page load, so a match the owner removed stays removed.
+
+- **Deletions shrink a comparison; they never delete it.** Deleting a survey removes its membership. Deleting an unanswered question removes its match with its projection row. A tombstoned question keeps its match, and its definition is read from the newest `survey_versions` snapshot that holds it, so answers collected before it was removed still chart.
+
+- **The comparison is built on the server.** `buildComparison` runs in the page and the client receives summaries, not every response of every wave; only the matched questions' answers are read. 029 aligned in the client because the page already held the rows — at five waves that was the thing to stop doing.
+
+- **Keys are internal, and new ones are random.** A key is minted once when a question is created (`q_` and a random token, `newQuestionKey`), preserved by `duplicateSurvey`, freshly minted by `duplicateElement`, and never shown, edited or re-derived. It is a suggestion hint and a CSV column's internal id, never a join. Random rather than derived from the title, because a key two waves share must only ever mean "copied from": a key derived from the placeholder title meant "both were once called *Uus küsimus*", and one derived from a Russian title meant nothing. The key chip, its editor and warning, `keyPolicyFor`, `nextKeyFor`, the reserved-keys read and the builder's session list of retired keys are all gone — a random key cannot collide with a tombstone in practice, and `survey_questions_survey_key_idx` (024) is still the backstop. Existing readable keys are untouched and keep suggesting. The CSV tells two same-titled columns apart by question number (`Linn [#3]`) rather than by key.
+
+- **Option values are never reused.** `nextOptionValue` handed out the lowest free `option_N`, so deleting an answered "Tartu" (`option_2`) and adding "Pärnu" filed Tartu's answers under Pärnu — in that survey's own results, not only in a comparison. Values are now random. Existing values are untouched.
+
+- **Responses are read in pages.** `listResponsesBySurvey` issued one query each for responses and answers, and PostgREST returns at most `max_rows` (1000) rows, so any survey past about a thousand answers was summarised from an arbitrary subset without an error anywhere. Both reads now page on a stable order.
+
+**Consequences.**
+
+- The reported key bug and the Cyrillic key problem are gone because nothing derives a key from a title after creation, not because the derivation was fixed.
+- A recreated option in a later wave has a different value and shows as two option rows, each "not offered" in the other wave. Mapping options inside a row is the obvious extension and would be a column on the row.
+- Going past five waves is a palette decision (DESIGN §7), not a schema change.
+- The group's old automatic view is gone. An empty group offers "compare all waves", which builds a comparison of the newest five with suggestions — the old view, one click away, and editable.

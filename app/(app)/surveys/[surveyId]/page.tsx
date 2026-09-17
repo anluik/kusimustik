@@ -6,13 +6,8 @@ import { cache } from "react";
 import { BuilderScreen } from "@/components/builder/builder-screen";
 import { SurveyIdSchema } from "@/domain/ids";
 import { requireSessionUser } from "@/lib/auth/session";
-import { keyPolicyFor } from "@/lib/builder/keys";
 import { countResponses } from "@/lib/db/responses";
-import {
-    getSurvey,
-    listReservedQuestionKeys,
-    listSurveysInWaveGroup
-} from "@/lib/db/surveys";
+import { getSurvey } from "@/lib/db/surveys";
 import { loadElementCopyMessages } from "@/lib/i18n/messages";
 import { createServerDb } from "@/lib/supabase/server";
 
@@ -23,14 +18,6 @@ import { createServerDb } from "@/lib/supabase/server";
  * scopes the read: a survey belonging to someone else simply is not there, so
  * "not yours" and "deleted" are the same 404 — as they must be, or the URL
  * becomes an oracle for which survey ids exist.
- *
- * The wave group is counted here rather than in the client, because it decides
- * whether question keys may still follow their titles: a survey with a sibling
- * wave is already being joined on its keys. See `keyPolicyFor`.
- *
- * The reserved keys are read for the same reason and at the same time: a key
- * a removed-but-answered question still holds is not the builder's to give
- * away, and the builder cannot see tombstones from the document alone.
  */
 const loadSurvey = cache(async (raw: string) => {
     const id = SurveyIdSchema.safeParse(raw);
@@ -41,13 +28,11 @@ const loadSurvey = cache(async (raw: string) => {
     const record = await getSurvey(db, id.data);
     if (record === null) return null;
 
-    const waves = await listSurveysInWaveGroup(db, record.survey.waveGroupId);
     // What makes an edit here destructive rather than merely undoable: taking
     // a choice out of a question that has been answered leaves those answers
     // with nothing on a chart to belong to (`aggregate`'s `unshownCount`).
     const responseCount = await countResponses(db, id.data);
-    const reservedKeys = await listReservedQuestionKeys(db, id.data);
-    return { record, waveCount: waves.length, responseCount, reservedKeys };
+    return { record, responseCount };
 });
 
 export async function generateMetadata({
@@ -69,7 +54,7 @@ export default async function BuilderPage({
     const found = await loadSurvey(surveyId);
     if (found === null) notFound();
 
-    const { record, waveCount, responseCount, reservedKeys } = found;
+    const { record, responseCount } = found;
     // A new question's words belong to the language the *survey* is written
     // in, so the builder needs every language's copy rather than the one the
     // owner is reading the app in (docs/DECISIONS.md 032).
@@ -98,13 +83,6 @@ export default async function BuilderPage({
             initialElements={record.survey.elements}
             initialVersion={record.version}
             elementCopyMessages={elementCopyMessages}
-            keys={{
-                policy: keyPolicyFor({
-                    publishedVersion: record.publishedVersion,
-                    waveCount
-                }),
-                reserved: reservedKeys
-            }}
             // A survey that has never been published has collected nothing and
             // emitted nothing, so its results page would be three empty states.
             hasResults={record.survey.slug !== null}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { toCsvCells, toCsvColumns, withUniqueHeaders } from "@/domain/export";
+import { newQuestionId } from "@/domain/ids";
 import {
     ALL_QUESTIONS,
     RESPONSES,
@@ -174,23 +175,24 @@ describe("withUniqueHeaders", () => {
         expect(withUniqueHeaders(columns)).toEqual(columns);
     });
 
-    it("qualifies both sides when two questions share a title", () => {
-        // Same title, different keys — which is what the builder mints for a
-        // second question added under the same name.
-        const twin = { ...nps, key: "recommend_2" };
-        const [first, second] = withUniqueHeaders([
+    it("qualifies both sides with the question's number when two share a title", () => {
+        // A key is internal (docs/DECISIONS.md 035), so it is not what a
+        // reader is shown; the question's place in the file is.
+        const twin = { ...nps, id: newQuestionId(), key: "q_twin" };
+        const [, first, second] = withUniqueHeaders([
+            ...toCsvColumns(shortText),
             ...toCsvColumns(nps),
             ...toCsvColumns(twin)
         ]);
 
-        expect(first?.header).toBe(`${nps.title} [recommend]`);
-        expect(second?.header).toBe(`${nps.title} [recommend_2]`);
+        expect(first?.header).toBe(`${nps.title} [#2]`);
+        expect(second?.header).toBe(`${nps.title} [#3]`);
     });
 
     it("keeps one column per input column, in order", () => {
         const columns = [
             ...toCsvColumns(nps),
-            ...toCsvColumns({ ...nps, key: "x" })
+            ...toCsvColumns({ ...nps, id: newQuestionId(), key: "x" })
         ];
         const unique = withUniqueHeaders(columns);
 

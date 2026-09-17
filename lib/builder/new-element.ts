@@ -1,12 +1,9 @@
 import { assertNever } from "@/domain/assert-never";
-import type { SurveyLocale } from "@/domain/content";
-import type { QuestionId } from "@/domain/ids";
 import { newQuestionId } from "@/domain/ids";
-import { resolveElement } from "@/domain/localize";
-import { takenKeys, type SurveyKeys } from "@/lib/builder/keys";
+import { randomToken } from "@/domain/token";
 import {
     OTHER_OPTION_VALUE,
-    deriveQuestionKey,
+    newQuestionKey,
     type AuthoredElement,
     type ChoiceOption,
     type ElementType,
@@ -74,18 +71,29 @@ const INITIAL_SCALE_MAX = 5;
  *
  * Values are generated, never derived from the label: an answer stores the
  * value, so rewording an option must not orphan the answers already given to
- * it. `OTHER_OPTION_VALUE` is reserved by the schema and cannot be produced
- * here, since every candidate is `option_<n>`.
+ * it. For the same reason they are never *reused*. Filling the lowest free
+ * `option_<n>` handed a deleted, already-answered option's value to whatever
+ * was added next, and every answer the old option collected was counted under
+ * the new one's label — in that survey's own results, and in every comparison
+ * (docs/DECISIONS.md 035). A deleted value may still be in the answers, and
+ * only the database knows, so a new value is random rather than "free".
+ *
+ * `taken` is still checked: a collision among a question's own options is a
+ * schema error, and forty-odd bits make one a curiosity rather than a plan.
+ * `OTHER_OPTION_VALUE` is excluded outright rather than by the shape of the
+ * token, so changing the prefix can never make it reachable.
  */
 export function nextOptionValue(taken: Iterable<string>): string {
     const used = new Set(taken);
-    for (let n = 1; ; n += 1) {
-        const candidate = `option_${n}`;
+    for (;;) {
+        const candidate = `o_${randomToken(OPTION_VALUE_TOKEN_LENGTH)}`;
         if (!used.has(candidate) && candidate !== OTHER_OPTION_VALUE) {
             return candidate;
         }
     }
 }
+
+const OPTION_VALUE_TOKEN_LENGTH = 10;
 
 export function newOption(
     existing: readonly ChoiceOption[],
@@ -119,13 +127,12 @@ function newOptions(
 export function createElement(
     type: CreatableElementType,
     defaults: ElementDefaults,
-    siblings: readonly { readonly id: QuestionId; readonly key: string }[],
-    keys: SurveyKeys
+    siblings: readonly { readonly key: string }[]
 ): SurveyElement {
-    const taken = takenKeys(siblings, keys);
+    const taken = siblings.map(sibling => sibling.key);
     const question = {
         id: newQuestionId(),
-        key: deriveQuestionKey(defaults.title, taken),
+        key: newQuestionKey(taken),
         title: defaults.title,
         isAnswerable: true,
         required: true
@@ -135,7 +142,7 @@ export function createElement(
         case "statement":
             return {
                 id: newQuestionId(),
-                key: deriveQuestionKey(defaults.statementTitle, taken),
+                key: newQuestionKey(taken),
                 title: defaults.statementTitle,
                 type: "statement",
                 isAnswerable: false
@@ -205,30 +212,20 @@ export function createElement(
  * A copy of an element, ready to sit next to the original.
  *
  * The copy gets a fresh `id` and a fresh `key`. That is the opposite of
- * `duplicateSurvey`, which preserves keys so that waves stay comparable
- * (docs/DECISIONS.md 003) — here the two questions live in the *same* survey,
- * where a shared key is a `SurveySchema` violation and would mean two CSV
- * columns claiming one header. Everything the author wrote — options, bounds,
- * labels — is carried over verbatim.
- *
- * It copies the *stored* element, so a question translated into three
- * languages is duplicated in three. Only the key is derived from one language,
- * and it is the survey's own: a key is machine-facing, and deriving it from
- * whichever language the author happened to be translating in would name the
- * CSV column in Russian.
+ * `duplicateSurvey`, which preserves keys so that a wave's questions carry
+ * their lineage into the next one (docs/DECISIONS.md 035) — here the two
+ * questions live in the *same* survey, where a shared key is a `SurveySchema`
+ * violation, and the copy is a new question that merely starts out alike.
+ * Everything the author wrote — options, bounds, labels, every language — is
+ * carried over verbatim.
  */
 export function duplicateElement(
     element: AuthoredElement,
-    source: SurveyLocale,
-    siblings: readonly AuthoredElement[],
-    keys: SurveyKeys
+    siblings: readonly { readonly key: string }[]
 ): AuthoredElement {
     return {
         ...element,
         id: newQuestionId(),
-        key: deriveQuestionKey(
-            resolveElement(element, source).title,
-            takenKeys(siblings, keys)
-        )
+        key: newQuestionKey(siblings.map(sibling => sibling.key))
     };
 }

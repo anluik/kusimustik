@@ -4,17 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SurveyLocale } from "@/domain/content";
 import { newSurveyId } from "@/domain/ids";
 import { authorElement } from "@/domain/localize";
-import type { AuthoredElement, SurveyElement } from "@/domain/question";
-import type { SurveyKeys } from "@/lib/builder/keys";
+import type { AuthoredElement } from "@/domain/question";
 import { createElement } from "@/lib/builder/new-element";
 import { useSurveyBuilder } from "@/hooks/use-survey-builder";
 
 /**
- * The autosave's two gates — what it refuses to send, and which keys it
- * considers spent — and the seam between the stored document and the one
- * language of it the editor panel sees.
+ * The autosave's gate — what it refuses to send — and the seam between the
+ * stored document and the one language of it the editor panel sees.
  *
- * The gates exist because a save that goes out and fails is not recoverable
+ * The gate exists because a save that goes out and fails is not recoverable
  * from the builder: the document is unchanged, so every retry re-sends it and
  * fails identically. Anything the server or the database would reject has to
  * be caught before the request, not after it.
@@ -38,11 +36,9 @@ const defaults = {
     columnLabel: (index: number) => `Veerg ${index}`
 };
 
-const KEYS: SurveyKeys = { policy: "derive", reserved: [] };
-
 /** One language of a question, as the editor panel hands one back. */
 const question = (title: string, siblings: readonly AuthoredElement[] = []) =>
-    createElement("nps", { ...defaults, title }, siblings, KEYS);
+    createElement("nps", { ...defaults, title }, siblings);
 
 /** The same, as the document holds it: Estonian and nothing else. */
 const stored = (title: string, siblings: readonly AuthoredElement[] = []) =>
@@ -53,10 +49,7 @@ const HEAD_FIXTURE = { title: { et: "Maine ja rahulolu" } };
 
 function builderWith(
     initialElements: readonly AuthoredElement[],
-    {
-        keys = KEYS,
-        locale = "et"
-    }: { readonly keys?: SurveyKeys; readonly locale?: SurveyLocale } = {}
+    { locale = "et" }: { readonly locale?: SurveyLocale } = {}
 ) {
     return renderHook(() =>
         useSurveyBuilder({
@@ -64,7 +57,6 @@ function builderWith(
             initialHead: HEAD_FIXTURE,
             initialElements,
             initialVersion: 1,
-            keys,
             source: "et",
             locale
         })
@@ -201,65 +193,19 @@ describe("the language being edited", () => {
         expect(saved()[0]?.title).toEqual({ et: "Uus küsimus" });
     });
 
-    it("freezes question keys while a translation is being edited", () => {
-        // The key names a CSV column and joins this wave to the next one, so
-        // it cannot follow a Russian title.
-        const { result } = builderWith([stored("Töö tempo")], {
-            locale: "ru"
-        });
-
-        expect(result.current.keys.policy).toBe("freeze");
-    });
-});
-
-describe("keys retired during the session", () => {
-    it("are not handed to the next question added", () => {
-        // The page's snapshot was taken before this delete, so the tombstone
-        // the save is about to create is invisible to it.
-        const doomed = stored("Uus küsimus");
-        const { result } = builderWith([doomed]);
-
-        act(() => {
-            result.current.remove(doomed.id);
-        });
-
-        expect(result.current.keys.reserved).toContain(doomed.key);
-        const next = createElement(
-            "nps",
-            defaults,
-            result.current.stored,
-            result.current.keys
-        );
-        expect(next.key).not.toBe(doomed.key);
-    });
-
-    it("keeps what the page already reserved", () => {
-        const { result } = builderWith([], {
-            keys: { policy: "freeze", reserved: ["linn"] }
-        });
-
-        expect(result.current.keys).toEqual({
-            policy: "freeze",
-            reserved: ["linn"]
-        });
-    });
-
-    it("does not retire a key merely because an element was retitled", () => {
-        // Under `derive` the key tracks the title, so it moves constantly.
-        // Reserving every value it passes through would make backspacing a
-        // title mint `uus_kusimus_2`.
-        const element = stored("Uus küsimus");
+    it("never moves a question's key when it is retitled", async () => {
+        // Keys are internal lineage, not a slug of the title (DECISIONS 035).
+        const element = stored("Töö tempo");
         const { result } = builderWith([element]);
 
         act(() => {
-            const edited: SurveyElement = {
+            result.current.replace({
                 ...result.current.elements[0]!,
-                title: "Kui rahul oled?",
-                key: "kui_rahul_oled"
-            };
-            result.current.replace(edited);
+                title: "Kui rahul oled?"
+            });
         });
 
-        expect(result.current.keys.reserved).toEqual([]);
+        await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+        expect(saved()[0]?.key).toBe(element.key);
     });
 });

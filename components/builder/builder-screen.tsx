@@ -15,7 +15,7 @@ import { ElementCanvas } from "@/components/builder/element-canvas";
 import { HEAD } from "@/lib/builder/document";
 import type { BuilderSelection } from "@/lib/builder/document";
 import { ElementList } from "@/components/builder/element-list";
-import { SaveIndicator } from "@/components/builder/save-indicator";
+import { SaveIndicator } from "@/components/shell/save-indicator";
 import {
     SurveySettingsDialog,
     type SurveySettings
@@ -40,7 +40,6 @@ import type { AuthoredElement } from "@/domain/question";
 import type { AuthoredSurveyHead, SurveyStatus } from "@/domain/survey";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSurveyBuilder } from "@/hooks/use-survey-builder";
-import type { SurveyKeys } from "@/lib/builder/keys";
 import { elementCopy } from "@/lib/builder/element-copy";
 import {
     createElement,
@@ -77,7 +76,6 @@ export function BuilderScreen({
     initialHead,
     initialElements,
     initialVersion,
-    keys,
     elementCopyMessages,
     hasResults,
     responseCount,
@@ -91,8 +89,6 @@ export function BuilderScreen({
     /** The stored document — every language, not one of them. */
     readonly initialElements: readonly AuthoredElement[];
     readonly initialVersion: number;
-    /** Which keys are spoken for, and whether a key may still follow its title. */
-    readonly keys: SurveyKeys;
     /** The words a new element is born with, in every language a survey may be
      *  written in; see `lib/builder/element-copy.ts`. */
     readonly elementCopyMessages: ElementCopyMessages;
@@ -122,7 +118,6 @@ export function BuilderScreen({
         initialHead,
         initialElements,
         initialVersion,
-        keys,
         source: settings.locale,
         locale
     });
@@ -174,9 +169,7 @@ export function BuilderScreen({
     );
 
     function add(type: CreatableElementType) {
-        builder.add(
-            createElement(type, sourceCopy, builder.elements, builder.keys)
-        );
+        builder.add(createElement(type, sourceCopy, builder.elements));
         setSheetOpen(true);
     }
 
@@ -200,8 +193,6 @@ export function BuilderScreen({
                         ? { kind: "head", head: builder.head }
                         : { kind: "element", element: builder.selected }
                 }
-                elements={builder.elements}
-                keys={builder.keys}
                 insetHeader={asSheet}
                 onChange={builder.replace}
                 onHeadChange={builder.replaceHead}

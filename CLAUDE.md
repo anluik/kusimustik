@@ -30,7 +30,8 @@ pnpm db:reset       # reset local DB and replay migrations + seed
 - **Exhaustive switches.** Every `switch` on `question.type` ends with `default: assertNever(question)`. Never add a fallback branch to make a build pass — handle the case.
 - **`domain/` imports nothing.** No React, no Supabase, no Next. It is pure functions and schemas. If you need to reach for a dependency there, stop and ask.
 - **Server-side validation is not optional.** Every mutation re-derives its Zod schema server-side and re-parses. Client validation is a UX nicety only.
-- **`id` and `key` are not interchangeable.** `id` identifies a question within one survey and changes on duplication. `key` is stable across duplication and is what wave comparison joins on. Never key analytics, comparison or export column identity on `id`.
+- **`id` and `key` are not interchangeable, and neither is a comparison join.** `id` identifies a question within one survey and changes on duplication. `key` is internal lineage: minted once when a question is created, preserved by `duplicateSurvey`, never shown, edited or re-derived from the title. It is a *suggestion* hint and the CSV column id. What wave comparison compares is the owner's saved matches (`wave_comparison_matches`, by question id) — never infer a cross-wave match on your own, from `key` or anything else. See docs/DECISIONS.md 035.
+- **Option values are never reused.** An answer is stored by option value, so a value handed to a new option re-labels every answer the old one collected. New values are random.
 - **A survey's words are locale-keyed; its identifiers are not.** The survey's own title and description *and* everything in `surveys.elements` are the *authored* document — every title, description, label and placeholder is a `LocalizedText` map — and `AuthoredSurveySchema` is what the repository parses. One language of it is a *resolved* survey (`SurveySchema`, plain strings), which is what the runner, the aggregator and the exporter read. `domain/localize.ts` is the only thing that maps between them; never reach into a `LocalizedText` yourself. Keys, ids, option values and slugs are never translated. See docs/DECISIONS.md 030.
 
   `surveys.locale` is the language a survey is *written* in and everything's fallback; `surveys.locales` is the set it is *offered* in, always containing `locale` and normalised by `surveys_before_write()`. The builder holds the authored document and edits one language of it: `projectElement` for what the panel binds to, `mergeElement` for what comes back. Never author over a stored document — that replaces every other translation. See docs/DECISIONS.md 031.
@@ -54,7 +55,8 @@ root, so `domain/` is `@/domain` and `lib/db/` is `@/lib/db`.
 app/                 App Router — routes only. NO app/layout.tsx: each group
                      below is its own root layout, because <html lang> differs
                      by surface (docs/DECISIONS.md 011)
-  (app)/             authed dashboard — builder, results, wave comparison
+  (app)/             authed dashboard — builder, results, wave groups
+                     (/waves/[id]) and saved comparisons (/comparisons/[id])
   (auth)/            signed-out surfaces — /login
   (public)/          respondent runner at /k/[slug], no auth. The four route
                      files sit under [[...locale]]: the respondent's language
@@ -76,12 +78,17 @@ lib/runner/          the respondent's server side — the submit action and its 
                      codes, draft storage, analytics batching, and the Phase 9
                      honeypot and rate-limit throttle
 lib/surveys/         survey actions, error codes, and the pure list shaping
+lib/comparisons/     saved wave comparisons — actions, error codes, the save check,
+                     the matching editor's reducer, and the server-side loader
+                     (docs/DECISIONS.md 035)
 lib/builder/         the builder's pure parts — document reducer, element factory,
                      key policy, optional-field patches
 components/ui/       shadcn — do not hand-edit, re-run the CLI (one documented
                      exception: docs/DECISIONS.md 012)
 components/shell/    app shell — sidebar, app bar, empty state, providers
 components/surveys/  the survey list, its row actions and its dialogs
+components/comparisons/ a wave group's comparison list, the new-comparison dialog
+                     and the matching editor
 components/builder/  the three-panel builder — element list, canvas, editor panel;
                      survey-head-fields.tsx is the survey's own title and intro,
                      the header block at the top of the list; translation.tsx is

@@ -12,7 +12,6 @@ import {
     useChoiceListCopy
 } from "@/components/builder/option-list-editor";
 import type { MatrixSingleQuestion, SurveyElement } from "@/domain/question";
-import type { SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * One answer per row, from a shared set of columns.
@@ -25,13 +24,9 @@ import type { SurveyKeys } from "@/lib/builder/keys";
  */
 export function MatrixSingleEditor({
     question,
-    siblings,
-    keys,
     onChange
 }: {
     readonly question: MatrixSingleQuestion;
-    readonly siblings: readonly SurveyElement[];
-    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
@@ -41,8 +36,6 @@ export function MatrixSingleEditor({
         <>
             <ElementFields
                 element={question}
-                siblings={siblings}
-                keys={keys}
                 onChange={onChange}
                 titleLabel={t("titleLabel")}
                 titlePlaceholder={t("titlePlaceholder")}

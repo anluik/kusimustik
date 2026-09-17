@@ -171,11 +171,40 @@ One actions menu component serves both row kinds. Only the first item's wording 
 | Character counter | Mono 9px span, `text-muted-foreground` |
 | Option rows | `Input` + drag handle + remove `Button variant="ghost" size="icon"` |
 | Toggles | `Switch` |
-| Question key chip | `Badge variant="secondary"`, Mono |
 | Logic rule preview | `Card` with `bg-muted`, Mono 11px |
 | Duplicate / delete in panel header | `Button variant="ghost" size="sm"` |
 | Autosave indicator | plain dot + Mono text in the app bar. **Not a `Toast`, not a canvas spinner.** |
 | Command palette (⌘K) | `Command` / `CommandDialog` |
+
+### Wave comparisons
+
+Three surfaces, all owner-side and dense (§4). Waves are always named `waveLabel`, falling back to the wave's creation date — never the survey title, which is usually the same for every wave.
+
+**The group's comparison list** (`/waves/[waveGroupId]`), reached from the survey list's compare control.
+
+| Element | Primitive |
+|---|---|
+| List | `Table`, the survey list's header and row geometry; columns: name, waves (Mono, `2025 · 2026 · 2027`), updated, actions |
+| Row actions | `DropdownMenu` — open, edit matches, rename (`Dialog` with one `Input`), delete (`AlertDialog`, destructive) |
+| New comparison | `Button` default in the app bar; disabled with a `Tooltip` when the group has one wave |
+| Empty, one wave | §6 empty state: "a comparison needs a second wave", action back to the survey list |
+| Empty, two or more waves | §6 empty state; primary action **Compare all waves** (creates a comparison of the newest five, with suggestions), secondary **New comparison** |
+
+**New comparison** — a `Dialog`. One `Input` for the name, prefilled `oldest – newest` of the chosen waves and following the choice until the owner types in it. The waves are a list of rows, each a `Label` + `Switch`, newest first; the newest five start on. The submit is disabled below two and above five, and the footer says which (`text-input`, not a toast).
+
+**The matching editor** (`/comparisons/[comparisonId]/matches`).
+
+| Element | Primitive |
+|---|---|
+| App bar | the comparison's name; autosave indicator exactly as the builder's (§6 error state included); **Done** `Button` default back to the result |
+| Toolbar | `Button variant="outline" size="sm"`: *Suggest matches*, *Add wave* (`DropdownMenu` of the group's remaining waves; disabled at five or when every wave is compared, the reason in a `Tooltip`); `Switch` *Only incomplete* |
+| Wave header | one column per wave, oldest left, a `--chart-n` swatch as in the result legend, and a ghost icon `Button` to remove the wave (`AlertDialog`: its matches go with it) |
+| Row | a `Card` per row; one `Select` per wave, `h-[30px]`, listing that wave's questions as `N. title` with a Mono type tag. Nothing chosen shows the placeholder *Not in this wave*; it is not an option. A ghost icon `Button` beside a filled select clears it. A question already used in another row is still listed and says so; choosing it moves it. A question the row's rules refuse is a disabled item, with no explanation |
+| Remove row | ghost icon `Button` |
+| Add row | a trailing `Button variant="outline"` |
+| Narrow viewport | a row stacks its `Select`s, each captioned with its wave's name |
+
+**The result** (`/comparisons/[comparisonId]`) is Phase 11's screen: the legend, then a card per row. A wave that has no question in the row is a sentence on the card, as absent waves were; a question removed from its wave is captioned *removed in <wave>* and still charted. **No key badge**, and no review state: a suggested row is a row like any other.
 
 ### Results — behaviour tab
 

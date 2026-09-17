@@ -1,8 +1,8 @@
 -- Development seed: one owner and two waves of the same annual survey.
 --
 -- The two waves share a wave_group_id and every question key, but have distinct
--- question ids and two deliberately reworded titles — which is exactly the case
--- wave comparison has to survive (DECISIONS 003). Answer distributions differ
+-- question ids and two deliberately reworded titles — a comparison that holds
+-- them together has to survive that (DECISIONS 035). Answer distributions differ
 -- between the waves so the charts have something to show; they are derived from
 -- the response number rather than random(), so `pnpm db:reset` is reproducible.
 --
@@ -493,3 +493,34 @@ select '00000000-0000-4000-8000-0000000000a2',
        timestamptz '2026-04-01 09:00:00+03' + (n * interval '3 hours') + interval '5 minutes',
        null
 from generate_series(1, 42) as n;
+
+-- A saved comparison of the two waves ------------------------------------------
+--
+-- The owner decides what is compared (DECISIONS 035): one row per question,
+-- as duplicating the survey suggests. Read-only as far as the tests go: a spec
+-- that edits a comparison creates its own.
+
+insert into public.wave_comparisons (id, owner_id, wave_group_id, name, version)
+values ('00000000-0000-4000-8000-0000000000c1',
+        '00000000-0000-4000-8000-000000000001',
+        '00000000-0000-4000-8000-00000000000f',
+        '2025 – 2026',
+        1);
+
+insert into public.wave_comparison_waves (comparison_id, survey_id)
+values ('00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000a1'),
+       ('00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000a2');
+
+insert into public.wave_comparison_rows (id, comparison_id)
+select ('30000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+       '00000000-0000-4000-8000-0000000000c1'
+from generate_series(2, 9) as n;
+
+insert into public.wave_comparison_matches (row_id, comparison_id, survey_id, question_id)
+select ('30000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+       '00000000-0000-4000-8000-0000000000c1',
+       w.survey_id,
+       (w.prefix || '0000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid
+from generate_series(2, 9) as n
+         cross join (values ('00000000-0000-4000-8000-0000000000a1'::uuid, '1000'),
+                            ('00000000-0000-4000-8000-0000000000a2'::uuid, '2000')) as w(survey_id, prefix);
