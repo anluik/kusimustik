@@ -11,11 +11,19 @@ export const ROUTES = {
     /** Charts, individual responses and the drop-off funnel. */
     results: (surveyId: string) => `/surveys/${surveyId}/results`,
     /**
-     * One recurring survey's waves side by side. Keyed on the wave group rather
+     * One recurring survey's saved comparisons. Keyed on the wave group rather
      * than on a survey: the series outlives any one of its waves, and naming a
      * wave here would make the link break the year it is deleted.
      */
     compare: (waveGroupId: string) => `/waves/${waveGroupId}`,
+    /** One saved comparison, drawn. See docs/DECISIONS.md 035. */
+    comparison: (comparisonId: string) => `/comparisons/${comparisonId}`,
+    /**
+     * The matching editor for one comparison. `unmatched` opens it filtered to
+     * the questions no row holds yet.
+     */
+    comparisonMatches: (comparisonId: string, unmatched = false) =>
+        `/comparisons/${comparisonId}/matches${unmatched ? "?show=unmatched" : ""}`,
     settings: "/settings",
     login: "/login",
     authCallback: "/auth/callback",

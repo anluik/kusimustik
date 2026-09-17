@@ -47,7 +47,7 @@ describe("SurveySchema", () => {
         ).toBe(true);
     });
 
-    it("rejects duplicate question keys — wave comparison joins on them", () => {
+    it("rejects duplicate question keys — one key is one question's lineage", () => {
         const [first, second] = survey.elements;
         expect(first).toBeDefined();
         expect(second).toBeDefined();

@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { assertNever } from "@/domain/assert-never";
-import type { BuilderSaveStatus } from "@/hooks/use-survey-builder";
+import type { AutosaveStatus } from "@/lib/autosave";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,18 +12,18 @@ import { cn } from "@/lib/utils";
  * when it fails, the dot goes destructive and the recovery is an underlined
  * action right next to it, because this is something the owner has to act on.
  *
- * A conflict is offered a reload rather than a retry: another tab has already
- * saved, so trying again with the version this tab holds would fail exactly
- * the same way. Everything else is worth one more attempt.
+ * A failure the editor cannot retry out of is offered a reload instead: when
+ * another tab has already saved, trying again with the version this tab holds
+ * would fail exactly the same way.
  */
 export function SaveIndicator({
     status,
     onRetry
 }: {
-    readonly status: BuilderSaveStatus;
+    readonly status: AutosaveStatus;
     readonly onRetry: () => void;
 }) {
-    const t = useTranslations("Builder.save");
+    const t = useTranslations("Autosave");
 
     const dot = (className: string) => (
         <span
@@ -67,7 +67,7 @@ export function SaveIndicator({
                     <>
                         {dot("bg-destructive")}
                         <span className="text-destructive">{t("failed")}</span>
-                        {status.error === "conflict" ? (
+                        {status.recovery === "reload" ? (
                             <button
                                 type="button"
                                 onClick={() => window.location.reload()}

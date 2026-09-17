@@ -6,19 +6,18 @@ import {
     toWaveCategoryRows,
     toWaveTrend
 } from "@/lib/results/wave-chart-data";
-import { buildWaveComparison } from "@/lib/results/wave-comparison";
-import type { ComparedQuestion } from "@/lib/results/wave-comparison";
-import { choice, scale, wave } from "@/lib/results/wave-fixtures";
+import type { ComparedRow } from "@/lib/results/wave-comparison";
+import { choice, compareByKey, scale, wave } from "@/lib/results/wave-fixtures";
 import type { WaveResponses } from "@/lib/db/waves";
 
 /**
  * The shapes the comparison charts read. The rule under all of them: a wave
- * that did not ask contributes `null`, and a wave that asked and got no takers
+ * the row holds nothing from contributes `null`, and a wave that asked and got no takers
  * contributes nought — the two must never be drawn the same way.
  */
 
-function only(waves: readonly WaveResponses[]): ComparedQuestion {
-    const [question] = buildWaveComparison(waves).questions;
+function only(waves: readonly WaveResponses[]): ComparedRow {
+    const [question] = compareByKey(waves).rows;
     if (question === undefined) throw new Error("no compared question");
     return question;
 }
@@ -133,7 +132,7 @@ describe("toWaveCategoryRows", () => {
         expect(rows[2]?.values).toEqual([100]);
     });
 
-    it("leaves a wave that did not ask the question out of every row", () => {
+    it("leaves a wave the row holds nothing from out of every option row", () => {
         const question = choice("2026", "role", ["a", "b"]);
         const rows = toWaveCategoryRows(
             only([wave("2025", []), wave("2026", [question])])

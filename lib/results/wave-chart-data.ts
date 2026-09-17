@@ -1,6 +1,6 @@
 import type { CategoricalSummary, QuestionSummary } from "@/domain/aggregate";
 import { assertNever } from "@/domain/assert-never";
-import type { ComparedQuestion, WaveCell } from "@/lib/results/wave-comparison";
+import type { ComparedRow, WaveCell } from "@/lib/results/wave-comparison";
 
 /**
  * The comparison's chart data: one question's waves, shaped for the charts
@@ -12,7 +12,7 @@ import type { ComparedQuestion, WaveCell } from "@/lib/results/wave-comparison";
  * Percentages are `aggregate()`'s own, taken against each wave's answered
  * count, so the comparison says the same thing the single-wave card does.
  *
- * A wave that did not ask the question, or asked something else under its key,
+ * A wave the row holds no question from, or one that is no longer comparable,
  * contributes `null` rather than nought — a gap in the line and no bar at all.
  * Nought is a finding ("nobody chose this"); absence is not.
  *
@@ -46,6 +46,9 @@ export function seriesFill(index: number): string {
     return SERIES_FILLS[index % SERIES_FILLS.length] ?? SERIES_FILLS[0];
 }
 
+/** The one series of a single-number trend. */
+const SCALAR_SERIES = "__scalar__";
+
 /** The row standing for a question's free-text "other" bucket. */
 export const OTHER_ROW = "__other__";
 
@@ -60,14 +63,14 @@ export type WaveCategoryRow = {
 /**
  * One row per option, one value per wave.
  *
- * Options are matched across waves on their stored `value`, for the same reason
- * questions are matched on `key`: the label is the author's wording and gets
- * edited between waves. An option a wave never offered is `null`, not nought,
+ * Options are matched across waves on their stored `value`: the label is the
+ * author's wording and gets edited between waves, and a value is never reused
+ * for a different option (docs/DECISIONS.md 035). An option a wave never offered is `null`, not nought,
  * and one a *later* wave added appears after the reference question's own
  * options rather than being dropped.
  */
 export function toWaveCategoryRows(
-    question: ComparedQuestion
+    question: ComparedRow
 ): readonly WaveCategoryRow[] {
     const categorical = question.cells.map(cell =>
         cell.state === "compared" && cell.summary.kind === "categorical"
@@ -102,7 +105,7 @@ export function toWaveCategoryRows(
 }
 
 function optionsOf(
-    question: ComparedQuestion
+    question: ComparedRow
 ): readonly { readonly value: string; readonly label: string }[] {
     const reference = question.question;
     switch (reference.type) {
@@ -156,7 +159,7 @@ export type WaveTrend = {
     readonly series: readonly TrendSeries[];
 };
 
-export function toWaveTrend(question: ComparedQuestion): WaveTrend | null {
+export function toWaveTrend(question: ComparedRow): WaveTrend | null {
     const reference = question.question;
 
     switch (reference.type) {
@@ -185,7 +188,7 @@ export function toWaveTrend(question: ComparedQuestion): WaveTrend | null {
                 unit: "value",
                 series: [
                     {
-                        key: reference.key,
+                        key: SCALAR_SERIES,
                         // §7's single-series comparison: one line, `--chart-1`,
                         // no legend — so the series needs no label of its own.
                         label: "",

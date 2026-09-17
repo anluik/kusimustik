@@ -20,7 +20,10 @@ import type { QuestionId } from "@/domain/ids";
  */
 
 export type CsvColumn = {
-    /** Stable across waves: `key`, or `key__<option|row>` for a fanned-out one. */
+    /**
+     * The column's identity within the file: `key`, or `key__<option|row>`
+     * for a fanned-out one. Internal — a reader sees `header`.
+     */
     readonly id: string;
     readonly header: string;
     readonly questionKey: string;
@@ -169,20 +172,20 @@ export function toCsvCells(
 }
 
 /**
- * The same columns, with any header that is not unique qualified by the column
- * id until it is.
+ * The same columns, with any header that is not unique qualified by its
+ * question's number until it is.
  *
  * Two questions are allowed to carry the same title — an author writing a
- * grid of "Kui rahul oled?" per department is doing nothing wrong, and the
- * builder keeps their *keys* apart (`uus_kusimus`, `uus_kusimus_2`). The file
+ * grid of "Kui rahul oled?" per department is doing nothing wrong. The file
  * only carries headers, though, so without this a spreadsheet gets two columns
  * with one name and no way to tell which question either belongs to.
  *
  * Only the colliding headers are touched: a file whose questions have distinct
- * titles reads exactly as it did. The column `id` is what gets appended
- * because it is the identity the rest of the pipeline already uses — the same
- * string a wave comparison joins on — and a trailing counter guarantees
- * termination even if two columns somehow shared one id.
+ * titles reads exactly as it did. The number is the question's place among the
+ * file's questions — the one the owner sees on the results cards — written
+ * `#3` so it needs no translating. It is not the question's key: keys are
+ * internal and mean nothing to a reader (docs/DECISIONS.md 035). A trailing
+ * counter covers the last case, two same-labelled options of one question.
  */
 export function withUniqueHeaders(
     columns: readonly CsvColumn[]
@@ -192,15 +195,23 @@ export function withUniqueHeaders(
         seen.set(column.header, (seen.get(column.header) ?? 0) + 1);
     }
 
+    const numbers = new Map<string, number>();
+    for (const column of columns) {
+        if (!numbers.has(column.questionId)) {
+            numbers.set(column.questionId, numbers.size + 1);
+        }
+    }
+
     const used = new Set<string>();
     return columns.map(column => {
         if (seen.get(column.header) === 1) {
             used.add(column.header);
             return column;
         }
-        let header = qualify(column.header, column.id);
+        const number = `#${numbers.get(column.questionId) ?? 0}`;
+        let header = qualify(column.header, number);
         for (let n = 2; used.has(header); n += 1) {
-            header = qualify(column.header, `${column.id} ${n}`);
+            header = qualify(column.header, `${number} ${n}`);
         }
         used.add(header);
         return { ...column, header };

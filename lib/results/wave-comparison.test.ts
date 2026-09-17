@@ -1,32 +1,56 @@
 import { describe, expect, it } from "vitest";
 
-import {
-    MAX_COMPARED_WAVES,
-    buildWaveComparison
-} from "@/lib/results/wave-comparison";
+import type { ComparisonRow } from "@/domain/comparison";
+import { newComparisonRowId, newQuestionId } from "@/domain/ids";
+import type { NpsQuestion } from "@/domain/question";
+import type { WaveResponses } from "@/lib/db/waves";
+import { buildComparison } from "@/lib/results/wave-comparison";
 import type { WaveComparison } from "@/lib/results/wave-comparison";
-import { choice, scale, statement, wave } from "@/lib/results/wave-fixtures";
+import {
+    byKey,
+    choice,
+    compareByKey,
+    scale,
+    statement,
+    wave
+} from "@/lib/results/wave-fixtures";
 
 /**
- * The join, without a database. `lib/db/waves.db.test.ts` proves the same thing
- * against the seed; this covers the shapes a seed cannot hold — a wave group
- * longer than the palette, a question that came back after a wave without it,
- * and a key that changed hands between element types.
+ * Drawing the owner's rows, without a database. `lib/db/waves.db.test.ts`
+ * reads the seeded comparison end to end; this covers the shapes a seed does
+ * not hold — a row with a gap, a row that stopped holding, a removed question.
  */
 
-function keys(comparison: WaveComparison): readonly string[] {
-    return comparison.questions.map(question => question.key);
+function titles(comparison: WaveComparison): readonly string[] {
+    return comparison.rows.map(row => row.question.title);
 }
 
-function states(comparison: WaveComparison, key: string): readonly string[] {
-    const found = comparison.questions.find(question => question.key === key);
-    if (found === undefined) throw new Error(`no compared question ${key}`);
-    return found.cells.map(cell => cell.state);
+function states(comparison: WaveComparison, index = 0): readonly string[] {
+    const row = comparison.rows[index];
+    if (row === undefined) throw new Error(`no row ${index}`);
+    return row.cells.map(cell => cell.state);
 }
 
-describe("buildWaveComparison", () => {
+function row(
+    waves: readonly WaveResponses[],
+    pick: readonly (number | undefined)[]
+): ComparisonRow {
+    return {
+        id: newComparisonRowId(),
+        matches: waves.flatMap((each, index) => {
+            const at = pick[index];
+            const element =
+                at === undefined ? undefined : each.survey.elements[at];
+            return element === undefined
+                ? []
+                : [{ surveyId: each.survey.id, questionId: element.id }];
+        })
+    };
+}
+
+describe("buildComparison", () => {
     it("keeps the waves in the order they arrive, oldest first", () => {
-        const comparison = buildWaveComparison([
+        const comparison = compareByKey([
             wave("2025", [choice("2025", "role")]),
             wave("2026", [choice("2026", "role")])
         ]);
@@ -35,11 +59,10 @@ describe("buildWaveComparison", () => {
             "2025",
             "2026"
         ]);
-        expect(comparison.omittedWaveCount).toBe(0);
     });
 
-    it("orders questions by the newest wave, then by what only older ones ask", () => {
-        const comparison = buildWaveComparison([
+    it("orders rows by the newest wave, then by what only older ones ask", () => {
+        const comparison = compareByKey([
             wave("2025", [
                 choice("2025", "role"),
                 choice("2025", "dropped"),
@@ -52,11 +75,11 @@ describe("buildWaveComparison", () => {
             ])
         ]);
 
-        expect(keys(comparison)).toEqual([
-            "satisfaction",
-            "role",
-            "added",
-            "dropped"
+        expect(titles(comparison)).toEqual([
+            "satisfaction in 2026",
+            "role in 2026",
+            "added in 2026",
+            "dropped in 2025"
         ]);
     });
 
@@ -64,7 +87,7 @@ describe("buildWaveComparison", () => {
         const older = choice("2025", "role");
         const newer = choice("2026", "role");
 
-        const comparison = buildWaveComparison([
+        const comparison = compareByKey([
             wave(
                 "2025",
                 [older],
@@ -80,12 +103,8 @@ describe("buildWaveComparison", () => {
             )
         ]);
 
-        const [role] = comparison.questions;
-        // The card is titled with the newest wording, and the ids differ —
-        // the only thing the two waves share is the key.
+        const [role] = comparison.rows;
         expect(role?.question.id).toBe(newer.id);
-        expect(role?.question.title).toBe("role in 2026");
-        expect(older.id).not.toBe(newer.id);
 
         const [first, second] = role?.cells ?? [];
         if (first?.state !== "compared" || second?.state !== "compared") {
@@ -93,79 +112,137 @@ describe("buildWaveComparison", () => {
         }
         expect(first.summary.questionId).toBe(older.id);
         expect(first.summary.answeredCount).toBe(2);
+        expect(first.removed).toBe(false);
         expect(second.summary.questionId).toBe(newer.id);
         expect(second.summary.answeredCount).toBe(1);
     });
 
-    it("says a wave did not ask a question rather than showing it as nought", () => {
-        const comparison = buildWaveComparison([
+    it("says a row holds nothing from a wave rather than showing nought", () => {
+        const comparison = compareByKey([
             wave("2025", [choice("2025", "role")]),
             wave("2026", []),
             wave("2027", [choice("2027", "role")])
         ]);
 
-        // Absent in the middle wave, and still compared either side of it: a
-        // question that came back is one series with a gap, not two questions.
-        expect(states(comparison, "role")).toEqual([
+        expect(states(comparison)).toEqual([
             "compared",
-            "absent",
+            "notMatched",
             "compared"
         ]);
-        const [role] = comparison.questions;
-        expect(role?.comparedCount).toBe(2);
-        expect(role?.missingCount).toBe(1);
+        expect(comparison.rows[0]?.comparedCount).toBe(2);
+        expect(comparison.rows[0]?.missingCount).toBe(1);
     });
 
-    it("refuses to compare a key that changed type, or became a statement", () => {
-        const comparison = buildWaveComparison([
-            wave("2025", [scale("2025", "role"), statement("2025", "intro")]),
-            wave("2026", [choice("2026", "role"), choice("2026", "intro")])
-        ]);
-
-        expect(states(comparison, "role")).toEqual(["mismatched", "compared"]);
-        expect(states(comparison, "intro")).toEqual(["mismatched", "compared"]);
-
-        const role = comparison.questions.find(q => q.key === "role");
-        expect(
-            role?.cells[0]?.state === "mismatched" && role.cells[0].type
-        ).toBe("opinion_scale");
-    });
-
-    it("never gives a statement a card of its own", () => {
-        const comparison = buildWaveComparison([
-            wave("2026", [statement("2026", "intro"), choice("2026", "role")])
-        ]);
-        expect(keys(comparison)).toEqual(["role"]);
-    });
-
-    it("compares the most recent waves and reports the ones it left out", () => {
-        const waves = Array.from({ length: MAX_COMPARED_WAVES + 2 }, (_, i) => {
-            const label = `20${20 + i}`;
-            return wave(label, [choice(label, "role")]);
+    it("names the wave whose question stopped satisfying the row", () => {
+        // The 2027 question was retyped in the builder after it was matched.
+        // The row is anchored on the two that still agree, so 2027 is the one
+        // reported — not the other two.
+        const waves = [
+            wave("2025", [scale("2025", "mood")]),
+            wave("2026", [scale("2026", "mood")]),
+            wave("2027", [choice("2027", "mood")])
+        ];
+        const comparison = buildComparison({
+            waves,
+            rows: [row(waves, [0, 0, 0])],
+            removed: new Map()
         });
 
-        const comparison = buildWaveComparison(waves);
-
-        expect(comparison.waves).toHaveLength(MAX_COMPARED_WAVES);
-        expect(comparison.omittedWaveCount).toBe(2);
-        // The five kept are the *newest* five, and they stay in order.
-        expect(comparison.waves.map(w => w.waveLabel)).toEqual([
-            "2022",
-            "2023",
-            "2024",
-            "2025",
-            "2026"
+        expect(states(comparison)).toEqual([
+            "compared",
+            "compared",
+            "mismatched"
         ]);
+        const [, , third] = comparison.rows[0]?.cells ?? [];
+        expect(third?.state === "mismatched" && third.type).toBe(
+            "single_choice"
+        );
+        expect(comparison.rows[0]?.question.type).toBe("opinion_scale");
     });
 
-    it("holds a wave with no responses as a wave with none, not a missing one", () => {
-        const question = choice("2026", "role");
-        const comparison = buildWaveComparison([
+    it("never gives a statement a card, and drops a row with nothing left", () => {
+        const waves = [
+            wave("2026", [statement("2026", "intro"), choice("2026", "role")])
+        ];
+        const empty: ComparisonRow = {
+            id: newComparisonRowId(),
+            matches: [
+                {
+                    surveyId: waves[0]?.survey.id ?? never(),
+                    questionId: newQuestionId()
+                }
+            ]
+        };
+        const comparison = buildComparison({
+            waves,
+            rows: [...byKey(waves), empty],
+            removed: new Map()
+        });
+        expect(titles(comparison)).toEqual(["role in 2026"]);
+    });
+
+    it("still compares a removed question, from its last definition", () => {
+        const kept = choice("2025", "role");
+        const gone: NpsQuestion = {
+            type: "nps",
+            isAnswerable: true,
+            id: newQuestionId(),
+            key: "recommend",
+            title: "Recommend (removed)",
+            required: true
+        };
+        const current: NpsQuestion = {
+            ...gone,
+            id: newQuestionId(),
+            title: "Recommend"
+        };
+        const waves = [
+            // 2025 no longer holds `gone` in its document, but its answers do.
+            wave("2025", [kept], [{ [gone.id]: { type: "nps", value: 9 } }]),
+            wave("2026", [current])
+        ];
+        const rows: ComparisonRow[] = [
+            {
+                id: newComparisonRowId(),
+                matches: [
+                    {
+                        surveyId: waves[0]?.survey.id ?? never(),
+                        questionId: gone.id
+                    },
+                    {
+                        surveyId: waves[1]?.survey.id ?? never(),
+                        questionId: current.id
+                    }
+                ]
+            }
+        ];
+
+        const comparison = buildComparison({
+            waves,
+            rows,
+            removed: new Map([
+                [
+                    gone.id,
+                    { surveyId: waves[0]?.survey.id ?? never(), question: gone }
+                ]
+            ])
+        });
+
+        const [first] = comparison.rows[0]?.cells ?? [];
+        expect(first?.state).toBe("compared");
+        expect(first?.state === "compared" && first.removed).toBe(true);
+        expect(first?.state === "compared" && first.summary.answeredCount).toBe(
+            1
+        );
+    });
+
+    it("holds a wave with no responses as a wave with none", () => {
+        const comparison = compareByKey([
             wave("2025", [choice("2025", "role")]),
-            wave("2026", [question])
+            wave("2026", [choice("2026", "role")])
         ]);
 
-        const [, second] = comparison.questions[0]?.cells ?? [];
+        const [, second] = comparison.rows[0]?.cells ?? [];
         expect(second?.state).toBe("compared");
         expect(
             second?.state === "compared" && second.summary.responseCount
@@ -173,3 +250,7 @@ describe("buildWaveComparison", () => {
         expect(comparison.waves[1]?.responseCount).toBe(0);
     });
 });
+
+function never(): never {
+    throw new Error("fixture missing");
+}

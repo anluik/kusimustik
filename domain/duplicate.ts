@@ -36,9 +36,11 @@ export type DuplicateSurveyOptions = {
  * Copies a survey definition for a new wave.
  *
  * Fresh survey id, fresh question ids, **the same question keys** and **the
- * same wave group** — that combination is what keeps year-over-year comparison
- * joined up after the questions have been reworded. Getting it wrong is silent
- * and only surfaces a year later, which is why it has its own test file.
+ * same wave group**. The key is each question's lineage: it is what a saved
+ * comparison's first suggestion rests on, so next year's reworded question is
+ * still offered as the match for this year's (docs/DECISIONS.md 035). Getting
+ * it wrong is quiet — every question would simply stop being suggested — which
+ * is why it has its own test file.
  *
  * The copy comes back as a draft with no slug, so it cannot take over the
  * source's public link.

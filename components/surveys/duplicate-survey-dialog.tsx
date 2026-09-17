@@ -32,10 +32,10 @@ type FormValues = z.infer<typeof FormSchema>;
 /**
  * Duplicating a survey is how a recurring one gets its next wave: the copy
  * keeps the source's `waveGroupId` and every question `key` and is given fresh
- * ids, so next year's results still line up with this year's
- * (docs/DECISIONS.md 003). The label is what the comparison charts will use as
- * the series name, which is why it is asked for here rather than buried in
- * settings.
+ * ids, so a comparison of the two can suggest this year's questions as the
+ * matches for last year's (docs/DECISIONS.md 035). The label is what the
+ * comparison charts will use as the series name, which is why it is asked for
+ * here rather than buried in settings.
  */
 export function DuplicateSurveyDialog({
     surveyId,

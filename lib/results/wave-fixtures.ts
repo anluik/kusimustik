@@ -1,5 +1,10 @@
 import type { AnswerValue } from "@/domain/answer";
-import { newResponseId, newSurveyId, questionId } from "@/domain/ids";
+import {
+    comparisonRowId,
+    newResponseId,
+    newSurveyId,
+    questionId
+} from "@/domain/ids";
 import type { QuestionId } from "@/domain/ids";
 import type {
     OpinionScaleQuestion,
@@ -7,9 +12,12 @@ import type {
     StatementElement,
     SurveyElement
 } from "@/domain/question";
+import type { ComparisonRow } from "@/domain/comparison";
 import { SurveySchema } from "@/domain/survey";
 import { ResponseRecordSchema } from "@/lib/db/responses";
 import type { WaveResponses } from "@/lib/db/waves";
+import { buildComparison } from "@/lib/results/wave-comparison";
+import type { WaveComparison } from "@/lib/results/wave-comparison";
 
 /**
  * Hand-built waves for the comparison tests.
@@ -19,9 +27,10 @@ import type { WaveResponses } from "@/lib/db/waves";
  * fixtures for the arithmetic, and `lib/db/waves.db.test.ts` proves the same
  * alignment against the seed and a real database.
  *
- * Every question id is derived from its wave *and* its key, which is the point:
- * two waves asking the same key hold two different questions, and anything that
- * joined on `id` would find nothing.
+ * Every question id is derived from its wave *and* its key, so two waves asking
+ * the same key hold two different questions — which is what a saved row lines
+ * up. `byKey` builds those rows the way an owner confirming every lineage
+ * suggestion would.
  *
  * Not imported by application code. It sits beside the module it serves, like
  * `lib/db/test-support.ts`, so `tsc` and ESLint cover it like anything else.
@@ -130,4 +139,41 @@ export function wave(
             })
         )
     };
+}
+
+/**
+ * Rows matching every answerable question across the waves by key, confirmed —
+ * a stand-in for an owner who accepted every lineage suggestion. Statements are
+ * matched too when they share a key with a question, so a test can show what a
+ * row that stopped holding does.
+ */
+export function byKey(waves: readonly WaveResponses[]): ComparisonRow[] {
+    const keys: string[] = [];
+    for (const each of [...waves].reverse()) {
+        for (const element of each.survey.elements) {
+            if (!keys.includes(element.key)) keys.push(element.key);
+        }
+    }
+    return keys.flatMap((key, index) => {
+        const matches = waves.flatMap(each => {
+            const element = each.survey.elements.find(e => e.key === key);
+            return element === undefined || !element.isAnswerable
+                ? []
+                : [{ surveyId: each.survey.id, questionId: element.id }];
+        });
+        if (matches.length === 0) return [];
+        return [
+            {
+                id: comparisonRowId(
+                    `55555555-0000-4000-8000-${String(index).padStart(12, "0")}`
+                ),
+                matches
+            }
+        ];
+    });
+}
+
+/** `buildComparison` over `byKey`'s rows, with nothing removed. */
+export function compareByKey(waves: readonly WaveResponses[]): WaveComparison {
+    return buildComparison({ waves, rows: byKey(waves), removed: new Map() });
 }

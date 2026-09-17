@@ -3,73 +3,83 @@
 import { ArrowUpRight, LayoutList } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
-import { useMemo } from "react";
 
-import {
-    WaveQuestionCard,
-    useWaveName
-} from "@/components/results/wave-question-card";
+import { useWaveName } from "@/components/comparisons/wave-name";
+import { WaveQuestionCard } from "@/components/results/wave-question-card";
 import { LABEL, META, PANEL_HEAD } from "@/components/results/type";
 import { AppBar } from "@/components/shell/app-bar";
 import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
 import { PAGE_WIDTH } from "@/components/shell/page-width";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import type { WaveResponses } from "@/lib/db/waves";
-import { buildWaveComparison } from "@/lib/results/wave-comparison";
+import { MIN_COMPARED_WAVES } from "@/domain/comparison";
+import type { ComparisonId, WaveGroupId } from "@/domain/ids";
+import type { WaveComparison } from "@/lib/results/wave-comparison";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 /**
- * Wave comparison (PLAN Phase 11): one recurring survey's waves side by side.
+ * One saved comparison, drawn (docs/DECISIONS.md 035).
  *
- * The alignment is `buildWaveComparison`'s and happens here rather than on the
- * server for the same reason the results screen shapes its own summaries — it
- * is pure, it is cheap, and the page already holds the rows. What the server
- * does is the reading (`listWaveGroupResponses`), which is three queries however
- * many waves there are.
- *
- * The waves themselves are the series, oldest first, and they are named by
- * their `waveLabel` — free text the owner wrote ("2026", "Q1"), which is
- * exactly what DECISIONS 003 reserved it for.
+ * The comparison arrives built: the page runs `buildComparison` on the server
+ * and this receives summaries, never responses. The waves are the series,
+ * oldest first, named by their label or their creation date.
  */
 export function WaveComparisonScreen({
-    waves,
-    title
+    comparisonId,
+    waveGroupId,
+    name,
+    comparison
 }: {
-    readonly waves: readonly WaveResponses[];
-    /** The newest wave's title: the wording the owner last chose. */
-    readonly title: string;
+    readonly comparisonId: ComparisonId;
+    readonly waveGroupId: WaveGroupId;
+    readonly name: string;
+    readonly comparison: WaveComparison;
 }) {
     const t = useTranslations("Waves");
     const format = useFormatter();
     const waveName = useWaveName();
 
-    const comparison = useMemo(() => buildWaveComparison(waves), [waves]);
-
     const responses = comparison.waves.reduce(
         (total, wave) => total + wave.responseCount,
         0
     );
+    const matchesLink = ROUTES.comparisonMatches(comparisonId);
 
     return (
         <>
             <AppBar
                 constrained
-                title={title}
+                title={name}
                 meta={t("title")}
                 actions={
-                    <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="h-[30px] rounded text-xs"
-                    >
-                        <Link href={ROUTES.surveys}>
-                            <LayoutList aria-hidden />
-                            {t("backToSurveys")}
-                        </Link>
-                    </Button>
+                    <>
+                        <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="h-[30px] rounded text-xs"
+                        >
+                            <Link href={ROUTES.compare(waveGroupId)}>
+                                <LayoutList aria-hidden />
+                                <span className="hidden sm:inline">
+                                    {t("result.allComparisons")}
+                                </span>
+                                <span className="sr-only sm:hidden">
+                                    {t("result.allComparisons")}
+                                </span>
+                            </Link>
+                        </Button>
+                        <Button
+                            asChild
+                            size="sm"
+                            className="h-[30px] rounded text-xs"
+                        >
+                            <Link href={matchesLink}>
+                                {t("result.editMatches")}
+                            </Link>
+                        </Button>
+                    </>
                 }
             />
 
@@ -120,29 +130,28 @@ export function WaveComparisonScreen({
                             </li>
                         ))}
                     </ul>
-
-                    {comparison.omittedWaveCount > 0 && (
-                        // DESIGN §7 has five categorical colours and the wave is
-                        // the category, so older waves are left out — and said
-                        // to be left out, never dropped quietly.
-                        <p className={cn(META, "text-muted-foreground")}>
-                            {t("omitted", {
-                                shown: comparison.waves.length,
-                                omitted: comparison.omittedWaveCount
-                            })}
-                        </p>
-                    )}
                 </Card>
 
-                {comparison.questions.length === 0 ? (
-                    <NoQuestions />
+                {comparison.waves.length < MIN_COMPARED_WAVES ? (
+                    <ComparisonEmptyState
+                        which="tooFewWaves"
+                        href={matchesLink}
+                    />
+                ) : comparison.rows.length === 0 ? (
+                    <ComparisonEmptyState
+                        which="noMatches"
+                        href={matchesLink}
+                    />
                 ) : responses === 0 ? (
-                    <NoResponses />
+                    <ComparisonEmptyState
+                        which="noResponses"
+                        href={ROUTES.compare(waveGroupId)}
+                    />
                 ) : (
-                    comparison.questions.map((question, index) => (
+                    comparison.rows.map((row, index) => (
                         <WaveQuestionCard
-                            key={question.key}
-                            question={question}
+                            key={row.id}
+                            row={row}
                             waves={comparison.waves}
                             position={index + 1}
                         />
@@ -153,32 +162,20 @@ export function WaveComparisonScreen({
     );
 }
 
-/** Every wave is a questionnaire of statements, or of nothing at all. */
-function NoQuestions() {
-    const t = useTranslations("Waves.empty.noQuestions");
-    return <ComparisonEmptyState title={t("title")} body={t("body")} />;
-}
-
-/** The waves exist and are aligned; nobody has answered any of them yet. */
-function NoResponses() {
-    const t = useTranslations("Waves.empty.noResponses");
-    return <ComparisonEmptyState title={t("title")} body={t("body")} />;
-}
-
 function ComparisonEmptyState({
-    title,
-    body
+    which,
+    href
 }: {
-    readonly title: string;
-    readonly body: string;
+    readonly which: "tooFewWaves" | "noMatches" | "noResponses";
+    readonly href: string;
 }) {
     const t = useTranslations("Waves");
 
     return (
         <Card className="gap-3 rounded px-3.5 py-3">
             <EmptyState
-                title={title}
-                body={body}
+                title={t(`empty.${which}.title`)}
+                body={t(`empty.${which}.body`)}
                 preview={
                     <>
                         <EmptyStateRow />
@@ -193,7 +190,11 @@ function ComparisonEmptyState({
                         size="sm"
                         className="h-[30px] rounded text-xs"
                     >
-                        <Link href={ROUTES.surveys}>{t("backToSurveys")}</Link>
+                        <Link href={href}>
+                            {which === "noResponses"
+                                ? t("result.allComparisons")
+                                : t("result.editMatches")}
+                        </Link>
                     </Button>
                 }
             />

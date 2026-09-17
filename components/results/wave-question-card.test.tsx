@@ -2,14 +2,17 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { renderWithIntl } from "@/components/test-support";
 import { WaveQuestionCard } from "@/components/results/wave-question-card";
-import { buildWaveComparison } from "@/lib/results/wave-comparison";
+import type { ComparisonRow } from "@/domain/comparison";
+import { newComparisonRowId } from "@/domain/ids";
+import { buildComparison } from "@/lib/results/wave-comparison";
 import type { WaveComparison } from "@/lib/results/wave-comparison";
-import { choice, scale, wave } from "@/lib/results/wave-fixtures";
+import { choice, compareByKey, scale, wave } from "@/lib/results/wave-fixtures";
 
 /**
- * What the card must never do: render a wave that did not ask the question as
- * an empty series and leave the owner to notice. A missing wave is a sentence
- * on the card (PLAN Phase 11), for the same reason `unshownCount` is one.
+ * What the card must never do: render a wave the row holds nothing from as an
+ * empty series and leave the owner to notice. A missing wave is a sentence on
+ * the card (PLAN Phase 11), for the same reason `unshownCount` is one — and so
+ * is a row the owner has not yet confirmed (docs/DECISIONS.md 035).
  *
  * `ResizeObserver` is stubbed for the same reason `category-chart.test.tsx`
  * stubs it — jsdom has none, and without it Recharts never measures and never
@@ -31,19 +34,13 @@ afterAll(() => {
 });
 
 function card(comparison: WaveComparison) {
-    const [question] = comparison.questions;
-    if (question === undefined) throw new Error("no compared question");
-    return (
-        <WaveQuestionCard
-            question={question}
-            waves={comparison.waves}
-            position={1}
-        />
-    );
+    const [row] = comparison.rows;
+    if (row === undefined) throw new Error("no compared row");
+    return <WaveQuestionCard row={row} waves={comparison.waves} position={1} />;
 }
 
 describe("WaveQuestionCard", () => {
-    it("names the wave that did not ask the question", () => {
+    it("names the wave the row holds nothing from", () => {
         const asked = choice("2026", "role", ["a", "b"]);
         const waves = [
             wave("2025", []),
@@ -55,24 +52,33 @@ describe("WaveQuestionCard", () => {
         ];
 
         const { getByText, container } = renderWithIntl(
-            card(buildWaveComparison(waves))
+            card(compareByKey(waves))
         );
 
-        expect(getByText("Ei küsitud: 2025")).toBeDefined();
+        expect(getByText("Vastet pole: 2025")).toBeDefined();
         // And the chart is still drawn, from the wave that did ask.
         expect(container.querySelector("svg")).not.toBeNull();
     });
 
-    it("says when a key stopped meaning the same question", () => {
+    it("says when a matched question stopped fitting its row", () => {
         const waves = [
             wave("2025", [scale("2025", "role")]),
             wave("2026", [choice("2026", "role", ["a", "b"])])
         ];
+        const row: ComparisonRow = {
+            id: newComparisonRowId(),
+            matches: waves.map(each => ({
+                surveyId: each.survey.id,
+                questionId: each.survey.elements[0]?.id ?? missing()
+            }))
+        };
 
-        const { getByText } = renderWithIntl(card(buildWaveComparison(waves)));
+        const { getByText } = renderWithIntl(
+            card(buildComparison({ waves, rows: [row], removed: new Map() }))
+        );
 
         expect(
-            getByText(/Ei ole võrreldav, küsimuse tüüp on muutunud: 2025/)
+            getByText(/Ei ole enam võrreldav, küsimus on muutunud: /)
         ).toBeDefined();
     });
 
@@ -95,7 +101,7 @@ describe("WaveQuestionCard", () => {
         ];
 
         const { getByText, getAllByText } = renderWithIntl(
-            card(buildWaveComparison(waves))
+            card(compareByKey(waves))
         );
 
         expect(getByText("2025")).toBeDefined();
@@ -110,7 +116,7 @@ describe("WaveQuestionCard", () => {
         ];
 
         const { getByText, container } = renderWithIntl(
-            card(buildWaveComparison(waves))
+            card(compareByKey(waves))
         );
 
         expect(
@@ -121,3 +127,7 @@ describe("WaveQuestionCard", () => {
         expect(container.querySelector("svg")).toBeNull();
     });
 });
+
+function missing(): never {
+    throw new Error("fixture missing");
+}

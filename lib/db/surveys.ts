@@ -337,25 +337,8 @@ export async function listSurveys(db: Db): Promise<SurveySummary[]> {
     return rows.map(toSummary);
 }
 
-/** Every wave of one recurring survey, oldest first; see DECISIONS 003. */
-export async function listSurveysInWaveGroup(
-    db: Db,
-    waveGroupId: WaveGroupId
-): Promise<SurveySummary[]> {
-    const rows = unwrap(
-        `listSurveysInWaveGroup(${waveGroupId})`,
-        await db
-            .from("surveys")
-            .select(SUMMARY_COLUMNS)
-            .eq("wave_group_id", waveGroupId)
-            .order("created_at", { ascending: true })
-    );
-    return rows.map(toSummary);
-}
-
 /**
- * The same waves with their definitions attached — what a comparison needs and
- * a list does not, which is why the summary version above stays as it is.
+ * Every wave of one recurring survey, definitions attached.
  *
  * Oldest first, by `created_at`: wave order is chronological, and `wave_label`
  * is free text that cannot be relied on to sort ("Q1" and "2026 kevad" both
@@ -604,30 +587,6 @@ export async function listSurveyQuestions(
         })),
         `survey_questions of ${surveyId}`
     );
-}
-
-/**
- * The keys this survey has spent but no longer shows: questions removed from
- * the definition that kept their answers, and therefore kept their key.
- *
- * The builder needs them to mint the next key. `survey_questions_survey_key_idx`
- * is what makes a clash an error rather than a silently merged CSV column, so
- * without this read the builder would cheerfully compose a document the
- * database refuses (see the 20260908120000 migration).
- */
-export async function listReservedQuestionKeys(
-    db: Db,
-    surveyId: SurveyId
-): Promise<readonly string[]> {
-    const rows = unwrap(
-        `listReservedQuestionKeys(${surveyId})`,
-        await db
-            .from("survey_questions")
-            .select("key")
-            .eq("survey_id", surveyId)
-            .not("removed_at", "is", null)
-    );
-    return rows.map(row => row.key);
 }
 
 /** Per-survey counts for the list; see the `survey_stats` migration. */

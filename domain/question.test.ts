@@ -6,7 +6,7 @@ import {
     OPINION_SCALE_MAX_STEPS,
     OTHER_OPTION_VALUE,
     SurveyElementSchema,
-    deriveQuestionKey,
+    newQuestionKey,
     isAnswerableElement
 } from "@/domain/question";
 import {
@@ -183,41 +183,28 @@ describe("element validation rules", () => {
     });
 });
 
-describe("deriveQuestionKey", () => {
-    it("slugifies a title", () => {
-        expect(deriveQuestionKey("How satisfied are you?")).toBe(
-            "how_satisfied_are_you"
-        );
+describe("newQuestionKey", () => {
+    // A key is internal lineage — preserved when a survey is duplicated into
+    // its next wave, never shown and never derived from a title — so a new
+    // one is random: a key match can then only ever mean "copied from", which
+    // is the one thing the comparison's suggestions may rely on
+    // (docs/DECISIONS.md 035).
+    it("is a valid key", () => {
+        const key = newQuestionKey();
+        expect(key).toMatch(/^q_[a-z0-9]{12}$/);
+        expect(
+            SurveyElementSchema.safeParse({ ...singleChoice, key }).success
+        ).toBe(true);
     });
 
-    it("folds Estonian diacritics rather than dropping the words", () => {
-        expect(deriveQuestionKey("Küsimus üldise õhkkonna kohta")).toBe(
-            "kusimus_uldise_ohkkonna_kohta"
-        );
-        expect(deriveQuestionKey("Šokolaad ja žanr")).toBe("sokolaad_ja_zanr");
+    it("never repeats, and avoids the keys already in the survey", () => {
+        const keys = Array.from({ length: 200 }, () => newQuestionKey());
+        expect(new Set(keys).size).toBe(keys.length);
+        expect(keys).not.toContain(newQuestionKey(keys));
     });
 
-    it("keeps the key a valid identifier when the title starts with a digit", () => {
-        expect(deriveQuestionKey("2025 outlook")).toBe("q_2025_outlook");
-    });
-
-    it("falls back when a title slugifies to nothing", () => {
-        expect(deriveQuestionKey("🎉 !!! ")).toBe("question");
-    });
-
-    it("suffixes to avoid collisions with keys already in the survey", () => {
-        expect(deriveQuestionKey("Rating", ["rating"])).toBe("rating_2");
-        expect(deriveQuestionKey("Rating", ["rating", "rating_2"])).toBe(
-            "rating_3"
-        );
-    });
-
-    it("always produces something the schema accepts", () => {
-        for (const title of ["🎉", "2025", "Küsimus", "a".repeat(200)]) {
-            const key = deriveQuestionKey(title);
-            expect(
-                SurveyElementSchema.safeParse({ ...singleChoice, key }).success
-            ).toBe(true);
-        }
+    it("owes nothing to a title, in any script", () => {
+        // What `deriveQuestionKey` used to turn every Russian title into.
+        expect(newQuestionKey()).not.toBe("question");
     });
 });

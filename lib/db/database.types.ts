@@ -392,6 +392,147 @@ export type Database = {
           },
         ]
       }
+      wave_comparison_matches: {
+        Row: {
+          comparison_id: string
+          question_id: string
+          row_id: string
+          survey_id: string
+        }
+        Insert: {
+          comparison_id: string
+          question_id: string
+          row_id: string
+          survey_id: string
+        }
+        Update: {
+          comparison_id?: string
+          question_id?: string
+          row_id?: string
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wave_comparison_matches_comparison_id_survey_id_fkey"
+            columns: ["comparison_id", "survey_id"]
+            isOneToOne: false
+            referencedRelation: "wave_comparison_waves"
+            referencedColumns: ["comparison_id", "survey_id"]
+          },
+          {
+            foreignKeyName: "wave_comparison_matches_question_id_survey_id_fkey"
+            columns: ["question_id", "survey_id"]
+            isOneToOne: false
+            referencedRelation: "survey_questions"
+            referencedColumns: ["question_id", "survey_id"]
+          },
+          {
+            foreignKeyName: "wave_comparison_matches_row_id_comparison_id_fkey"
+            columns: ["row_id", "comparison_id"]
+            isOneToOne: false
+            referencedRelation: "wave_comparison_rows"
+            referencedColumns: ["id", "comparison_id"]
+          },
+        ]
+      }
+      wave_comparison_rows: {
+        Row: {
+          comparison_id: string
+          id: string
+        }
+        Insert: {
+          comparison_id: string
+          id: string
+        }
+        Update: {
+          comparison_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wave_comparison_rows_comparison_id_fkey"
+            columns: ["comparison_id"]
+            isOneToOne: false
+            referencedRelation: "wave_comparisons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wave_comparison_waves: {
+        Row: {
+          comparison_id: string
+          survey_id: string
+        }
+        Insert: {
+          comparison_id: string
+          survey_id: string
+        }
+        Update: {
+          comparison_id?: string
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wave_comparison_waves_comparison_id_fkey"
+            columns: ["comparison_id"]
+            isOneToOne: false
+            referencedRelation: "wave_comparisons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wave_comparison_waves_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "survey_stats"
+            referencedColumns: ["survey_id"]
+          },
+          {
+            foreignKeyName: "wave_comparison_waves_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wave_comparisons: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+          version: number
+          wave_group_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+          version?: number
+          wave_group_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+          version?: number
+          wave_group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wave_comparisons_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       survey_stats: {
@@ -418,6 +559,15 @@ export type Database = {
         Args: { p_bucket: string; p_client: string; p_scope: string }
         Returns: boolean
       }
+      create_comparison: {
+        Args: {
+          p_name: string
+          p_rows: Json
+          p_survey_ids: string[]
+          p_wave_group_id: string
+        }
+        Returns: string
+      }
       get_runner_survey: {
         Args: { p_slug: string }
         Returns: {
@@ -439,8 +589,28 @@ export type Database = {
         Args: { p_locale: string; p_text: Json }
         Returns: string
       }
+      owns_comparison: { Args: { p_comparison_id: string }; Returns: boolean }
       owns_survey: { Args: { p_survey_id: string }; Returns: boolean }
       prune_rate_limits: { Args: never; Returns: undefined }
+      removed_question_definitions: {
+        Args: { p_question_ids: string[] }
+        Returns: {
+          element: Json
+          locale: string
+          question_id: string
+          survey_id: string
+        }[]
+      }
+      save_comparison: {
+        Args: {
+          p_comparison_id: string
+          p_expected_version: number
+          p_name: string
+          p_rows: Json
+          p_survey_ids: string[]
+        }
+        Returns: number
+      }
       submit_response: {
         Args: {
           p_answers: Json

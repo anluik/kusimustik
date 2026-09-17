@@ -17,6 +17,8 @@ import type { SurveyStats, SurveySummary } from "@/lib/db/surveys";
 export type SurveyListItem = SurveySummary & {
     readonly responseCount: number;
     readonly questionCount: number;
+    /** Saved comparisons this survey is a wave of; see its delete dialog. */
+    readonly comparisonCount: number;
 };
 
 /** A survey that is the only one in its wave group. */
@@ -69,12 +71,14 @@ function byUpdatedAtDesc(
  */
 export function toListItems(
     summaries: readonly SurveySummary[],
-    stats: ReadonlyMap<string, SurveyStats>
+    stats: ReadonlyMap<string, SurveyStats>,
+    comparisonCounts: ReadonlyMap<string, number>
 ): SurveyListItem[] {
     return summaries.map(summary => ({
         ...summary,
         responseCount: stats.get(summary.id)?.responseCount ?? 0,
-        questionCount: stats.get(summary.id)?.questionCount ?? 0
+        questionCount: stats.get(summary.id)?.questionCount ?? 0,
+        comparisonCount: comparisonCounts.get(summary.id) ?? 0
     }));
 }
 

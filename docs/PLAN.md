@@ -53,7 +53,7 @@ Deliverables in `domain/`:
 
 - `ids.ts` — branded `SurveyId`, `QuestionId`, `ResponseId` + constructors.
 - `question.ts` — `QuestionSchema` as `z.discriminatedUnion("type", [...])`. Each member has `id`, `key`, `type`, `title`, `description?`, `required`, plus its own config.
-  - **`id` vs `key`.** `id` is a branded UUID, unique within a survey, regenerated on duplication. `key` is a slug (`nps_overall`, `q_satisfaction`), unique within a survey, and **preserved across duplication**. Wave-over-wave comparison groups on `key`, so rewording a question doesn't sever its trend line. Auto-derive the key from the title on creation, let the owner override it, and warn loudly before allowing a rename on a published survey.
+  - **`id` vs `key`.** `id` is a branded UUID, unique within a survey, regenerated on duplication. `key` is a slug (`nps_overall`, `q_satisfaction`), unique within a survey, and **preserved across duplication**. Wave-over-wave comparison groups on `key`, so rewording a question doesn't sever its trend line. Auto-derive the key from the title on creation, let the owner override it, and warn loudly before allowing a rename on a published survey. *(Superseded by Phase 11b and DECISIONS 035: the key is internal — minted once, never shown or edited — and comparison is a set of matches the owner builds.)*
 - `answer.ts` — `buildAnswerSchema(question): ZodType`. This is the load-bearing function. Given a question, return the Zod schema its answer must satisfy, honouring `required`, min/max selections, scale bounds, matrix row coverage. Used identically on client and server.
 - `survey.ts` — `SurveySchema` (title, description, status: `draft | published | closed`, slug, locale, `waveGroupId`, `waveLabel?`, ordered elements). Duplicating a survey inherits the source's `waveGroupId`; a survey created from scratch gets a fresh one. `waveLabel` is free text ("2025", "Q1"), used as the axis label in comparisons.
 - `duplicate.ts` — `duplicateSurvey(survey, opts): Survey`. New survey id, new question ids, **same question keys**, same `waveGroupId`. Test this explicitly; getting it wrong is silent and only shows up a year later.
@@ -252,6 +252,23 @@ Two things to decide rather than improvise: what a question present in one wave 
 **Done when:** the seeded two waves render side by side with their wave labels as the series, a question missing from one wave says so rather than rendering an empty series, and `pnpm test:db` is green.
 
 **Done.** `lib/db/waves.ts` reads a wave group in three queries however many waves it holds; `lib/results/wave-comparison.ts` aligns them on `key` and calls `aggregate()` once per wave; `lib/results/wave-chart-data.ts` shapes the series. The screen is `/waves/[waveGroupId]`, reached from the compare control DESIGN §5 always specified and 013 left out, and the `line` branches are reachable at last. DECISIONS 029 records the five decisions, chiefly what an absent wave renders as and why the wave costs the palette its five colours. Proved by `lib/db/waves.db.test.ts` against the seed's two waves and a constructed group whose questionnaire changed, and by `e2e/wave-comparison.spec.ts` end to end as the owner.
+
+---
+
+## Phase 11b — Chosen comparisons
+
+**Goal:** the owner decides what is compared. Replaces Phase 11's automatic join on `key`, which guessed — and could silently join two different questions (DECISIONS 035).
+
+- A **comparison** is named, saved, belongs to one wave group and covers two to five waves. It is a list of **rows**, each lining up at most one question per wave. Every question in a row has the same type (and an `opinion_scale` row the same `max`).
+- **Suggestions** — by preserved `key` first, identical wording second — fill in starting rows when a comparison is created, a wave is added, or the owner asks. The owner changes or removes them; there is no separate review step. The matching editor autosaves like the builder.
+- A comparison never blocks editing a survey; deleting a survey or an unanswered question shrinks a comparison and never deletes it. A tombstoned question keeps charting from its last published definition.
+- The comparison is built on the server; the client gets summaries.
+- **Keys become internal**: no chip, no editor, no following the title; new keys are random.
+- Two defects found on the way are fixed first: responses are read in pages past PostgREST's 1000-row cap, and option values are never reused.
+
+Steps, each of which can be its own session: (0) DECISIONS 035 and DESIGN §5; (1) the two defects; (2) `domain/comparison.ts`, tests first; (3) the migration, RLS and `.db.test.ts`; (4) repository and actions; (5) `buildComparison`; (6) the screens; (7) keys go internal.
+
+**Done when:** from the survey list, an owner can build a comparison of the seeded waves from suggestions, edit it, add a third wave and see only its column suggested, and read the result — and `pnpm check`, `pnpm test:db` and `e2e/wave-comparison.spec.ts` are green.
 
 ---
 

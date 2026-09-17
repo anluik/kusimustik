@@ -22,7 +22,6 @@ import {
     withSelectionBound,
     withSelectionBoundsInRange
 } from "@/lib/builder/element-patch";
-import type { SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * Checkboxes, with an optional floor and ceiling on how many may be ticked.
@@ -35,13 +34,9 @@ import type { SurveyKeys } from "@/lib/builder/keys";
  */
 export function MultiChoiceEditor({
     question,
-    siblings,
-    keys,
     onChange
 }: {
     readonly question: MultiChoiceQuestion;
-    readonly siblings: readonly SurveyElement[];
-    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     const t = useTranslations("Builder.editor");
@@ -77,8 +72,6 @@ export function MultiChoiceEditor({
         <>
             <ElementFields
                 element={question}
-                siblings={siblings}
-                keys={keys}
                 onChange={onChange}
                 titleLabel={t("titleLabel")}
                 titlePlaceholder={t("titlePlaceholder")}

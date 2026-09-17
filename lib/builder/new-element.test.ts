@@ -15,10 +15,8 @@ import {
     newOption,
     nextOptionValue
 } from "@/lib/builder/new-element";
-import type { SurveyKeys } from "@/lib/builder/keys";
 
 /** No wave, nothing published, nothing removed: the plain case. */
-const KEYS: SurveyKeys = { policy: "derive", reserved: [] };
 
 const defaults = {
     title: "Uus küsimus",
@@ -30,7 +28,7 @@ const defaults = {
 
 describe("createElement", () => {
     it("produces a single_choice question the domain accepts", () => {
-        const element = createElement("single_choice", defaults, [], KEYS);
+        const element = createElement("single_choice", defaults, []);
 
         expect(SurveyElementSchema.safeParse(element).success).toBe(true);
         expect(element.type).toBe("single_choice");
@@ -38,7 +36,7 @@ describe("createElement", () => {
     });
 
     it("starts with the two options the schema requires", () => {
-        const element = createElement("single_choice", defaults, [], KEYS);
+        const element = createElement("single_choice", defaults, []);
         if (element.type !== "single_choice") throw new Error("wrong type");
 
         expect(element.options).toEqual([
@@ -62,7 +60,7 @@ describe("createElement", () => {
                 "matrix_single"
             ] as const
         ).map(type => {
-            const element = createElement(type, defaults, [], KEYS);
+            const element = createElement(type, defaults, []);
             return [type, element.isAnswerable && element.required] as const;
         });
 
@@ -79,25 +77,22 @@ describe("createElement", () => {
     });
 
     it("gives every element a fresh id", () => {
-        const first = createElement("single_choice", defaults, [], KEYS);
-        const second = createElement("single_choice", defaults, [first], KEYS);
+        const first = createElement("single_choice", defaults, []);
+        const second = createElement("single_choice", defaults, [first]);
 
         expect(second.id).not.toBe(first.id);
     });
 
-    it("derives a key that does not collide with its siblings", () => {
-        const first = createElement("single_choice", defaults, [], KEYS);
-        const second = createElement("single_choice", defaults, [first], KEYS);
-        const third = createElement(
-            "single_choice",
-            defaults,
-            [first, second],
-            KEYS
-        );
+    it("mints a key of its own, owing nothing to the placeholder title", () => {
+        // Every new question is born with the same title; a key derived from
+        // it made every wave's new questions look like each other's lineage
+        // (docs/DECISIONS.md 035).
+        const first = createElement("single_choice", defaults, []);
+        const second = createElement("single_choice", defaults, [first]);
 
-        expect(first.key).toBe("uus_kusimus");
-        expect(second.key).toBe("uus_kusimus_2");
-        expect(third.key).toBe("uus_kusimus_3");
+        expect(first.key).toMatch(/^q_[a-z0-9]{12}$/);
+        expect(second.key).toMatch(/^q_[a-z0-9]{12}$/);
+        expect(second.key).not.toBe(first.key);
     });
 });
 
@@ -127,22 +122,19 @@ describe("CREATABLE_ELEMENT_TYPES", () => {
 describe.each(ELEMENT_TYPES)("a new %s", type => {
     it("is a document the domain accepts", () => {
         const parsed = SurveyElementSchema.safeParse(
-            createElement(type, defaults, [], KEYS)
+            createElement(type, defaults, [])
         );
         expect(parsed.error?.issues ?? []).toEqual([]);
     });
 
     it("is answerable unless it is a statement", () => {
-        const element = createElement(type, defaults, [], KEYS);
+        const element = createElement(type, defaults, []);
         expect(element.isAnswerable).toBe(type !== "statement");
     });
 
     it("can be duplicated into a document the domain accepts", () => {
-        const source = authorElement(
-            createElement(type, defaults, [], KEYS),
-            "et"
-        );
-        const copy = duplicateElement(source, "et", [source], KEYS);
+        const source = authorElement(createElement(type, defaults, []), "et");
+        const copy = duplicateElement(source, [source]);
 
         expect(AuthoredElementSchema.safeParse(copy).success).toBe(true);
         expect(copy.type).toBe(type);
@@ -151,7 +143,7 @@ describe.each(ELEMENT_TYPES)("a new %s", type => {
 
 describe("duplicateElement", () => {
     it("keeps everything the author wrote", () => {
-        const source = createElement("multi_choice", defaults, [], KEYS);
+        const source = createElement("multi_choice", defaults, []);
         if (source.type !== "multi_choice") throw new Error("wrong type");
         const edited = authorElement(
             {
@@ -166,7 +158,7 @@ describe("duplicateElement", () => {
             "et"
         );
 
-        const copy = duplicateElement(edited, "et", [edited], KEYS);
+        const copy = duplicateElement(edited, [edited]);
 
         expect(copy).toMatchObject({
             type: "multi_choice",
@@ -179,72 +171,65 @@ describe("duplicateElement", () => {
         // The copy is made from the stored element, so a question written in
         // three languages is duplicated in three. Copying one language of it
         // would lose two translations to a click.
-        const source = createElement("single_choice", defaults, [], KEYS);
+        const source = createElement("single_choice", defaults, []);
         const translated = {
             ...authorElement(source, "et"),
             title: { et: "Roll", en: "Role", ru: "Роль" }
         };
 
-        const copy = duplicateElement(translated, "et", [translated], KEYS);
+        const copy = duplicateElement(translated, [translated]);
 
         expect(copy.title).toEqual({ et: "Roll", en: "Role", ru: "Роль" });
-    });
-
-    it("derives the key from the survey's own language", () => {
-        // Not from whichever language is on screen: the key names a CSV
-        // column and joins this wave to the next one.
-        const source = createElement("nps", defaults, [], KEYS);
-        const translated = {
-            ...authorElement(source, "et"),
-            title: { et: "Soovitus", ru: "Рекомендация" }
-        };
-
-        expect(duplicateElement(translated, "et", [], KEYS).key).toBe(
-            "soovitus"
-        );
     });
 
     it("takes a fresh id and a fresh key, unlike duplicating a survey", () => {
         // Two questions in one survey may not share a key: SurveySchema
         // rejects it, and the CSV would grow two columns with one header.
-        // Preserving keys is a *cross-survey* rule (docs/DECISIONS.md 003).
+        // Preserving keys is a *cross-survey* rule (docs/DECISIONS.md 035).
         const source = authorElement(
-            createElement("single_choice", defaults, [], KEYS),
+            createElement("single_choice", defaults, []),
             "et"
         );
-        const copy = duplicateElement(source, "et", [source], KEYS);
+        const copy = duplicateElement(source, [source]);
 
         expect(copy.id).not.toBe(source.id);
         expect(copy.key).not.toBe(source.key);
-        expect(copy.key).toBe(`${source.key}_2`);
+        expect(copy.key).toMatch(/^q_[a-z0-9]{12}$/);
     });
 });
 
 describe("nextOptionValue", () => {
-    it("fills the first free slot rather than counting entries", () => {
-        // Deleting the middle option must not hand the next one a value that
-        // an existing answer already points at.
-        expect(nextOptionValue(["option_1", "option_3"])).toBe("option_2");
-        expect(nextOptionValue([])).toBe("option_1");
+    it("never hands out a value a deleted option may have left in the answers", () => {
+        // `option_2` was deleted; answers can still point at it, so the next
+        // option must not become `option_2` (docs/DECISIONS.md 035).
+        const value = nextOptionValue(["option_1", "option_3"]);
+        expect(value).not.toMatch(/^option_\d+$/);
+        expect(value).toMatch(/^o_[a-z0-9]{10}$/);
+    });
+
+    it("avoids the values the question already has", () => {
+        const taken = Array.from({ length: 50 }, () => nextOptionValue([]));
+        expect(taken).not.toContain(nextOptionValue(taken));
+    });
+
+    it("does not repeat itself", () => {
+        const values = Array.from({ length: 200 }, () => nextOptionValue([]));
+        expect(new Set(values).size).toBe(values.length);
     });
 
     it("never produces the reserved other value", () => {
-        const values = Array.from({ length: 20 }, (_, index) =>
-            nextOptionValue(
-                Array.from({ length: index }, (_, n) => `option_${n + 1}`)
-            )
-        );
+        const values = Array.from({ length: 20 }, () => nextOptionValue([]));
         expect(values).not.toContain(OTHER_OPTION_VALUE);
     });
 });
 
 describe("newOption", () => {
     it("numbers the label from the current option count", () => {
-        expect(
-            newOption(
-                [{ value: "option_1", label: "Valik 1" }],
-                defaults.optionLabel
-            )
-        ).toEqual({ value: "option_2", label: "Valik 2" });
+        const option = newOption(
+            [{ value: "option_1", label: "Valik 1" }],
+            defaults.optionLabel
+        );
+        expect(option.label).toBe("Valik 2");
+        expect(option.value).not.toBe("option_1");
     });
 });

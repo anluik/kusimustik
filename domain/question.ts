@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { localizedTextSchema } from "@/domain/content";
 import { QuestionIdSchema } from "@/domain/ids";
+import { randomToken } from "@/domain/token";
 
 /**
  * The element union. Everything downstream — the runner, the aggregator, the
@@ -81,11 +82,14 @@ const TEXT_MAX = {
 } as const;
 
 /**
- * Stable, human-readable identity for a question. Unique within a survey and
- * preserved across duplication — wave comparison and CSV column identity join
- * on this, never on `id`. See docs/DECISIONS.md 003.
+ * A question's lineage. Unique within a survey, preserved when a survey is
+ * duplicated into its next wave, and never shown, edited or derived from the
+ * title. A saved comparison's first suggestion rests on it, and the CSV uses it
+ * as a column's internal id — but what a comparison compares is the owner's
+ * saved matches, never a key on its own. See docs/DECISIONS.md 035.
  *
- * Machine-facing, and therefore the same in every language.
+ * The pattern still admits the readable keys surveys were given before keys
+ * became internal; new ones are `q_` and a random token (`newQuestionKey`).
  */
 export const QuestionKeySchema = z
     .string()
@@ -438,36 +442,25 @@ export function isAnswerableElement(
 }
 
 /**
- * Derives a stable key from a question title, folding diacritics rather than
- * dropping them so Estonian titles keep their words ("Küsimus" -> "kusimus").
- * Pass the keys already used in the survey and a numeric suffix is added until
- * the result is free.
+ * A key for a new question.
+ *
+ * A key is internal lineage: `duplicateSurvey` preserves it, so a question in
+ * next year's wave carries the key of the question it was copied from, and
+ * that is what the comparison's first suggestion rests on. It is never shown,
+ * edited or derived from the title (docs/DECISIONS.md 035). Random, then, so a
+ * key two waves share can only ever mean "copied from" — a key derived from a
+ * placeholder title meant "both were once called *Uus küsimus*", and one
+ * derived from a Russian title meant nothing at all.
+ *
+ * `taken` still counts: two questions in one document on one key is a schema
+ * error, and the retry costs nothing.
  */
-export function deriveQuestionKey(
-    title: string,
-    taken: Iterable<string> = []
-): string {
-    const slug = title
-        .normalize("NFD")
-        .replace(/\p{M}/gu, "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "");
-
-    const base = trimKey(
-        slug === "" ? "question" : /^[0-9]/.test(slug) ? `q_${slug}` : slug
-    );
-
+export function newQuestionKey(taken: Iterable<string> = []): string {
     const used = new Set(taken);
-    if (!used.has(base)) return base;
-
-    for (let n = 2; ; n += 1) {
-        const suffix = `_${n}`;
-        const candidate = `${trimKey(base, QUESTION_KEY_MAX_LENGTH - suffix.length)}${suffix}`;
-        if (!used.has(candidate)) return candidate;
+    for (;;) {
+        const key = `q_${randomToken(QUESTION_KEY_TOKEN_LENGTH)}`;
+        if (!used.has(key)) return key;
     }
 }
 
-function trimKey(value: string, limit = QUESTION_KEY_MAX_LENGTH): string {
-    return value.slice(0, limit).replace(/_+$/, "");
-}
+const QUESTION_KEY_TOKEN_LENGTH = 12;

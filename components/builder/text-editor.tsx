@@ -22,7 +22,6 @@ import {
     withMaxLength,
     withPlaceholder
 } from "@/lib/builder/element-patch";
-import type { SurveyKeys } from "@/lib/builder/keys";
 
 /**
  * The two written-answer questions. They differ only in what the runner draws
@@ -34,14 +33,10 @@ type TextQuestion = ShortTextQuestion | LongTextQuestion;
 
 function TextFields({
     question,
-    siblings,
-    keys,
     onChange,
     maxLengthCeiling
 }: {
     readonly question: TextQuestion;
-    readonly siblings: readonly SurveyElement[];
-    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
     /** `ShortTextQuestionSchema` stops at 1 000 characters, long text at 10 000. */
     readonly maxLengthCeiling: number;
@@ -53,8 +48,6 @@ function TextFields({
         <>
             <ElementFields
                 element={question}
-                siblings={siblings}
-                keys={keys}
                 onChange={onChange}
                 titleLabel={t("titleLabel")}
                 titlePlaceholder={t("titlePlaceholder")}
@@ -128,8 +121,6 @@ function TextFields({
 
 export function ShortTextEditor(props: {
     readonly question: ShortTextQuestion;
-    readonly siblings: readonly SurveyElement[];
-    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     return <TextFields {...props} maxLengthCeiling={1_000} />;
@@ -137,8 +128,6 @@ export function ShortTextEditor(props: {
 
 export function LongTextEditor(props: {
     readonly question: LongTextQuestion;
-    readonly siblings: readonly SurveyElement[];
-    readonly keys: SurveyKeys;
     readonly onChange: (element: SurveyElement) => void;
 }) {
     return <TextFields {...props} maxLengthCeiling={10_000} />;

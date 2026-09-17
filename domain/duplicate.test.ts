@@ -27,7 +27,7 @@ describe("duplicateSurvey", () => {
         );
     });
 
-    it("preserves every question key, in order — this is what wave comparison joins on", () => {
+    it("preserves every question key, in order — the lineage comparisons suggest matches from", () => {
         expect(copy.elements.map(e => e.key)).toEqual(
             survey.elements.map(e => e.key)
         );
