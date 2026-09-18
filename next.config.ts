@@ -16,10 +16,11 @@ const nextConfig: NextConfig = {
         // runner will be a third), so there is no single layout for Next.js to
         // build a 404 from. `app/global-not-found.tsx` is that page.
         globalNotFound: true
-    },
-    redirects: async () => [
-        { source: "/", destination: "/surveys", permanent: false }
-    ]
+    }
+    // `/` used to redirect to `/surveys` because nothing rendered there. It is
+    // the landing page now (docs/DECISIONS.md 038), and a redirect here would
+    // win over the route: `redirects()` runs before routing, so the page would
+    // never be reached and the cause would not be visible from `app/`.
 };
 
 export default withNextIntl(nextConfig);

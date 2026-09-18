@@ -1014,3 +1014,35 @@ The owner's position: the people using this should never see or reason about key
 - The bare `rounded` utility is banned — it is a hardcoded 4px that ignores `--radius`. 263 uses were replaced.
 - A token change now fails `pnpm check` until the audit agrees, which is the point. Snapped values are printed; paste them back rather than shipping a colour the browser clips.
 - Adding a primitive whose disabled state dims with opacity means adding its `data-slot` to the block in `globals.css` (036), not a class at the call site.
+
+---
+
+## 038 — The landing page: a fourth root layout, a third catalogue, and a language in the path
+
+**Status:** accepted.
+
+**Context.** `/` had no page. `next.config.ts` redirected it to `/surveys`, the proxy then bounced anonymous visitors to `/login`, and the product's front door was a sign-in form for an account nobody could yet want. Phases 13 and 14 are skipped, so there is no pricing page to build towards and no plan ceiling to sell past; what the root route needs is an argument, not a price list.
+
+**Decision.** A landing page at `/`, `/en` and `/ru`, built as its own surface.
+
+- **The language is a path segment, not the cookie.** `app/(marketing)/[[...locale]]/` mirrors `/k/[slug]/[[...locale]]` exactly, and for the same reasons as 011 and 033: reading `NEXT_LOCALE` on a public route makes every request dynamic and hands two people the same URL for different pages. On the most-cached document the site has, that is the worst place to pay it. Estonian is the bare `/` — the address people type and the one that goes on things — and `/et` redirects there rather than serving one page at two URLs. A segment that names no language 404s; without that, every typo in the origin would answer 200 with the landing page on it.
+- **A fourth root layout.** `<html lang>` differs by surface, which is why there is no `app/layout.tsx` (011). This is the fourth: `(app)`, `(auth)`, `(public)` and now `(marketing)`.
+- **A third message catalogue,** `messages/marketing/`. 011 split the runner's copy from the owner app's because the runner is loaded on a stranger's phone and must not ship builder, results and settings copy. The landing page is loaded by *more* strangers than any surface, and by ones who have not decided to be here yet. The same argument applies, so it gets the same treatment. `lib/i18n/messages.test.ts` now checks the three namespace sets are **pairwise** disjoint.
+- **`/` is public by exact match, never by prefix.** `PUBLIC_EXACT` is a separate list from `PUBLIC_PREFIXES` for one reason: every path in the application starts with `/`, so putting it in the prefix list would make the entire owner app public in a single edit — and silently, since the proxy would simply stop redirecting and every page would be left relying on its own `requireSessionUser()`. Deny-by-default is worth more than the line it saves.
+- **The `redirects()` entry is gone.** `redirects()` runs before routing, so leaving it would have beaten the new route and the cause would not have been visible from `app/`.
+- **Server components on this surface are handed a translator; they do not call `getTranslations()`.** Those getters resolve through `lib/i18n/request.ts`, which loads the *owner app's* catalogue from the locale cookie. A marketing key looked up that way does not fail — it renders as its own path, which is how `Landing.scale.title` ends up on the page looking like a string somebody forgot to translate. `MarketingTranslator` is the type; the page makes one and passes it down.
+
+**The page's argument.** The visitor is handed a real single-choice question in the runner's own card, and the moment they answer it the same answer is shown from the owner's side: a chart bar marked as theirs and a row in the response table. It demonstrates the whole loop by running it on the reader rather than describing it.
+
+**What it deliberately does not do.**
+
+- **It submits nothing.** `responses` is behind RLS and the anonymous key cannot read an aggregate out of it, so a live tally would need a new public read path; a landing page is a poor reason to open one, and it would file a junk response against a real survey on every visit. The answer stays in the component and the copy says so.
+- **It invents nothing.** No customers, logos, testimonials, usage figures, press or prices — PRODUCT.md records that none exist. The two charts that carry numbers are labelled *näidisandmed* on the plate.
+- **It degrades.** The question is read from a published survey named by `NEXT_PUBLIC_DEMO_SURVEY_SLUG`; when that is unset, closed, missing, or has no single-choice question, the page falls back to a built-in question and drops the "answer a real one" action. The production demo survey does not exist yet, so the fallback is the current behaviour everywhere.
+
+**Consequences.**
+
+- Creating the production demo survey and setting `NEXT_PUBLIC_DEMO_SURVEY_SLUG` is a deployment step, not a code change. Until it exists the page runs on its built-in question.
+- `safeReturnPath` treats `/` as public, so signing in never returns the owner to the landing page.
+- The rail's sign-in link is the whole acquisition path: the proxy already redirects a signed-in visitor from `/login` to `/surveys`, so one static page serves both strangers and owners without reading anything about the request.
+- Sign-ups being open is a deviation from PLAN Phase 14 and DEPLOY step 22, decided 2026-09-18 and recorded in PRODUCT.md. Every account created before a ceiling exists is one that has used the product without one.
