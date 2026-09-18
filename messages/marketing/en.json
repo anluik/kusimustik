@@ -1,0 +1,80 @@
+{
+    "Landing": {
+        "meta": {
+            "title": "Inquirdi - build a survey, collect answers",
+            "description": "Build a survey, share one link, read the results. In Estonian, English and Russian."
+        },
+        "nav": {
+            "signIn": "Log in",
+            "skip": "Skip to the question",
+            "languageLabel": "Page language"
+        },
+        "theme": {
+            "label": "Appearance",
+            "light": "Light",
+            "dark": "Dark",
+            "system": "System"
+        },
+        "hero": {
+            "note": "This is Inquirdi's real answering view. Your answer stays in this browser, we do not store it. The other responses are demonstration data.",
+            "hint": "Pick one.",
+            "statement": "Build a survey. Share one link. Read the results."
+        },
+        "demo": {
+            "title": "How do you collect feedback today?",
+            "options": {
+                "paper": "On paper",
+                "online": "With an online survey",
+                "email": "By email",
+                "phone": "By phone",
+                "none": "We don't"
+            }
+        },
+        "turn": {
+            "title": "This is what the survey's owner sees.",
+            "body": "The same answer, two ways. Neither needed setting up."
+        },
+        "plates": {
+            "chart": "Result",
+            "table": "Recent answers",
+            "count": "{count, plural, one {# response} other {# responses}}",
+            "yours": "your answer",
+            "colTime": "Time",
+            "colLocale": "Language",
+            "colAnswer": "Answer",
+            "justNow": "just now",
+            "ago": {
+                "t1": "2 min ago",
+                "t2": "18 min ago",
+                "t3": "1 h ago"
+            }
+        },
+        "scale": {
+            "title": "One answer is an opinion. Three hundred is a result.",
+            "body": "Inquirdi aggregates them for you: the distribution, the average, and the point where people gave up. No spreadsheet required.",
+            "demoLabel": "Demonstration data",
+            "demoQuestion": "How satisfied are you with the service? (2026)"
+        },
+        "waves": {
+            "title": "Ask again next year.",
+            "body": "A recurring survey is a wave. You match the questions across waves yourself. Inquirdi never guesses a match, because a wrong one is worse than a missing one.",
+            "matched": "matched",
+            "demoQuestion": "How satisfied are you with the service?",
+            "metric": "satisfied (4-5)"
+        },
+        "languages": {
+            "title": "One link, three languages.",
+            "body": "Write the survey in one language and translate it into the others. The respondent picks theirs; the link you share stays the same.",
+            "linkLabel": "Share link"
+        },
+        "close": {
+            "title": "Build your first survey.",
+            "body": "No password needed, we send a sign-in link by email.",
+            "action": "Create an account",
+            "demoAction": "Answer a real survey"
+        },
+        "footer": {
+            "signIn": "Log in"
+        }
+    }
+}

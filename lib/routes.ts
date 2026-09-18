@@ -1,10 +1,20 @@
+import { DEFAULT_LOCALE, UI_LOCALES } from "@/lib/i18n/locales";
+
 /**
  * Every path the application knows about, in one place. The proxy protects by
  * *deny by default*: a new owner route is protected the moment it exists, and
- * making something public is a deliberate edit to `PUBLIC_PREFIXES`.
+ * making something public is a deliberate edit to `PUBLIC_PREFIXES` or, for
+ * the landing page's three addresses, to `PUBLIC_EXACT`.
  */
 export const ROUTES = {
+    /** The landing page, in Estonian. See docs/DECISIONS.md 038. */
     home: "/",
+    /**
+     * The landing page in one of the other languages it is offered in.
+     * Estonian is the bare `/` and has no segment of its own, exactly as the
+     * runner's own language is the bare `/k/<slug>`.
+     */
+    homeInLocale: (locale: string) => `/${locale}`,
     surveys: "/surveys",
     /** The builder for one survey; the survey's own page for now. */
     builder: (surveyId: string) => `/surveys/${surveyId}`,
@@ -61,7 +71,29 @@ export const ROUTES = {
  */
 const PUBLIC_PREFIXES = ["/login", "/auth", "/k", ROUTES.events] as const;
 
+/**
+ * Public paths that are matched *whole*, never as prefixes — the landing page
+ * and its two translations (docs/DECISIONS.md 038).
+ *
+ * They are a separate list for one reason worth stating plainly: `/` cannot go
+ * in `PUBLIC_PREFIXES`. Every path in this application starts with it, so a
+ * prefix match on `/` would make the entire owner app public in a single
+ * edit, and it would do it silently — the proxy would simply stop redirecting
+ * and every page would be left relying on its own `requireSessionUser()`.
+ * Deny-by-default is worth more than the one line this saves.
+ */
+const PUBLIC_EXACT: readonly string[] = [
+    ROUTES.home,
+    // Every language, Estonian included. `/et` is not an address the page
+    // serves — Estonian is the bare `/` — but the *page* is what redirects it
+    // there, and it can only do that if the proxy lets the request reach it.
+    // Leaving it out would bounce an anonymous visitor to a sign-in form for
+    // the crime of typing a valid language code.
+    ...UI_LOCALES.map(ROUTES.homeInLocale)
+];
+
 export function isPublicPath(pathname: string): boolean {
+    if (PUBLIC_EXACT.includes(pathname)) return true;
     return PUBLIC_PREFIXES.some(
         prefix => pathname === prefix || pathname.startsWith(`${prefix}/`)
     );

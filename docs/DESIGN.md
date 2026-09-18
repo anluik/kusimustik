@@ -1,6 +1,6 @@
 # Design spec
 
-Visual contract for Küsimustik. Claude Code follows this and does not invent values that aren't here.
+Visual contract for Inquirdi. Claude Code follows this and does not invent values that aren't here.
 
 Direction: **paper and ink**. Warm paper, one ink-teal accent, a serif for the words that are the point. Dense where you work, quiet and generous where someone is answering.
 
@@ -28,6 +28,8 @@ The **categorical palette order is the colour-vision safety mechanism**, and it 
 **Shadows are tinted, never black.** `--shadow-tint` is a warm hue per mode, and the `--shadow-*` scale is built from it. A card on paper gets `shadow-xs`; a dialog or a floating surface `shadow-sm`. A shadow is the surface in shade, so it carries the surface's warmth.
 
 **Texture.** A fixed, non-interactive grain overlays the page (`body::after`), multiplying in light and screening in dark, to keep a large plain surface from reading as flat vector. It is suppressed under `forced-colors` and `prefers-contrast: more`.
+
+**The surfaces the browser draws.** Selection, the caret, the scrollbar and a link's underline all ship with defaults that belong to no design system — on warm paper, the browser's stock blue selection is the one place the app reads as assembled rather than built. They are themed once, in a base layer in `app/globals.css`, so every surface inherits them: `::selection` takes `--accent` on `--accent-foreground`, which is the same pale teal that marks a chosen option, so selecting text looks like the app's own "this one" state; `caret-color` on inputs, textareas and `contenteditable` is `--primary`; scrollbars are `--input` on a transparent track, thin, declared both as `scrollbar-color`/`scrollbar-width` for Firefox and as the `-webkit-scrollbar` parts for WebKit and Blink, the thumb going to `--muted-foreground` on hover; and links carry `text-underline-offset: 0.2em` so an underline clears its descenders rather than cutting through them. Under `forced-colors` the selection falls back to `Highlight`/`HighlightText` — the user asked for exactly the colours they chose. This is app-wide, not one surface's decoration.
 
 **Fonts.** Three faces, each with a job, all three carrying Cyrillic because Russian is a launch locale:
 
@@ -68,7 +70,7 @@ Named once, in `components/type.ts`, and imported. **There are no local copies o
 
 ## 3. Spacing rhythm
 
-Base unit 4px. Allowed steps: 2, 4, 6, 8, 10, 12, 14, 16, 20, 24. Nothing between.
+Base unit 4px. **On application surfaces** — the owner app, the builder, the runner — the allowed steps are 2, 4, 6, 8, 10, 12, 14, 16, 20, 24. Nothing between. The marketing register below is the one named exception, and it does not widen this ladder.
 
 | Purpose | Value | Tailwind |
 |---|---|---|
@@ -87,6 +89,21 @@ Base unit 4px. Allowed steps: 2, 4, 6, 8, 10, 12, 14, 16, 20, 24. Nothing betwee
 A dense table is `table-fixed` (§5) and its columns are narrower below `sm`: the response count and the row actions both stay on a 380px screen. Dense table column gutters are 10–12px. Horizontal padding on a list row is 12px; on a nested wave row, 8px plus a 12px indent from a `border-l` rule.
 
 **Never use vertical margin to separate siblings** — use flex/grid `gap`. Scroll-list rows use `gap-px` and rely on `hover:bg-muted` for separation.
+
+**The marketing register is coarser, and it is an exception, not an extension.** The landing page (§12) is read at arm's length by someone who has not decided to be here yet, not worked in at a desk, and the 2–24px ladder makes a page like that read as a cramped panel. It runs on its own intervals — 24, 32, 48, 56, 64, 80, 96px — and they are used only there:
+
+| Purpose | Value | Tailwind |
+|---|---|---|
+| Between the page's sections | 96px | `gap-24` |
+| Between the question card and the owner's column | 64px | `gap-16` |
+| Page padding, top / bottom | 56px → 80px at `sm` / 64px | `pt-14 sm:pt-20 pb-16` |
+| Section rule to its content | 32px | `pt-8` |
+| The closing section's rule to its content | 48px | `pt-12` |
+| The footer's rule to its content | 24px | `pt-6` |
+| Words ↔ evidence gutter | 24px → 48px at `lg` | `gap-6 lg:gap-12` |
+| Marketing column cap | 1100px | `max-w-[1100px]` |
+
+Nothing in `app/`, `components/builder/`, `components/runner/` or `components/results/` reaches for these. A dense workspace that starts spacing at 32px has stopped being dense.
 
 **Width is capped.** Owner pages are held to `PAGE_WIDTH` (1280px, `components/shell/page-width.ts`); the builder is exempt, being a three-panel workspace. A **plot** is capped at 720px on top of that (§7) and the runner's column at 620px: a bar that runs a metre across a wide monitor is harder to compare than one that does not, and prose past ~70 characters is harder to read.
 
@@ -351,3 +368,39 @@ Points where this spec overrode an earlier decision. Recorded so nobody "fixes" 
 8. **The old screenshots in `docs/design/` are a record, not a reference.** They show the pre-redesign direction. Nothing should be matched to them.
 4. **The runner's radius is a token, not an override.** Implemented as `--survey-radius` (§8) rather than a one-off class.
 5. **Disabled uses colour, not opacity.** Standard shadcn dims with opacity; that stacks and breaks audited contrast, so it's overridden here.
+---
+
+## 12. The landing page
+
+The product's front door, at `/`, `/en` and `/ru` — one file under `app/(marketing)/[[...locale]]/`, its own root layout, its own message catalogue. The architecture is docs/DECISIONS.md 038 and is not restated here; what follows is the visual contract, and it applies to anything added to this surface later.
+
+**The page is a survey.** The visitor is handed one real single-choice question in the runner's own card, and the moment they answer it the same answer is shown back from the owner's side: a bar marked as theirs in a chart, and a row of their own at the top of a list of recent answers. Nothing is submitted, stored or sent: the answer is component state and the copy says so. The page argues by running the product on the reader, so every visual decision below exists to keep that demonstration legible rather than to decorate it.
+
+**Two densities meet here, and that is the argument.** §4 says the owner's density and the runner's are two answers to two jobs and **must not be averaged**. This is the one surface where both appear at once, and they are *juxtaposed* rather than blended: the question card is runner density exactly — `--survey-*` tokens, `rounded-survey`, `bg-survey-card`, a hairline, `shadow-xs`, 17px question, 15px option labels, 48px option rows, the runner's own `OptionRow` component rather than a copy of it — and the plates that receive the answer are owner density exactly: `bg-card`, `rounded-xl`, `px-4 py-3.5`, an 11px sentence-case `LABEL` header, 12–13px figures on tabular numerals. Neither moves toward the other. A visitor who later signs in should recognise both halves of what they were shown, which only works if each half is the real thing. **Do not invent a middle density for this page**; if a new block belongs to the respondent it takes the runner's tokens, and if it belongs to the owner it takes the card's.
+
+**Composition: one column, one sheet of paper.** The whole page is a single 1100px column. The question card is centred in what is left of the first screen (`min-h-[calc(100svh-9rem)]`, capped at the runner's own 620px) so the owner's side begins *below* the fold — showing an empty results panel in the first viewport would spend the reveal before the visitor had done anything, and the largest shape on the page would be a chart of nothing. `svh`, not `vh`: a phone's toolbars are part of the first screen and `vh` lies about them. Below that, every section is a two-column spine — the words on the left (`SectionHead`: a serif heading at `DISPLAY`, capped at 24 characters and balanced, plus one 15px muted line capped at 52 characters), the evidence on the right (a `Plate`, capped at the §3 plot width of 720px) — collapsing to one column below `lg`. Sections are separated by a `border-t` hairline and the §3 marketing rhythm and by nothing else. **No section is a coloured band, and there is no full-bleed anything**; the paper field with its §1 grain runs edge to edge under the entire page, and the rule plus the rhythm is what makes a section a section. Four centred heading-and-subhead blocks stacked down a page is the arrangement this category always ships and it reads as a brochure; a rule that runs the full column with a heading that starts where every other line starts reads as a document, which is what this product makes.
+
+**Heading order follows the page, not the layout.** The document's single `<h1>` is a plain statement of what the product does, set in the display serif at 20px, under the card and separated from it by a hairline. The demo question is an `<h2>` inside the card. A demo question is the loudest thing on the first screen and is still not what the page is about — it is an instrument, and naming it the page's title would tell a screen reader and a search engine that the product is one satisfaction survey. Section headings below are `<h2>`, plate labels `<h3>`.
+
+**One authored moment of motion, and nothing else.** A bar grows on `width` only — 620ms, `cubic-bezier(0.16, 1, 0.3, 1)`, under `motion-safe:` — when the answer lands. Separately, the owner's column is scrolled into view **once**, on the first answer, with `scrollIntoView({ behavior: "smooth", block: "start" })`, which honours `prefers-reduced-motion` itself; a visitor changing their mind is not asking to be moved again, so it never fires twice. Nothing scrolls on its own, nothing fades in on scroll, nothing parallaxes, nothing counts up. This is §4's "nothing moves on hover" carried onto a marketing surface: the page has one thing to show happening, and everything else holding still is what makes it visible.
+
+**Demonstration data is labelled, and it has to add up.** PRODUCT.md forbids inventing customers, logos, testimonials, usage figures, press and prices, and the landing page invents none. Two plates carry figures that are not the visitor's own, and both wear a *Näidisandmed* / *Demonstration data* / *Демонстрационные данные* note in the plate header, in every locale — the header's `aside` slot, muted, 12px. Two further rules hold for anything added later:
+
+1. **Demonstration figures agree arithmetically across the page.** The waves plate's 2026 figure (71,3%) is the top two steps of the scale plate's distribution (32,0 + 39,3); both plates title the same question, so a reader who adds the bars up is entitled to get that number. The two once disagreed by 3,6pp, which is a defect a reader can find.
+2. **A plate that shows a derived figure names its metric.** The waves plate's label is the question *and* what is being counted — "rahul (4–5)" — because "71,3%" of an opinion scale is meaningless without it.
+
+Charts here take §7 unchanged and without exception: ordered data gets the ramp through the shared `rampFill`/`rampStep` helpers with the mandatory 1px stroke, a single series gets `--chart-1`, two waves get `--chart-1` and `--chart-2` with dot swatches, bars are horizontal and thin (14px, under the 18px cap), the data end is rounded and the baseline end square, widths come from the results surface's own `barWidth` with its dot decimal, and figures are Estonian-formatted regardless of the page's language. Labels sit outside the fill on this page rather than inside it: §7 permits either, and these fills spend most of their life at 0%, where a label that has to move out of the bar below some width is a rule with a seam in it.
+
+**Both plates open on a survey that has been running, not on an empty panel.** The built-in question carries illustrative counts and three illustrative recent answers, so the chart shows a real distribution and the list shows rows before the visitor has done anything. Answering adds one: the count ticks up, every share is recomputed, and the visitor's row appears at the top of the list. This is deliberate and it replaced a genuinely empty first state, because a chart of five zeroes and a table of dashes is the weakest object a page can put in front of a reader, and one response against a count of one is not a result.
+
+Three rules hold it honest, and any figure added to this surface later inherits them:
+
+1. **Illustrative figures are labelled where they are, not at the edge of the card.** A plate whose numbers were not produced by the reader carries the *demonstration data* tag beside its own name (§12's `Plate` `note` slot). The sentence under the question card says the same thing in words.
+2. **The visitor's own figure is the one real number on the plate**, so the baseline stays small enough that adding one moves it. A baseline in the thousands would make the only true value invisible.
+3. **Nothing illustrative is ever attached to a real survey's question.** When the page is running on a published survey rather than its built-in question, both plates drop the counts, the rows and the tag, and the list falls back to the dash-per-cell empty state in `--input`, the disabled token, never dimmed (§6). Hanging invented counts on somebody's actual question is the one thing this page may not do.
+
+The list is named *recent answers* rather than *answers* for the same reason: four rows under a heading that promises all of them is a panel that looks broken, and a survey's owner reads a recent-answers list on the results surface too.
+
+**It degrades to a built-in question.** The question is read from a real published survey through the runner's own loader, named by `NEXT_PUBLIC_DEMO_SURVEY_SLUG`. When that is unset, or the survey is closed, missing, or has no single-choice question, the page falls back to a built-in question — the same component, the same card, the same two plates, and the secondary "answer a real one" action disappears rather than pointing at nothing. The fallback is the current behaviour in every environment. Nothing about the page's composition changes between the two; the only visible difference is one absent button.
+
+**Chrome is one 48px rail.** A hairline under the mark, the three language endonyms as links to distinct URLs (`Eesti`, `English`, `Русский`, the same three strings in every catalogue, as the runner's picker does — §4), and a sign-in link. On a phone it wraps to two rows from `sm` down rather than truncating, because the thing that loses a truncation contest is always the product's own name. The footer repeats the mark, the languages and the way in, and carries the appearance control: light, dark or system, as three quiet text buttons rather than a filled tab list, because a preference is not a destination and nobody arrives wanting it. The page's primary action is a 48px `--primary` link at the end, not at the top: by then the visitor has answered a question and seen it land two ways.

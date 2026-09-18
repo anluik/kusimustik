@@ -28,6 +28,9 @@ const OWNS_A_LANDMARK: Readonly<Record<string, string>> = {
     // terminal notices that replace it.
     "components/runner/runner-screen.tsx": "the runner",
     "components/runner/runner-notice.tsx": "thanks, closed, not found, failed",
+    // The landing page, which has its own root layout and so no shell to
+    // inherit a landmark from (docs/DECISIONS.md 038).
+    "app/(marketing)/[[...locale]]/page.tsx": "the landing page",
     // Their own documents: neither renders inside any layout.
     "app/global-error.tsx": "the root error page",
     "app/global-not-found.tsx": "the 404"

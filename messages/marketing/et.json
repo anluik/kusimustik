@@ -1,0 +1,80 @@
+{
+    "Landing": {
+        "meta": {
+            "title": "Inquirdi - koostage küsitlus, koguge vastuseid",
+            "description": "Koostage küsitlus, jagage üht linki ja vaadake tulemusi. Eesti, inglise ja vene keeles."
+        },
+        "nav": {
+            "signIn": "Logi sisse",
+            "skip": "Otse küsimuse juurde",
+            "languageLabel": "Lehe keel"
+        },
+        "theme": {
+            "label": "Välimus",
+            "light": "Hele",
+            "dark": "Tume",
+            "system": "Süsteemne"
+        },
+        "hero": {
+            "note": "See on Inquirdi päris vastamisvaade. Teie vastus jääb siia brauserisse, me ei salvesta seda. Ülejäänud vastused on näidisandmed.",
+            "hint": "Valige üks.",
+            "statement": "Koostage küsitlus. Jagage üht linki. Lugege tulemusi."
+        },
+        "demo": {
+            "title": "Kuidas te praegu tagasisidet kogute?",
+            "options": {
+                "paper": "Paberil",
+                "online": "Veebiküsitlusega",
+                "email": "E-kirja teel",
+                "phone": "Telefoni teel",
+                "none": "Ei kogugi"
+            }
+        },
+        "turn": {
+            "title": "Nii näeb seda küsitluse omanik.",
+            "body": "Sama vastus, kaks vaadet. Kumbki ei vajanud seadistamist."
+        },
+        "plates": {
+            "chart": "Tulemus",
+            "table": "Hiljutised vastused",
+            "count": "{count, plural, one {# vastus} other {# vastust}}",
+            "yours": "teie vastus",
+            "colTime": "Aeg",
+            "colLocale": "Keel",
+            "colAnswer": "Vastus",
+            "justNow": "just praegu",
+            "ago": {
+                "t1": "2 min tagasi",
+                "t2": "18 min tagasi",
+                "t3": "1 t tagasi"
+            }
+        },
+        "scale": {
+            "title": "Üks vastus on arvamus. Kolmsada on tulemus.",
+            "body": "Inquirdi koondab need ise: jaotus, keskmine ja koht, kus vastajad pooleli jätsid. Tabelarvutust avama ei pea.",
+            "demoLabel": "Näidisandmed",
+            "demoQuestion": "Kui rahul olete teenusega? (2026)"
+        },
+        "waves": {
+            "title": "Küsige uuesti aasta pärast.",
+            "body": "Korduvad küsitlused on nagu lained. Küsimused seote lainete vahel ise kokku.",
+            "matched": "seotud",
+            "demoQuestion": "Kui rahul olete teenusega?",
+            "metric": "rahul (4-5)"
+        },
+        "languages": {
+            "title": "Üks link, kolm keelt.",
+            "body": "Kirjutage küsitlus ühes keeles ja tõlkige teistesse. Vastaja valib oma keele; jagatav link jääb samaks.",
+            "linkLabel": "Jagatav link"
+        },
+        "close": {
+            "title": "Tehke esimene küsitlus.",
+            "body": "Parooli pole vaja, saadame sisselogimislingi e-postile.",
+            "action": "Looge konto",
+            "demoAction": "Vastake päris küsitlusele"
+        },
+        "footer": {
+            "signIn": "Logi sisse"
+        }
+    }
+}

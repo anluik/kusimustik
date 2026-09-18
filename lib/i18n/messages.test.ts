@@ -7,6 +7,9 @@ import appRu from "@/messages/app/ru.json";
 import runnerEt from "@/messages/runner/et.json";
 import runnerEn from "@/messages/runner/en.json";
 import runnerRu from "@/messages/runner/ru.json";
+import marketingEt from "@/messages/marketing/et.json";
+import marketingEn from "@/messages/marketing/en.json";
+import marketingRu from "@/messages/marketing/ru.json";
 import { UI_LOCALES } from "@/lib/i18n/locales";
 import { RUNNER_ACTION_ERRORS } from "@/lib/runner/errors";
 
@@ -24,7 +27,8 @@ function keyPaths(value: unknown, prefix = ""): string[] {
 
 const CATALOGUES = {
     app: { et: appEt, en: appEn, ru: appRu },
-    runner: { et: runnerEt, en: runnerEn, ru: runnerRu }
+    runner: { et: runnerEt, en: runnerEn, ru: runnerRu },
+    marketing: { et: marketingEt, en: marketingEn, ru: marketingRu }
 } as const;
 
 describe("UI locales", () => {
@@ -36,37 +40,49 @@ describe("UI locales", () => {
     });
 });
 
-describe.each(["app", "runner"] as const)("%s catalogue", surface => {
-    const reference = keyPaths(CATALOGUES[surface].et).sort();
+describe.each(["app", "runner", "marketing"] as const)(
+    "%s catalogue",
+    surface => {
+        const reference = keyPaths(CATALOGUES[surface].et).sort();
 
-    it("is not empty", () => {
-        expect(reference.length).toBeGreaterThan(0);
-    });
+        it("is not empty", () => {
+            expect(reference.length).toBeGreaterThan(0);
+        });
 
-    it.each(UI_LOCALES)("has exactly the Estonian keys in %s", locale => {
-        // Estonian is the source of truth: a key missing from et is not a key,
-        // and a key only present in en or ru renders as its own path.
-        expect(keyPaths(CATALOGUES[surface][locale]).sort()).toEqual(reference);
-    });
+        it.each(UI_LOCALES)("has exactly the Estonian keys in %s", locale => {
+            // Estonian is the source of truth: a key missing from et is not a key,
+            // and a key only present in en or ru renders as its own path.
+            expect(keyPaths(CATALOGUES[surface][locale]).sort()).toEqual(
+                reference
+            );
+        });
 
-    it.each(UI_LOCALES)("has no blank messages in %s", locale => {
-        const blanks = Object.entries(
-            flatten(CATALOGUES[surface][locale])
-        ).filter(([, message]) => message.trim() === "");
-        expect(blanks).toEqual([]);
-    });
-});
+        it.each(UI_LOCALES)("has no blank messages in %s", locale => {
+            const blanks = Object.entries(
+                flatten(CATALOGUES[surface][locale])
+            ).filter(([, message]) => message.trim() === "");
+            expect(blanks).toEqual([]);
+        });
+    }
+);
 
 describe("catalogue split", () => {
-    it("shares no top-level namespace between app and runner", () => {
-        // The two are intersected into one global `Messages` type
-        // (lib/i18n/next-intl.d.ts). Disjoint namespaces are what keeps that
-        // intersection lossless and keeps a runner key from shadowing an app
-        // one — see docs/DECISIONS.md 011.
-        const app = new Set(Object.keys(appEt));
-        const overlap = Object.keys(runnerEt).filter(name => app.has(name));
-        expect(overlap).toEqual([]);
-    });
+    it.each([
+        ["app", "runner", appEt, runnerEt],
+        ["app", "marketing", appEt, marketingEt],
+        ["runner", "marketing", runnerEt, marketingEt]
+    ] as const)(
+        "shares no top-level namespace between %s and %s",
+        (_left, _right, left, right) => {
+            // The three are intersected into one global `Messages` type
+            // (lib/i18n/next-intl.d.ts). Pairwise-disjoint namespaces are what
+            // keeps that intersection lossless and keeps one surface's key from
+            // shadowing another's — see docs/DECISIONS.md 011 and 038.
+            const names = new Set(Object.keys(left));
+            const overlap = Object.keys(right).filter(name => names.has(name));
+            expect(overlap).toEqual([]);
+        }
+    );
 
     /**
      * The builder canvas promises, in its own empty state, that it shows "how
@@ -116,6 +132,16 @@ describe("catalogue split", () => {
     it("keeps owner-only copy out of the runner catalogue", () => {
         const runnerKeys = keyPaths(runnerEt).join(" ");
         expect(runnerKeys).not.toMatch(/Surveys|Settings|Auth|Nav/);
+    });
+
+    it("keeps owner and runner copy out of the marketing catalogue", () => {
+        // The landing page is loaded by more strangers than any other surface
+        // and by ones who have not decided to be here yet, so it ships its own
+        // copy and nobody else's (docs/DECISIONS.md 038).
+        const marketingKeys = keyPaths(marketingEt).join(" ");
+        expect(marketingKeys).not.toMatch(
+            /Surveys|Settings|Builder|Results|Waves|Runner/
+        );
     });
 });
 

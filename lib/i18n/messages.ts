@@ -1,9 +1,12 @@
 import type { UiLocale } from "@/lib/i18n/locales";
 
 /**
- * Two catalogues, one per surface. The runner is loaded on a stranger's phone
- * over whatever connection they have, so it must not ship builder, results or
- * settings copy; see docs/DECISIONS.md 011.
+ * Three catalogues, one per surface. The runner is loaded on a stranger's
+ * phone over whatever connection they have, so it must not ship builder,
+ * results or settings copy; see docs/DECISIONS.md 011. The landing page is
+ * loaded by strangers too — by *more* of them, and by ones who have not
+ * decided to be here yet — so it gets the same treatment rather than riding
+ * along with the owner app's catalogue (DECISIONS 038).
  *
  * Estonian is the source of truth — the declaration in `next-intl.d.ts` is
  * derived from `app/et.json`, so a key that exists only in `en.json` is not a
@@ -12,6 +15,7 @@ import type { UiLocale } from "@/lib/i18n/locales";
 
 export type AppMessages = typeof import("@/messages/app/et.json");
 export type RunnerMessages = typeof import("@/messages/runner/et.json");
+export type MarketingMessages = typeof import("@/messages/marketing/et.json");
 
 /**
  * Explicit loaders rather than a template literal: a static import specifier
@@ -36,8 +40,23 @@ const RUNNER_CATALOGUES: Record<
     ru: () => import("@/messages/runner/ru.json")
 };
 
+const MARKETING_CATALOGUES: Record<
+    UiLocale,
+    () => Promise<{ default: MarketingMessages }>
+> = {
+    et: () => import("@/messages/marketing/et.json"),
+    en: () => import("@/messages/marketing/en.json"),
+    ru: () => import("@/messages/marketing/ru.json")
+};
+
 export async function loadAppMessages(locale: UiLocale): Promise<AppMessages> {
     return (await APP_CATALOGUES[locale]()).default;
+}
+
+export async function loadMarketingMessages(
+    locale: UiLocale
+): Promise<MarketingMessages> {
+    return (await MARKETING_CATALOGUES[locale]()).default;
 }
 
 export async function loadRunnerMessages(

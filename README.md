@@ -1,4 +1,4 @@
-# Küsimustik
+# Inquirdi
 
 A survey builder, collector and analyser for the Estonian market. Next.js App
 Router + TypeScript + Supabase.

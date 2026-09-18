@@ -203,6 +203,52 @@
     }
 }
 
+/* The surfaces the browser draws for us (DESIGN.md §1). Selection, the caret,
+   the scrollbar and an underline's offset all ship with defaults that belong to
+   no design system — on warm paper, Chrome's blue selection is the one place
+   the app reads as assembled rather than built. Themed from the tokens, once,
+   so every surface inherits them. */
+@layer base {
+  ::selection {
+    /* The accent is the pale teal that already marks a chosen option, so
+       selecting text looks like the rest of the app's "this one" state. */
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+    }
+  :where(input, textarea, [contenteditable]) {
+    caret-color: var(--primary);
+    }
+  /* A link's underline clears its descenders rather than cutting through them. */
+  :where(a) {
+    text-underline-offset: 0.2em;
+    }
+  /* Firefox takes the two-value form; WebKit and Blink read the parts below. */
+  * {
+    scrollbar-color: var(--input) transparent;
+    scrollbar-width: thin;
+    }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+    }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+    }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--input);
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+    }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+    }
+  /* The user asked for exactly the colours they chose. */
+  @media (forced-colors: active) {
+    ::selection { background-color: Highlight; color: HighlightText; }
+    }
+}
+
 /* The paper grain (DESIGN.md §1). A fixed, non-interactive overlay: it breaks
    the flatness of a large plain surface without tinting it, and being fixed it
    does not tile visibly or move while the page scrolls. Suppressed under
