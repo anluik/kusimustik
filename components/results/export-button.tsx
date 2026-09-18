@@ -35,7 +35,7 @@ export function ExportButton({
                 variant="outline"
                 size="sm"
                 disabled
-                className="h-[30px] rounded text-xs disabled:cursor-not-allowed disabled:text-input disabled:opacity-100"
+                className="h-[30px] rounded-lg text-xs"
             >
                 <Download aria-hidden />
                 {t("action")}
@@ -48,7 +48,7 @@ export function ExportButton({
             asChild
             variant="outline"
             size="sm"
-            className="h-[30px] rounded text-xs"
+            className="h-[30px] rounded-lg text-xs"
         >
             <a href={ROUTES.export(surveyId)} download>
                 <Download aria-hidden />

@@ -34,7 +34,7 @@ export function NpsEditor({
                 titlePlaceholder={t("titlePlaceholder")}
             />
 
-            <p className="border-t pt-3 text-[11px] leading-[1.35] text-muted-foreground">
+            <p className="border-t pt-3 text-[12px] leading-[1.4] text-muted-foreground">
                 {t("npsHelp", { min: NPS_MIN, max: NPS_MAX })}
             </p>
 

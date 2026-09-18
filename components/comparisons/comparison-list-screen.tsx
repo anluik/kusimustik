@@ -37,10 +37,9 @@ import { newestWaves } from "@/lib/comparisons/group";
 import type { ComparisonSummary } from "@/lib/db/comparisons";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { LABEL, META } from "@/components/type";
 
-const COLUMN_LABEL =
-    "h-[30px] bg-muted px-3 font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase";
-const MONO_META = "font-mono text-[11px] leading-none text-muted-foreground";
+const MONO_META = cn(META, "text-muted-foreground");
 const WIDE_ONLY = "hidden sm:table-cell";
 
 /**
@@ -79,7 +78,7 @@ export function ComparisonListScreen({
             size="sm"
             disabled={!canCompare}
             onClick={() => setCreating(true)}
-            className="h-[30px] rounded text-xs"
+            className="h-[30px] rounded-lg text-xs"
         >
             {t("list.new")}
         </Button>
@@ -97,14 +96,14 @@ export function ComparisonListScreen({
                             asChild
                             variant="outline"
                             size="sm"
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
-                            <Link href={ROUTES.surveys}>
+                            <Link
+                                href={ROUTES.surveys}
+                                aria-label={t("backToSurveys")}
+                            >
                                 <LayoutList aria-hidden />
                                 <span className="hidden sm:inline">
-                                    {t("backToSurveys")}
-                                </span>
-                                <span className="sr-only sm:hidden">
                                     {t("backToSurveys")}
                                 </span>
                             </Link>
@@ -129,7 +128,7 @@ export function ComparisonListScreen({
 
             <div className={cn("flex flex-col gap-3 p-4", PAGE_WIDTH)}>
                 {comparisons.length === 0 ? (
-                    <Card className="gap-3 rounded px-3.5 py-3">
+                    <Card className="gap-3 rounded-xl px-4 py-3.5">
                         {canCompare ? (
                             <CompareAll
                                 waveGroupId={waveGroupId}
@@ -146,7 +145,7 @@ export function ComparisonListScreen({
                                         asChild
                                         size="sm"
                                         variant="outline"
-                                        className="h-[30px] rounded text-xs"
+                                        className="h-[30px] rounded-lg text-xs"
                                     >
                                         <Link href={ROUTES.surveys}>
                                             {t("backToSurveys")}
@@ -157,24 +156,38 @@ export function ComparisonListScreen({
                         )}
                     </Card>
                 ) : (
-                    <Card className="gap-0 overflow-hidden rounded p-0">
-                        <Table>
+                    <Card className="gap-0 overflow-hidden rounded-xl p-0">
+                        {/* `table-fixed` for the same reason as the survey
+                            list's: under auto layout a long comparison name
+                            is its own minimum and pushes the row actions off
+                            a phone. */}
+                        <Table className="table-fixed">
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead className={COLUMN_LABEL}>
+                                    <TableHead className={LABEL}>
                                         {t("list.columns.name")}
                                     </TableHead>
                                     <TableHead
-                                        className={cn(COLUMN_LABEL, WIDE_ONLY)}
+                                        className={cn(
+                                            LABEL,
+                                            "w-[176px]",
+                                            WIDE_ONLY
+                                        )}
                                     >
                                         {t("list.columns.waves")}
                                     </TableHead>
                                     <TableHead
-                                        className={cn(COLUMN_LABEL, WIDE_ONLY)}
+                                        className={cn(
+                                            LABEL,
+                                            "w-[136px]",
+                                            WIDE_ONLY
+                                        )}
                                     >
                                         {t("list.columns.updated")}
                                     </TableHead>
-                                    <TableHead className={COLUMN_LABEL}>
+                                    <TableHead
+                                        className={cn(LABEL, "w-[60px]")}
+                                    >
                                         <span className="sr-only">
                                             {t("rowActions.label")}
                                         </span>
@@ -327,7 +340,7 @@ function CompareAll({
                             size="sm"
                             disabled={pending}
                             onClick={compareAll}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("empty.noComparisons.compareAll")}
                         </Button>
@@ -336,7 +349,7 @@ function CompareAll({
                             variant="outline"
                             disabled={pending}
                             onClick={onChoose}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("list.new")}
                         </Button>

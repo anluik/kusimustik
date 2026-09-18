@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Bar, BarChart, Cell, LabelList, XAxis, YAxis } from "recharts";
 
-import { META } from "@/components/results/type";
+import { META } from "@/components/type";
 import {
     ChartContainer,
     ChartTooltip,
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/chart";
 import type { ChartConfig } from "@/components/ui/chart";
 import type { CategoryBar } from "@/lib/results/chart-data";
+import { cn } from "@/lib/utils";
 
 /**
  * Categorical bars, horizontal or vertical.
@@ -28,6 +29,18 @@ import type { CategoryBar } from "@/lib/results/chart-data";
 /** DESIGN §4: rows are 32px in owner surfaces; a bar plus its gap. */
 const ROW_HEIGHT = 32;
 const MIN_HEIGHT = 96;
+
+/**
+ * §7: a bar encodes its value by length, and length is only readable against
+ * a stable baseline of comparison. Unbounded, three categories on a 3440px
+ * monitor became three 2-metre bands whose relative lengths were harder to
+ * judge than at half the width, and the value labels ended up a screen away
+ * from their names.
+ */
+const PLOT = "w-full max-w-[720px]";
+
+/** A rounded data end, anchored to the baseline (the bar's own corner). */
+const END_RADIUS = 4;
 
 export function CategoryChart({
     bars,
@@ -54,7 +67,7 @@ export function CategoryChart({
 
     if (orientation === "vertical") {
         return (
-            <ChartContainer config={config} className="h-[200px] w-full">
+            <ChartContainer config={config} className={cn("h-[200px]", PLOT)}>
                 <BarChart data={data} margin={{ top: 16, bottom: 0 }}>
                     <XAxis
                         dataKey="label"
@@ -64,7 +77,12 @@ export function CategoryChart({
                         className={META}
                     />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="count" radius={2} isAnimationActive={false}>
+                    <Bar
+                        dataKey="count"
+                        radius={[END_RADIUS, END_RADIUS, 0, 0]}
+                        maxBarSize={28}
+                        isAnimationActive={false}
+                    >
                         {data.map(bar => (
                             <Cell key={bar.key} fill={bar.fill} />
                         ))}
@@ -72,7 +90,7 @@ export function CategoryChart({
                             dataKey="count"
                             position="top"
                             offset={6}
-                            className="fill-foreground font-mono text-[11px]"
+                            className={cn(META, "fill-foreground")}
                         />
                     </Bar>
                 </BarChart>
@@ -83,7 +101,7 @@ export function CategoryChart({
     return (
         <ChartContainer
             config={config}
-            className="w-full"
+            className={PLOT}
             style={{
                 height: `${Math.max(data.length * ROW_HEIGHT + 16, MIN_HEIGHT)}px`
             }}
@@ -104,7 +122,12 @@ export function CategoryChart({
                 />
                 <XAxis dataKey="count" type="number" hide />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" radius={2} isAnimationActive={false}>
+                <Bar
+                    dataKey="count"
+                    radius={[0, END_RADIUS, END_RADIUS, 0]}
+                    maxBarSize={18}
+                    isAnimationActive={false}
+                >
                     {data.map(bar => (
                         <Cell key={bar.key} fill={bar.fill} />
                     ))}
@@ -114,7 +137,7 @@ export function CategoryChart({
                         dataKey="count"
                         position="right"
                         offset={6}
-                        className="fill-foreground font-mono text-[11px]"
+                        className={cn(META, "fill-foreground")}
                     />
                 </Bar>
             </BarChart>

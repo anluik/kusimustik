@@ -963,3 +963,54 @@ The owner's position: the people using this should never see or reason about key
 - A recreated option in a later wave has a different value and shows as two option rows, each "not offered" in the other wave. Mapping options inside a row is the obvious extension and would be a column on the row.
 - Going past five waves is a palette decision (DESIGN §7), not a schema change.
 - The group's old automatic view is gone. An empty group offers "compare all waves", which builds a comparison of the newest five with suggestions — the old view, one click away, and editable.
+
+---
+
+## 036 — Disabled primitives are coloured in one place, and the runner's type floor includes its chrome
+
+**Status:** accepted
+
+**Context.** A design audit found two gaps between `docs/DESIGN.md` and the code.
+
+1. §6 and §10 forbid dimming a disabled control with opacity, because stacked opacity breaks the audited contrast. The generated primitives in `components/ui/` do exactly that (`disabled:opacity-50`, `data-disabled:opacity-50`), and they are not hand-edited (§5, 012). Five call sites had patched it locally with `opacity-100` and `text-input`. About twenty others had not: every dialog's pending submit, the runner's submit while it sends, every disabled `Switch`, `Label` and menu item.
+2. §2 says respondent-facing text never goes below 14px. The runner's progress count, a scale's end labels and a text field's character counter were 11px, and the notice card's survey title was 13px.
+
+**Decision.**
+
+- **One unlayered block at the end of `app/globals.css` overrides the primitives' disabled styling**, selected by their `data-slot` and `data-sidebar` attributes: `opacity: 1` and `color: var(--input)`. Filled buttons (`default`, `destructive`) also swap their fill for `--muted` with a `--border` edge, because `--input` text on `--primary` is unreadable. A disabled `Switch` gets a `--muted` track, an `--input` edge and an `--input` thumb, so on and off still differ by position. The five local patches are gone.
+
+  Unlayered on purpose. Tailwind v4 puts utilities in `@layer utilities`, and an unlayered rule beats any layered one whatever its specificity. That is what lets it win over `hover:bg-primary/80`, `bg-survey-primary` and `text-destructive` without `!important`. `pointer-events: none` is left as the primitives set it, so a disabled control still does not take hover styles, and a tooltip on one still needs a wrapper.
+
+- **All four runner strings are 14px.** The count and the counter stay Mono.
+
+**Consequences.**
+
+- A `shadcn add` that renames a `data-slot` silently drops the override for that primitive. The selectors are the ones listed in the block. Check them after regenerating.
+- A new primitive with its own opacity-dimmed disabled state needs its slot added to the block, not a class at the call site.
+
+---
+
+## 037 — The redesign: paper and ink, a searched palette, and one type scale
+
+**Status:** accepted. Supersedes the visual direction of `docs/DESIGN.md` (direction "1c"), not its method.
+
+**Context.** The owner asked for a comprehensive redesign and left the scope to us. The previous direction — cool blue-grey, IBM Plex, 4px corners everywhere, uppercase mono for every label, count and badge — was internally consistent and read as a terminal: correct, characterless, and indistinguishable from every other B2B tool. What was *good* about it was not the palette but the thinking underneath: two densities for two jobs, no toasts, skeletons that match final geometry, colour never carrying state alone, an audited contrast floor, chart rules derived from that audit.
+
+**Decision.** Keep the method, re-cut the surface.
+
+- **Paper and ink.** Warm paper neutrals (hue ~85, near-zero chroma) and a single ink-teal accent at hue 192. One accent, no gradients, no second hue for emphasis. Warm-tinted shadows from a `--shadow-tint` token, a fixed grain overlay on the page, and softer containers than their contents (cards 11px, controls 8px, runner 10px).
+- **Three faces with three jobs.** Geist for the interface, Source Serif 4 for display, Geist Mono for identifiers *only*. **Numbers left mono**: both other faces have tabular figures, and mono digits made every count look like a code. **Nothing is uppercased**, and labels are sentence case — in Estonian and Russian the caps also cost the most width.
+- **One type scale, in `components/type.ts`.** Every surface previously kept its own copies of the same class strings; the old `components/results/type.ts` even carried a comment about the drift that caused. There are now no local copies.
+- **The chart palette was searched, not chosen.** Candidate orders of hue/lightness slots were enumerated and run through the data-viz validator (lightness band, chroma floor, adjacent separation under simulated protanopia and deuteranopia, a normal-vision floor, contrast on the card) in *both* modes. 122 of 3024 candidates passed; the shipped order — teal, terracotta, violet, olive, steel blue — was picked among the passing ones for how it looks. Worst adjacent separation ΔE 11.8 against a target of 8. `--chart-6/7/8`, frozen and unused, are deleted.
+- **The audit is a command.** `tools/token-audit.mjs` parses every `oklch()` token out of `app/globals.css` and checks the text, non-text, chart and ramp floors, that `--ramp-label-flip` matches where the flip actually has to happen, and that nothing is outside sRGB. `pnpm check` runs it. The previous spec asserted its audit in prose, which is why `--input` had sat at 2.3:1 while the spec claimed it cleared 3:1.
+- **Two floors moved rather than being restated.** `--input` is now a real 3.5:1 control border, and the ordered ramp's light end clears 2:1 on the card on its own (the mandatory 1px stroke stays, for the track behind it).
+- **The runner gets the survey's name.** Set in the display serif at the top of the page, above the description — the pinned 48px header keeps a truncated sans copy and the count. A name that only ever appears truncated in a bar is not a title.
+
+**Why not keep the blue.** Nothing was wrong with it, and that was the problem: `oklch(0.45 0.09 235)` on a cool grey is the default of the category. The teal is one hue over from where every competitor sits, and warming the neutrals is what makes it read as a considered choice rather than a theme swap.
+
+**Consequences.**
+
+- `docs/design/*.png` are a record of the old direction, not a reference. §11 says so; nothing should be matched to them.
+- The bare `rounded` utility is banned — it is a hardcoded 4px that ignores `--radius`. 263 uses were replaced.
+- A token change now fails `pnpm check` until the audit agrees, which is the point. Snapped values are printed; paste them back rather than shipping a colour the browser clips.
+- Adding a primitive whose disabled state dims with opacity means adding its `data-slot` to the block in `globals.css` (036), not a class at the call site.

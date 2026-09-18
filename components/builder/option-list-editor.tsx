@@ -161,7 +161,7 @@ function OptionRow({
                     ref={setActivatorNodeRef}
                     type="button"
                     aria-label={copy.reorder(index + 1)}
-                    className="flex h-[30px] w-4 shrink-0 cursor-grab touch-none items-center justify-center rounded text-input focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none active:cursor-grabbing"
+                    className="flex h-[30px] w-4 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-input focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none active:cursor-grabbing"
                     {...attributes}
                     {...listeners}
                 >
@@ -176,7 +176,7 @@ function OptionRow({
                     autoComplete="off"
                     aria-invalid={error !== undefined}
                     onChange={event => onRename(event.currentTarget.value)}
-                    className="h-[30px] rounded text-xs"
+                    className="h-[30px] rounded-lg text-xs"
                 />
 
                 <Button
@@ -188,13 +188,13 @@ function OptionRow({
                     disabled={!removable}
                     aria-label={copy.remove(index + 1)}
                     onClick={onRemove}
-                    className="shrink-0 rounded text-muted-foreground disabled:cursor-not-allowed disabled:text-input disabled:opacity-100"
+                    className="shrink-0 rounded-lg text-muted-foreground"
                 >
                     <X aria-hidden />
                 </Button>
             </div>
             {error !== undefined && (
-                <p className="pl-5 text-[11px] leading-[1.35] text-destructive">
+                <p className="pl-5 text-[12px] leading-[1.4] text-destructive">
                     {error}
                 </p>
             )}
@@ -345,7 +345,7 @@ export function OptionListEditor({
                     setAddedValue(added.value);
                     onChange([...options, added]);
                 }}
-                className="h-[30px] w-full rounded text-xs"
+                className="h-[30px] w-full rounded-lg text-xs"
             >
                 <Plus aria-hidden />
                 {copy.add}
@@ -357,7 +357,7 @@ export function OptionListEditor({
                     if (!open) setConfirming(null);
                 }}
             >
-                <AlertDialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+                <AlertDialogContent className="gap-3 rounded-lg p-3.5 sm:max-w-md">
                     <AlertDialogHeader className="gap-1">
                         <AlertDialogTitle className="text-[13px] leading-[1.2] font-semibold">
                             {copy.confirmTitle(confirming?.label ?? "")}
@@ -369,14 +369,14 @@ export function OptionListEditor({
                     <AlertDialogFooter className="gap-2">
                         <AlertDialogCancel
                             size="sm"
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {tWarning("cancel")}
                         </AlertDialogCancel>
                         <AlertDialogAction
                             size="sm"
                             variant="destructive"
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                             onClick={() => {
                                 if (confirming !== null)
                                     remove(confirming.value);

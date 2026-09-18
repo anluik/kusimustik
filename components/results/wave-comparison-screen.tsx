@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { useWaveName } from "@/components/comparisons/wave-name";
 import { WaveQuestionCard } from "@/components/results/wave-question-card";
-import { LABEL, META, PANEL_HEAD } from "@/components/results/type";
+import { LABEL, META, PANEL_HEAD } from "@/components/type";
 import { AppBar } from "@/components/shell/app-bar";
 import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
 import { PAGE_WIDTH } from "@/components/shell/page-width";
@@ -58,14 +58,14 @@ export function WaveComparisonScreen({
                             asChild
                             variant="outline"
                             size="sm"
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
-                            <Link href={ROUTES.compare(waveGroupId)}>
+                            <Link
+                                href={ROUTES.compare(waveGroupId)}
+                                aria-label={t("result.allComparisons")}
+                            >
                                 <LayoutList aria-hidden />
                                 <span className="hidden sm:inline">
-                                    {t("result.allComparisons")}
-                                </span>
-                                <span className="sr-only sm:hidden">
                                     {t("result.allComparisons")}
                                 </span>
                             </Link>
@@ -73,7 +73,7 @@ export function WaveComparisonScreen({
                         <Button
                             asChild
                             size="sm"
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             <Link href={matchesLink}>
                                 {t("result.editMatches")}
@@ -85,7 +85,7 @@ export function WaveComparisonScreen({
 
             {/* A `div`, not a `main`: `SidebarInset` already renders one. */}
             <div className={cn("flex flex-col gap-3 p-4", PAGE_WIDTH)}>
-                <Card className="gap-2.5 rounded px-3.5 py-3">
+                <Card className="gap-2.5 rounded-xl px-4 py-3.5">
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                         <h2 className={PANEL_HEAD}>
                             {t("waves", { count: comparison.waves.length })}
@@ -172,7 +172,7 @@ function ComparisonEmptyState({
     const t = useTranslations("Waves");
 
     return (
-        <Card className="gap-3 rounded px-3.5 py-3">
+        <Card className="gap-3 rounded-xl px-4 py-3.5">
             <EmptyState
                 title={t(`empty.${which}.title`)}
                 body={t(`empty.${which}.body`)}
@@ -188,7 +188,7 @@ function ComparisonEmptyState({
                         asChild
                         variant="outline"
                         size="sm"
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     >
                         <Link href={href}>
                             {which === "noResponses"

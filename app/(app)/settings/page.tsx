@@ -13,6 +13,7 @@ import {
     CardTitle
 } from "@/components/ui/card";
 import { requireSessionUser } from "@/lib/auth/session";
+import { CODE, LABEL, TITLE } from "@/components/type";
 
 export async function generateMetadata(): Promise<Metadata> {
     const t = await getTranslations("Settings");
@@ -37,49 +38,45 @@ export default async function SettingsPage() {
             {/* A `div`: `SidebarInset` is the page's `main`, and a document
                 may not nest one inside another. */}
             <div className="grid max-w-2xl gap-3 p-4">
-                <Card className="gap-3 rounded py-3">
-                    <CardHeader className="px-3.5">
-                        <CardTitle className="text-[13px] leading-[1.2] font-semibold">
+                <Card className="gap-3 rounded-xl py-4">
+                    <CardHeader className="px-4">
+                        <CardTitle className={TITLE}>
                             {t("account.title")}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid gap-2.5 px-3.5">
+                    <CardContent className="grid gap-3 px-4">
                         <div className="grid gap-1">
-                            <span className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase">
-                                {t("account.email")}
-                            </span>
-                            <span className="font-mono text-[11px] leading-none">
-                                {user.email}
-                            </span>
+                            <span className={LABEL}>{t("account.email")}</span>
+                            <span className={CODE}>{user.email}</span>
                         </div>
                         <DisplayNameForm displayName={user.displayName} />
                     </CardContent>
                 </Card>
 
-                <Card className="gap-3 rounded py-3">
-                    <CardHeader className="px-3.5">
-                        <CardTitle className="text-[13px] leading-[1.2] font-semibold">
+                <Card className="gap-3 rounded-xl py-4">
+                    <CardHeader className="px-4">
+                        <CardTitle className={TITLE}>
                             {language("label")}
                         </CardTitle>
                         <CardDescription className="text-xs leading-[1.35]">
                             {language("description")}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="max-w-56 px-3.5">
+                    <CardContent className="max-w-56 px-4">
                         <LocaleTabs />
                     </CardContent>
                 </Card>
 
-                <Card className="gap-3 rounded py-3">
-                    <CardHeader className="px-3.5">
-                        <CardTitle className="text-[13px] leading-[1.2] font-semibold">
+                <Card className="gap-3 rounded-xl py-4">
+                    <CardHeader className="px-4">
+                        <CardTitle className={TITLE}>
                             {theme("label")}
                         </CardTitle>
                         <CardDescription className="text-xs leading-[1.35]">
                             {theme("description")}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="max-w-56 px-3.5">
+                    <CardContent className="max-w-56 px-4">
                         <ThemeToggle />
                     </CardContent>
                 </Card>

@@ -32,11 +32,11 @@ export function OptionRow({
     return (
         <label
             className={cn(
-                "flex min-h-12 cursor-pointer items-center gap-2.5 rounded-survey border px-3 py-2 text-[14px] leading-[1.35] transition-colors",
+                "flex min-h-12 cursor-pointer items-center gap-2.5 rounded-survey border px-3 py-2 text-[15px] leading-[1.45] transition-colors",
                 "has-[:focus-visible]:border-survey-primary has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/18",
                 checked
                     ? "border-[1.5px] border-survey-primary bg-survey-accent text-survey-accent-foreground"
-                    : "border-input hover:bg-muted/60"
+                    : "border-input hover:bg-muted/60 active:bg-muted"
             )}
         >
             <input
@@ -47,7 +47,7 @@ export function OptionRow({
                 onChange={event => onSelect(event.target.checked)}
                 className="size-[18px] shrink-0 accent-survey-primary"
             />
-            <span className="min-w-0">{label}</span>
+            <span className="min-w-0 text-pretty">{label}</span>
         </label>
     );
 }
@@ -77,7 +77,7 @@ export function OtherField({
                 value={value}
                 placeholder={placeholder}
                 onChange={event => onChange(event.target.value)}
-                className="min-h-12 w-full rounded-survey border border-input bg-survey-card px-3 py-2 text-[14px] leading-[1.35] outline-none focus-visible:border-survey-primary focus-visible:ring-[3px] focus-visible:ring-ring/18"
+                className="min-h-12 w-full rounded-survey border border-input bg-survey-card px-3.5 py-2 text-[15px] leading-[1.45] outline-none focus-visible:border-survey-primary focus-visible:ring-[3px] focus-visible:ring-ring/18"
             />
         </>
     );

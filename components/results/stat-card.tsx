@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { LABEL, META, METRIC } from "@/components/results/type";
+import { LABEL, META, METRIC } from "@/components/type";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,7 @@ export function StatCard({
     readonly className?: string;
 }) {
     return (
-        <Card className={cn("gap-2 rounded px-3.5 py-3", className)}>
+        <Card className={cn("gap-2 rounded-lg px-3.5 py-3", className)}>
             <div className="flex items-center gap-1.5">
                 <span className={cn(LABEL, "text-muted-foreground")}>
                     {label}

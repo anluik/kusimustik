@@ -74,7 +74,7 @@ function TextFields({
                                 )
                             )
                         }
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     />
                 </Field>
 
@@ -107,7 +107,7 @@ function TextFields({
                                 )
                             );
                         }}
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     />
                 </Field>
             </EditorSection>

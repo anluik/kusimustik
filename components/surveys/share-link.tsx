@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/lib/routes";
+import { cn } from "@/lib/utils";
+import { CODE } from "@/components/type";
 
 const COPIED_FOR_MS = 2000;
 
@@ -60,14 +62,17 @@ export function ShareLink({ slug }: { readonly slug: string }) {
                 value={path}
                 aria-label={t("label")}
                 onFocus={event => event.currentTarget.select()}
-                className="hidden h-6 w-fit max-w-[26ch] min-w-0 truncate rounded border-transparent bg-muted px-1.5 font-mono text-[11px] leading-none shadow-none sm:block"
+                className={cn(
+                    CODE,
+                    "hidden h-[26px] w-fit max-w-[26ch] min-w-0 truncate rounded-lg border-transparent bg-transparent px-1.5 text-muted-foreground shadow-none transition-colors hover:bg-muted focus:bg-muted sm:block dark:bg-transparent dark:hover:bg-muted dark:focus:bg-muted"
+                )}
             />
             <Button
                 type="button"
                 variant="outline"
                 size="xs"
                 onClick={copy}
-                className="rounded text-xs"
+                className="rounded-lg text-xs"
             >
                 {copied ? t("copied") : t("copy")}
             </Button>

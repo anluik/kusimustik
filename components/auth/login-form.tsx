@@ -3,11 +3,14 @@
 import { useTranslations } from "next-intl";
 import { useActionState, useId } from "react";
 
+import { BrandMark } from "@/components/shell/brand-mark";
+import { DISPLAY } from "@/components/type";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sendMagicLink, type SignInResult } from "@/lib/auth/actions";
 import type { SignInError } from "@/lib/auth/errors";
+import { cn } from "@/lib/utils";
 
 export function LoginForm({
     returnPath,
@@ -32,11 +35,11 @@ export function LoginForm({
 
     if (state !== null && state.ok) {
         return (
-            <section className="flex w-full max-w-sm flex-col gap-3 rounded border bg-card px-3.5 py-4">
-                <h1 className="text-[17px] leading-[1.3] font-semibold">
+            <section className="flex w-full max-w-[400px] flex-col gap-4 rounded-xl border border-border/70 bg-card px-6 py-6 shadow-sm">
+                <h1 className={cn(DISPLAY, "text-[22px]")}>
                     {t("sent.title")}
                 </h1>
-                <p className="text-[14px] leading-[1.35] text-muted-foreground">
+                <p className="text-[14px] leading-[1.5] text-pretty text-muted-foreground">
                     {t("sent.body", { email: state.data.email })}
                 </p>
                 <form action={formAction} className="flex items-center gap-2">
@@ -49,8 +52,7 @@ export function LoginForm({
                     <Button
                         type="submit"
                         variant="outline"
-                        size="sm"
-                        className="h-[30px] rounded text-xs"
+                        className="h-9 rounded-lg text-[13px]"
                         disabled={isPending}
                     >
                         {isPending ? t("submitting") : t("sent.again")}
@@ -61,24 +63,23 @@ export function LoginForm({
     }
 
     return (
-        <section className="flex w-full max-w-sm flex-col gap-3 rounded border bg-card px-3.5 py-4">
-            <div className="flex flex-col gap-1">
-                <span
-                    aria-hidden
-                    className="mb-1 size-5 rounded-[3px] bg-primary"
-                />
-                <h1 className="text-[17px] leading-[1.3] font-semibold">
-                    {meta("title")}
-                </h1>
-                <p className="text-[14px] leading-[1.35] text-muted-foreground">
+        <section className="flex w-full max-w-[400px] flex-col gap-4 rounded-xl border border-border/70 bg-card px-6 py-6 shadow-sm">
+            <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2.5">
+                    <BrandMark className="size-7 text-primary" />
+                    <h1 className={cn(DISPLAY, "text-[22px]")}>
+                        {meta("title")}
+                    </h1>
+                </div>
+                <p className="text-[14px] leading-[1.5] text-pretty text-muted-foreground">
                     {t("subtitle")}
                 </p>
             </div>
 
             <form action={formAction} className="flex flex-col gap-2.5">
                 <input type="hidden" name="next" value={returnPath} />
-                <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={emailId} className="text-xs">
+                <div className="flex flex-col gap-2">
+                    <Label htmlFor={emailId} className="text-[13px]">
                         {t("emailLabel")}
                     </Label>
                     <Input
@@ -90,7 +91,7 @@ export function LoginForm({
                         placeholder={t("emailPlaceholder")}
                         aria-invalid={error !== null}
                         aria-describedby={error === null ? undefined : errorId}
-                        className="h-[30px] rounded text-xs"
+                        className="h-10 rounded-lg text-[14px]"
                     />
                 </div>
 
@@ -99,7 +100,7 @@ export function LoginForm({
                     <p
                         id={errorId}
                         role="alert"
-                        className="text-xs leading-[1.35] text-destructive"
+                        className="text-[13px] leading-[1.4] text-destructive"
                     >
                         {t(`errors.${error}`)}
                     </p>
@@ -107,9 +108,8 @@ export function LoginForm({
 
                 <Button
                     type="submit"
-                    size="sm"
                     disabled={isPending}
-                    className="h-[30px] rounded text-xs"
+                    className="h-10 rounded-lg text-[14px] shadow-xs"
                 >
                     {isPending ? t("submitting") : t("submit")}
                 </Button>

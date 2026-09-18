@@ -6,6 +6,8 @@ import { useTransition } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { setLocale } from "@/lib/i18n/actions";
 import { UI_LOCALES } from "@/lib/i18n/locales";
+import { cn } from "@/lib/utils";
+import { LABEL } from "@/components/type";
 
 /**
  * DESIGN.md §5: `Tabs`, `h-7`, Mono 10px. Writing the cookie is a Server
@@ -29,7 +31,7 @@ export function LocaleTabs() {
         >
             <TabsList
                 aria-label={t("label")}
-                className="grid h-7 w-full grid-cols-3 rounded p-0.5"
+                className="grid h-7 w-full grid-cols-3 rounded-lg p-0.5"
             >
                 {UI_LOCALES.map(locale => (
                     <TabsTrigger
@@ -37,7 +39,7 @@ export function LocaleTabs() {
                         value={locale}
                         disabled={isPending}
                         aria-label={t(`name.${locale}`)}
-                        className="h-6 rounded font-mono text-[10px] leading-none tracking-[0.07em]"
+                        className={cn(LABEL, "h-6 rounded-lg")}
                     >
                         {t(`short.${locale}`)}
                     </TabsTrigger>

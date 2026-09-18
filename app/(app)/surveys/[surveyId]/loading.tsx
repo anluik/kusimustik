@@ -25,7 +25,7 @@ export default async function BuilderLoading() {
                 <div className="flex h-full min-h-0">
                     <div className="hidden w-[268px] shrink-0 flex-col gap-1 border-r p-2 md:flex">
                         {Array.from({ length: 6 }, (_, index) => (
-                            <Skeleton key={index} className="h-8 rounded" />
+                            <Skeleton key={index} className="h-8 rounded-lg" />
                         ))}
                     </div>
 
@@ -33,15 +33,15 @@ export default async function BuilderLoading() {
                         {Array.from({ length: 4 }, (_, index) => (
                             <Skeleton
                                 key={index}
-                                className="h-24 rounded border"
+                                className="h-24 rounded-lg border"
                             />
                         ))}
                     </div>
 
                     <div className="hidden w-[340px] shrink-0 flex-col gap-3 border-l p-3.5 lg:flex">
-                        <Skeleton className="h-3.5 w-24 rounded" />
+                        <Skeleton className="h-3.5 w-24 rounded-lg" />
                         {Array.from({ length: 5 }, (_, index) => (
-                            <Skeleton key={index} className="h-8 rounded" />
+                            <Skeleton key={index} className="h-8 rounded-lg" />
                         ))}
                     </div>
                 </div>

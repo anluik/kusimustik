@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-import { META } from "@/components/results/type";
+import { META } from "@/components/type";
 import { assertNever } from "@/domain/assert-never";
 import type { AnswerDisplay } from "@/lib/results/response-table";
 import { cn } from "@/lib/utils";

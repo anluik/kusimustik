@@ -1,10 +1,10 @@
 # Design spec
 
-Visual contract for Register. Claude Code follows this and does not invent values that aren't here.
+Visual contract for Küsimustik. Claude Code follows this and does not invent values that aren't here.
 
-Direction 1c: calm, dense, professional. Dense where you work, quiet everywhere else.
+Direction: **paper and ink**. Warm paper, one ink-teal accent, a serif for the words that are the point. Dense where you work, quiet and generous where someone is answering.
 
-**Status:** complete. Tokens locked and audited; type, spacing, components, density, states and chart rules all specified. Screenshots in `docs/design/` are reference only — **where a screenshot and this document disagree, this document wins.**
+**Status:** complete, and re-cut in the September 2026 redesign (docs/DECISIONS.md 037). Tokens are audited by a script rather than by claim; type, spacing, components, density, states and chart rules are all specified. Screenshots in `docs/design/` are from the **previous** direction and are kept only as a record of it — **where a screenshot and this document disagree, this document wins.**
 
 ---
 
@@ -12,63 +12,83 @@ Direction 1c: calm, dense, professional. Dense where you work, quiet everywhere 
 
 `app/globals.css` is canonical. Never hardcode a colour; never add a token without adding it to both `:root` and `.dark`.
 
-Values were contrast-audited before being committed. Do not regenerate, round, or substitute them. If a change is needed, re-run the audit and record the result in `docs/DECISIONS.md`.
+**The audit is a command, not a claim.** `node tools/token-audit.mjs` reads every `oklch()` token out of `globals.css` and checks it; `pnpm check` runs it, so a token cannot change without the audit agreeing. It enforces:
 
-Audit baseline, both modes: all text pairs ≥ 4.5:1; `--muted-foreground` 5.89:1 on `--background`; every chart colour ≥ 3:1 on `--card`; worst chart pair separation dE 0.139 normal / 0.111 deuteranopia (light), 0.150 / 0.119 (dark).
+- every text pair ≥ 4.5:1, in both modes;
+- non-text UI ≥ 3:1, **input borders included** — `--input` is a real 3.5:1 border, not a hairline;
+- every categorical chart colour ≥ 3:1 on `--card`;
+- the ordered ramp: one hue, monotone lightness, ≥ 0.06 lightness per step, and a light end that still clears 2:1 on the card;
+- `--ramp-label-flip` matches where an in-bar label actually has to flip;
+- every token inside sRGB. The script prints what it snapped; paste the snapped values back rather than shipping a colour the browser will clip.
 
-Both themes ship. Every screen is checked in `.dark` before it's considered done.
+The **categorical palette order is the colour-vision safety mechanism**, and it was searched rather than chosen: `--chart-1` … `--chart-5` are teal → terracotta → violet → olive → steel blue, the order picked from the 122 of 3024 candidate orders that clear every gate in both modes (worst adjacent separation ΔE 11.8 against a target of 8, under simulated protanopia and deuteranopia). Do not reorder it, and do not add a sixth — see §7.
 
-**Radius.** `--radius: 0.25rem` → `rounded` (4px) everywhere in the app. The respondent runner is the single exception at 6px — see §4 and §8.
+**Radius.** `--radius: 0.5rem`. Containers are softer than what sits inside them: cards `rounded-xl` (11px), controls and rows `rounded-lg` (8px), pills `rounded-full`. Never the bare `rounded` utility — it is a hardcoded 4px that ignores the token. The respondent runner has its own radius at 10px, as a token (§8).
 
-**Fonts.** IBM Plex Sans for UI, IBM Plex Mono for numbers, codes, metadata and labels. Loaded via `next/font`; the token file deliberately has no `@import`.
+**Shadows are tinted, never black.** `--shadow-tint` is a warm hue per mode, and the `--shadow-*` scale is built from it. A card on paper gets `shadow-xs`; a dialog or a floating surface `shadow-sm`. A shadow is the surface in shade, so it carries the surface's warmth.
+
+**Texture.** A fixed, non-interactive grain overlays the page (`body::after`), multiplying in light and screening in dark, to keep a large plain surface from reading as flat vector. It is suppressed under `forced-colors` and `prefers-contrast: more`.
+
+**Fonts.** Three faces, each with a job, all three carrying Cyrillic because Russian is a launch locale:
+
+- **Geist** — the interface.
+- **Source Serif 4** — display: survey names, page and card titles, and the figures a panel exists to show. It has an optical-size axis, so it is a text serif at 15px and a display serif at 32px from one file.
+- **Geist Mono** — identifiers only: slugs, share links, emails, keys, `⌘K`. **Numbers are not mono.** Both other faces have tabular figures, which is what actually lines a column up; mono digits made every count look like a code.
+
+Loaded via `next/font` in `lib/fonts.ts` and shared by every root layout; the token file deliberately has no `@import`.
 
 ---
 
 ## 2. Type scale
 
-The scale is denser than Tailwind's defaults. **Use the arbitrary values as written** — do not round `text-[13px]` to `text-sm`.
+Named once, in `components/type.ts`, and imported. **There are no local copies of these strings** — a dozen files each keeping their own is how one card's label drifted to `text-xs` while its neighbour stayed at 10px. Use the constants; use the arbitrary pixel values as written if you must write one.
 
-| Level | Tailwind | Font | Used for |
-|---|---|---|---|
-| Metric | `text-[26px] leading-none font-semibold tracking-[-0.02em]` | Sans | Stat card figures |
-| Title | `text-[17px] leading-[1.3] font-semibold` | Sans | Survey title on runner intro card |
-| Question | `text-[15px] leading-[1.4] font-medium` | Sans | Question text, runner and builder canvas |
-| Panel head | `text-[13px] leading-[1.2] font-semibold` | Sans | Card and panel headers |
-| Row title | `text-[13px] leading-[1.2] font-medium` | Sans | Survey list rows, app bar current item |
-| Body | `text-[14px] leading-[1.35]` | Sans | Runner option labels, respondent-facing prose |
-| UI | `text-xs leading-none` (12px) | Sans | Buttons, inputs, selects, list cells, nav items |
-| Meta | `text-[11px] leading-none` | **Mono** | Counts, timestamps, share links, drop figures |
-| Label | `text-[10px] leading-none tracking-[0.07em] uppercase` | **Mono** | Column headers, section labels, stat card labels |
-| Tag | `text-[9px] leading-none tracking-[0.04em] uppercase` | **Mono** | Status badges, question-type tags |
+| Level | Constant | Value | Face | Used for |
+|---|---|---|---|---|
+| Display | `DISPLAY` | `text-[28px] leading-[1.15] font-semibold tracking-[-0.015em]` | **Serif** | A survey's name where it is the subject of the page: the runner's intro, a notice card, sign-in |
+| Metric | `METRIC` | `text-[32px] leading-[0.95] font-semibold tabular-nums` | **Serif** | The figure a stat card exists to show |
+| Title | `TITLE` | `text-[17px] leading-[1.25] font-semibold` | **Serif** | App-bar title, survey row titles, card and section headers, empty-state headings |
+| Question | `QUESTION` | `text-[15px] leading-[1.4] font-medium` | Sans | Question text on the builder canvas and results cards |
+| Panel head | `PANEL_HEAD` | `text-[13px] leading-[1.2] font-semibold` | Sans | Panel headers that are labels rather than names |
+| Row title | `ROW_TITLE` | `text-[13px] leading-[1.25] font-medium` | Sans | Wave labels, the app bar's current item |
+| Body | `BODY` | `text-[15px] leading-[1.45]` | Sans | Respondent-facing prose and option labels |
+| UI | `UI` | `text-xs leading-none` (12px) | Sans | Buttons, inputs, selects, list cells, nav items |
+| Meta | `META` | `text-[12px] leading-none tabular-nums` | Sans | Counts, timestamps, drop figures |
+| Label | `LABEL` | `text-[11px] leading-none font-medium` muted | Sans | Column headers, section labels, stat card labels |
+| Tag | `TAG` | `text-[11px] leading-none font-medium` | Sans | Status badges, question-type tags |
+| Code | `CODE` | `font-mono text-[12px] leading-none` | **Mono** | Slugs, share links, emails, keys |
 
 **Rules.**
 
-- Weight carries emphasis, not size. A selected row stays 12px and goes to `font-medium`; it never grows.
-- Anything countable, ordered or machine-ish is Mono: response counts, percentages, durations, question keys (`q3_source`), share links, version tags, `⌘K`.
-- Two weights in the interior only — `font-normal` and `font-medium`. `font-semibold` is reserved for panel heads and metrics.
-- **Respondent-facing text never goes below 14px.** Owner chrome may reach 9px, but only for Mono tags.
-
----
+- Weight carries emphasis, not size. A selected row stays at its size and goes to `font-medium`; it never grows.
+- **The serif marks content, not chrome.** A survey's name, a question's words, a figure that is the answer to the panel's question. A button, a tab, a column header and a nav item are chrome and stay sans — a serif button is a costume.
+- **Labels are sentence case.** The old all-caps mono label was the loudest thing on a quiet screen, and in Estonian and Russian it also cost the most width (§9). Nothing in the app is uppercased by CSS.
+- Two weights in the interior — `font-normal` and `font-medium`. `font-semibold` belongs to the serif levels and to panel heads.
+- **Respondent-facing text never goes below 14px**, and on the runner the body is 15px and questions are 17px. Owner chrome bottoms out at 11px, and only for a label or a tag.
 
 ## 3. Spacing rhythm
 
-Base unit 4px. Allowed steps: 2, 4, 6, 8, 10, 12, 14, 16, 20. Nothing between, nothing above 20 inside a panel.
+Base unit 4px. Allowed steps: 2, 4, 6, 8, 10, 12, 14, 16, 20, 24. Nothing between.
 
 | Purpose | Value | Tailwind |
 |---|---|---|
-| Icon ↔ label | 6–7px | `gap-1.5` |
+| Icon ↔ label | 6px | `gap-1.5` |
 | Within a control cluster | 8px | `gap-2` |
 | Between stacked rows | 1px | `gap-px` |
-| Between form fields | 10px | `gap-2.5` |
+| Between form fields | 12px | `gap-3` |
 | Panel section padding | 12px | `p-3` |
-| Card padding (owner) | 12–14px | `px-3.5 py-3` |
-| Card padding (runner) | 16px / 14px | `px-3.5 py-4` |
+| Card padding (owner) | 16px / 14px | `px-4 py-3.5` |
+| Card padding (runner) | 16px | `px-4 py-4` |
+| Card padding (a card that is the whole page: sign-in, notice, 404) | 24px | `px-6 py-6` |
 | Grid gutter between panels | 12px | `gap-3` |
-| Page padding | 16px | `p-4` |
+| Page padding (owner) | 16px | `p-4` |
+| Page padding (runner) | 16px / 24px | `px-4 py-6` |
 
-Dense table column gutters are 10–12px. Horizontal padding on a list row is 12px; on a nested wave row, 8px plus a 12px indent from a `border-l` rule.
+A dense table is `table-fixed` (§5) and its columns are narrower below `sm`: the response count and the row actions both stay on a 380px screen. Dense table column gutters are 10–12px. Horizontal padding on a list row is 12px; on a nested wave row, 8px plus a 12px indent from a `border-l` rule.
 
 **Never use vertical margin to separate siblings** — use flex/grid `gap`. Scroll-list rows use `gap-px` and rely on `hover:bg-muted` for separation.
+
+**Width is capped.** Owner pages are held to `PAGE_WIDTH` (1280px, `components/shell/page-width.ts`); the builder is exempt, being a three-panel workspace. A **plot** is capped at 720px on top of that (§7) and the runner's column at 620px: a bar that runs a metre across a wide monitor is harder to compare than one that does not, and prose past ~70 characters is harder to read.
 
 ---
 
@@ -79,35 +99,39 @@ Two different jobs, two different densities. **Do not average them.**
 ### Owner surfaces — dense, mouse and keyboard
 
 ```
-app bar           44      option row         36
-tab row           36      survey list row    46   (two lines)
-panel header      34      wave row           42
+app bar           48      option row         36
+tab row           36      survey list row    52   (two lines)
+panel header      34      wave row           46
 list row          32      gutters            12
 control           30      panels    268 / fluid / 340
-radius             4      type            10–13
+radius       8 / 11       type            11–17
 ```
 
 - Hit targets may go to 28px. Rows are 32px with 12px padding.
-- Hover is `bg-muted` (list) or `bg-sidebar-accent` (nav). Selection adds a 2px inset primary rule, so hover never obscures which row is selected.
+- Hover is `bg-muted` (list) or `bg-sidebar-accent` (nav), and it **transitions over 150ms, colour only** — nothing moves on hover. Selection adds a 2px inset primary rule, so hover never obscures which row is selected.
+- Press feedback is the button primitive's own 1px nudge. Nothing scales.
 - Focus is `ring-[3px] ring-ring/18` plus `border-primary`. **Never remove the ring for aesthetics.**
 - Truncate with ellipsis. Do not wrap in a dense row.
 
 ### Respondent runner — generous, thumb-first, 380px baseline
 
 ```
-header            52      option gap          8
-progress bar       3      card gap           12
-card padding  16 / 14     page padding       14
-question    15px / 1.4    radius              6
+header            48      option gap          8
+progress bar       3      card gap           14
+card padding      16      page padding   16 / 24
+question    17px / 1.35   radius             10
+body        15px / 1.45   column            620
 option row  min-h 48      sticky footer  action min-h 48
 ```
 
 - Every tap target ≥ 44px; ≥ 48px in practice.
-- One question group per card, one column, no side-by-side controls.
+- **The survey's name is set in the display serif at the top of the page**, above the description and the language picker's row — not only in the pinned header, which is 48px of chrome carrying a truncated copy and a count. A name that only ever appears truncated in a bar is not a title.
+- One question group per card, one column, no side-by-side controls. Cards are `--survey-radius`, a hairline, and `shadow-xs` on paper.
 - Progress and the primary action are pinned. The respondent never hunts for "next".
-- **The language picker is the first thing in the page, above the description.** A row of equal-width links, one per language the survey is offered in, each at least 44px tall and named in its own language ("Eesti keel", "English", "Русский"). The one being read carries the selected-option treatment below *plus* a tick, because the person who needs this control cannot read the page it is on. Nothing is rendered at all for a survey offered in one language. The header is not the place for it: it is 52px with a title and a count in it already. See docs/DECISIONS.md 033.
-- Selected option: `border-[1.5px] border-primary bg-accent text-accent-foreground` plus a filled control. **Colour alone never carries state.**
-- Radius steps 4 → 6 and type steps up one level. This is the only place the app's density rules relax, and it is deliberate.
+- Options and scale steps darken on press (`active:bg-muted`) as well as on hover: hover does not exist on the device most of them are using.
+- **The language picker is the first thing in the page, above the description.** A row of equal-width links, one per language the survey is offered in, each at least 44px tall and named in its own language ("Eesti keel", "English", "Русский"). The one being read carries the selected-option treatment below *plus* a tick, because the person who needs this control cannot read the page it is on. Nothing is rendered at all for a survey offered in one language. See docs/DECISIONS.md 033.
+- Selected option: `border-[1.5px] border-survey-primary bg-survey-accent text-survey-accent-foreground` plus a filled control. **Colour alone never carries state.**
+- Text wrapping is deliberate here: `text-pretty` on prose and option labels, `text-balance` on the survey's name and a notice's heading. A single word alone on the last line of a question is avoidable and looks like a bug.
 
 ---
 
@@ -120,15 +144,15 @@ Every element resolves to an existing shadcn primitive. `components/ui/` is gene
 | Element | Primitive |
 |---|---|
 | Left navigation, collapse | `Sidebar` + `SidebarProvider`, `SidebarMenu`, `SidebarMenuButton`, `SidebarMenuItem` |
-| Workspace header | `SidebarHeader` wrapping a `DropdownMenu` trigger |
+| Workspace header | `SidebarHeader`, 48px, `BrandMark` + the product name in `TITLE`. `components/shell/brand-mark.tsx` is the one drawn asset in the app (§11); `app/icon.svg` is the same mark with the tokens resolved |
 | Nav item, active | `SidebarMenuButton isActive` → `bg-sidebar-accent text-sidebar-accent-foreground` + `shadow-[inset_2px_0_0_var(--primary)]` |
 | Nav item, disabled (Templates) | `SidebarMenuButton disabled` + `Badge variant="outline"` reading the "coming soon" string |
 | Nav item count | `SidebarMenuBadge` |
 | Recents list | `SidebarGroup` + `SidebarGroupLabel` |
-| Language switcher | `Tabs` + `TabsList`/`TabsTrigger`, `h-7`, Mono 10px |
+| Language switcher | `Tabs` + `TabsList`/`TabsTrigger`, `h-7`, `LABEL` |
 | User menu | `SidebarFooter` + `DropdownMenu` |
 | Collapse trigger | `SidebarTrigger` |
-| Top bar title + count | plain `h2` + Mono span, no primitive |
+| Top bar title + count | plain `h1` in `TITLE` (the serif) + a `META` span, no primitive |
 | Search | `Input`, `h-[30px]` |
 | Status filter | `Select`, `h-[30px]` |
 | Primary action | `Button` default, `h-[30px] text-xs` |
@@ -137,12 +161,12 @@ Every element resolves to an existing shadcn primitive. `components/ui/` is gene
 
 | Element | Primitive |
 |---|---|
-| List container | `Table`, or a `div` grid if virtualising — keep the same column template either way |
-| Column header row | `TableHeader` / `TableHead`, `h-[30px]`, `bg-muted` |
-| Row | `TableRow` with `hover:bg-muted` |
-| Status badge | `Badge` — draft `secondary`, published `default` restyled to `bg-accent text-accent-foreground` + primary dot, closed `outline` |
+| List container | `Table` with **`table-fixed`**, or a `div` grid if virtualising — keep the same column template either way. Fixed layout is not cosmetic: under auto layout a cell's content is its own minimum (`truncate` inside it does not let it shrink), so a long survey name held the first column open and pushed the response count and the row actions off the right edge of a phone. Every column but the first declares its width; the first takes the rest and truncates |
+| Column header row | `TableHeader` / `TableHead`, `h-[30px]`, `bg-muted`, `LABEL` (sentence case) |
+| Row | `TableRow`, 52px, `transition-colors hover:bg-muted`; the title is `TITLE` at 15px, the way into the builder |
+| Status badge | `Badge`, `rounded-full`, `TAG` — draft `secondary`, published restyled to `bg-accent text-accent-foreground` + primary dot, closed `outline` |
 | Wave-group marker | `Badge`, accent fill |
-| Share link | `Input readOnly` styled flat (`bg-muted`, Mono 11px) + `Button variant="outline" size="sm"`; on click swap the label for 2s. **No toast.** |
+| Share link | `Input readOnly` styled flat and transparent, `CODE`, filling to `bg-muted` on hover or focus + `Button variant="outline" size="xs"`; on click swap the label for 2s. **No toast.** |
 | Group expand/collapse | `Collapsible` + `CollapsibleTrigger` on the caret cell, `CollapsibleContent` holding wave rows |
 | Compare waves | `Button variant="outline" size="sm"` |
 | Row actions | `DropdownMenu` + `DropdownMenuItem`, `DropdownMenuSeparator`; delete gets `text-destructive` |
@@ -168,12 +192,12 @@ One actions menu component serves both row kinds. Only the first item's wording 
 | Right editor panel | `Sheet` on narrow viewports, static `aside` at ≥ 1280px |
 | Type picker | `Select` |
 | Question / help fields | `Input`, `Textarea` |
-| Character counter | Mono 9px span, `text-muted-foreground` |
+| Character counter | `META` span, `text-muted-foreground`; 14px on the runner, which may not go below it |
 | Option rows | `Input` + drag handle + remove `Button variant="ghost" size="icon"` |
 | Toggles | `Switch` |
-| Logic rule preview | `Card` with `bg-muted`, Mono 11px |
+| Logic rule preview | `Card` with `bg-muted`, `CODE` |
 | Duplicate / delete in panel header | `Button variant="ghost" size="sm"` |
-| Autosave indicator | plain dot + Mono text in the app bar. **Not a `Toast`, not a canvas spinner.** |
+| Autosave indicator | plain dot + `META` text in the app bar. **Not a `Toast`, not a canvas spinner.** |
 | Command palette (⌘K) | `Command` / `CommandDialog` |
 
 ### Wave comparisons
@@ -184,7 +208,7 @@ Three surfaces, all owner-side and dense (§4). Waves are always named `waveLabe
 
 | Element | Primitive |
 |---|---|
-| List | `Table`, the survey list's header and row geometry; columns: name, waves (Mono, `2025 · 2026 · 2027`), updated, actions |
+| List | `Table`, the survey list's header and row geometry; columns: name, waves (`META`, `2025 · 2026 · 2027`), updated, actions |
 | Row actions | `DropdownMenu` — open, edit matches, rename (`Dialog` with one `Input`), delete (`AlertDialog`, destructive) |
 | New comparison | `Button` default in the app bar; disabled with a `Tooltip` when the group has one wave |
 | Empty, one wave | §6 empty state: "a comparison needs a second wave", action back to the survey list |
@@ -199,7 +223,7 @@ Three surfaces, all owner-side and dense (§4). Waves are always named `waveLabe
 | App bar | the comparison's name; autosave indicator exactly as the builder's (§6 error state included); **Done** `Button` default back to the result |
 | Toolbar | `Button variant="outline" size="sm"`: *Suggest matches*, *Add wave* (`DropdownMenu` of the group's remaining waves; disabled at five or when every wave is compared, the reason in a `Tooltip`); `Switch` *Only incomplete* |
 | Wave header | one column per wave, oldest left, a `--chart-n` swatch as in the result legend, and a ghost icon `Button` to remove the wave (`AlertDialog`: its matches go with it) |
-| Row | a `Card` per row; one `Select` per wave, `h-[30px]`, listing that wave's questions as `N. title` with a Mono type tag. Nothing chosen shows the placeholder *Not in this wave*; it is not an option. A ghost icon `Button` beside a filled select clears it. A question already used in another row is still listed and says so; choosing it moves it. A question the row's rules refuse is a disabled item, with no explanation |
+| Row | a `Card` per row; one `Select` per wave, `h-[30px]`, listing that wave's questions as `N. title` with a `TAG` type tag. Nothing chosen shows the placeholder *Not in this wave*; it is not an option. A ghost icon `Button` beside a filled select clears it. A question already used in another row is still listed and says so; choosing it moves it. A question the row's rules refuse is a disabled item, with no explanation |
 | Remove row | ghost icon `Button` |
 | Add row | a trailing `Button variant="outline"` |
 | Narrow viewport | a row stacks its `Select`s, each captioned with its wave's name |
@@ -212,7 +236,7 @@ Three surfaces, all owner-side and dense (§4). Waves are always named `waveLabe
 |---|---|
 | Sub-tabs | `Tabs`, pill style on `bg-muted` |
 | Stat cards | `Card`, header and content collapsed into one padded stack |
-| Delta | Mono 11px; `text-foreground` improving, `text-destructive` worsening. Arrow glyph, no coloured chip |
+| Delta | `META`; `text-foreground` improving, `text-destructive` worsening. Arrow glyph, no coloured chip |
 | **Funnel** | **Not Recharts.** CSS grid per stage with a `div` bar — 15 rows of horizontal bars need direct labelling and a flag column that Recharts fights |
 | Funnel flag | 2px `bg-destructive` mark in the row gutter + `Badge variant="outline"` in destructive |
 | Problem-question callout | `Alert` with `bg-muted` and `shadow-[inset_3px_0_0_var(--destructive)]`, one `Button variant="outline"` jumping to the editor |
@@ -227,13 +251,13 @@ Three surfaces, all owner-side and dense (§4). Waves are always named `waveLabe
 
 Every panel defines all four. None of them is a spinner over the whole page.
 
-**Empty.** A muted skeleton of the shape that will appear (funnel bars in `--ramp-track` with `border`), then a 14px semibold line naming what's missing, a 12px muted sentence explaining what unblocks it, then one primary and one secondary action. **Never an illustration.** Panels with a volume threshold say so explicitly ("needs at least 20 responses").
+**Empty.** A muted skeleton of the shape that will appear (funnel bars in `--ramp-track` with `border`), then a `TITLE` line naming what's missing, a 13px muted sentence explaining what unblocks it, then one primary and one secondary action. **Never an illustration.** Panels with a volume threshold say so explicitly ("needs at least 20 responses").
 
 **Loading.** `Skeleton` blocks matching final geometry — same heights, same column widths, so nothing reflows on arrival. Rows keep their 32px height. No spinner in a panel whose shape is known. A spinner is acceptable only inside a `Button` that was just pressed.
 
 **Error.** Text-first and local to what failed. Autosave failure: destructive dot + message + underlined retry in the app bar. Panel failure: `Alert variant="destructive"` inside the panel with a retry action, surrounding data left on screen. **Never a full-page error for a partial failure. Never a toast for something the user must act on.**
 
-**Disabled.** `text-input` — the darkened token, which clears 3:1 — with `cursor-not-allowed`. **No opacity dimming**; opacity stacking breaks the audited contrast. An item that will exist later carries a "coming soon" outline badge. An item that's contextually unavailable stays in the menu rather than disappearing, so menu shape is stable.
+**Disabled.** `--input` for the text, and a `--muted` fill where the enabled control was filled. **No opacity dimming**; opacity stacking breaks the audited contrast. This is **not** applied per call site: one unlayered block at the end of `app/globals.css` overrides the generated primitives by `data-slot`, and a new primitive with an opacity-dimmed disabled state gets its slot added there. See docs/DECISIONS.md 036. An item that will exist later carries a "coming soon" outline badge. An item that's contextually unavailable stays in the menu rather than disappearing, so menu shape is stable.
 
 **Offline.** Hollow dot + queued-changes count in the app bar. Queue, don't block.
 
@@ -241,9 +265,9 @@ Every panel defines all four. None of them is a spinner over the whole page.
 
 ## 7. Chart colour assignment
 
-These rules follow from the token audit, not from taste. `--ramp-1` … `--ramp-4` fall below 3:1 on `--card`, and the categorical palette is deuteranopia-separable only up to five entries.
+These rules follow from the token audit, not from taste. Run `pnpm audit:tokens` after touching any of them.
 
-**Categorical — unordered, 5 or fewer.** `--chart-1` … `--chart-5`, in order, no skipping. Maximum five. `--chart-6/7/8` exist in the token file but are **not for new work** (see §11).
+**Categorical — unordered, 5 or fewer.** `--chart-1` … `--chart-5`, in the order the search settled on (§1), no skipping. Maximum five, and there is no sixth token to reach for: `--chart-6/7/8` were deleted in the redesign.
 
 **Six or more series — change the encoding, not the palette.** Horizontal bars, sorted descending, one per category, each directly labelled with name and value. Single fill: `--chart-1`. Never a sixth colour. **Never a pie or donut, at any count.**
 
@@ -251,14 +275,16 @@ These rules follow from the token audit, not from taste. `--ramp-1` … `--ramp-
 
 **Ordered data — always the ramp.** Opinion scale, NPS, Likert, matrix intensity, funnel stages: `--ramp-1` … `--ramp-7`, never the categorical palette. Two hard requirements:
 
-1. Every ramp fill carries `border: 1px solid var(--border)`. Steps 1–4 are below 3:1 on `--card`; an isolated low bar would otherwise vanish.
-2. Value labels on the fill flip from `--foreground` to `--background` at **step 5 light, step 4 dark**. Read `--ramp-label-flip` — do not hardcode 5.
+1. Every ramp fill carries `border: 1px solid var(--border)`. The ramp's light end now clears 2:1 on the card on its own, but the stroke is what keeps a single low bar readable against a card *and* against the muted track behind it.
+2. Value labels on the fill flip from `--foreground` to `--background` at **step 4 light, step 3 dark**. Read `--ramp-label-flip` — do not hardcode it; the audit checks that the token matches where the flip actually has to happen.
 
 **More ordered stages than ramp steps.** Bin monotonically onto the 7 steps, front to back. The 15-stage funnel bins two per step: `[1,1,2,2,3,3,4,4,5,5,6,6,7,7,7]`. **The ramp encodes position in the sequence, not health** — a stage is never recoloured for performing badly. Problem stages are flagged in the row chrome (destructive gutter mark, destructive drop figure, outline badge), which keeps the colour channel honest and the flag readable for colour-blind users.
 
 **Single-series comparison.** `--chart-1` alone. Emphasise the notable value with weight and a 1px `--foreground` outline, never a second hue.
 
 **Bar direction.** Categorical bars are horizontal whenever labels are words. Vertical bars with rotated labels are not acceptable. Time series may be vertical.
+
+**Marks.** Thin marks, not slabs: a horizontal bar caps at 18px (14px per series when waves are grouped), a vertical one at 40–56px. The **data end is rounded 4px and the baseline end is square**, so which corners are rounded follows the direction the bar grows. Segments of a stacked bar are separated by a 2px gap in the surface colour, never by a hairline rule — a rule between two fills reads as a third fill. A plot is capped at 720px wide (§3). Legend swatches are dots, not bordered rectangles.
 
 **Implementation.**
 
@@ -276,7 +302,7 @@ Owner-customisable survey branding is post-MVP, but it constrains the runner now
 The runner reads its colours **and its radius** from its own namespace (`--survey-*`), defaulting to the app tokens:
 
 ```css
---survey-radius: 0.375rem;  /* the 6px runner radius from §4 */
+--survey-radius: 0.625rem;  /* the 10px runner radius from §4 */
 --survey-primary: var(--primary);
 --survey-background: var(--background);
 --survey-card: var(--card);
@@ -286,7 +312,7 @@ The runner reads its colours **and its radius** from its own namespace (`--surve
 
 Owner branding later overrides this namespace only. If runner components consume `--primary` directly, adding branding means touching every one of them. Cheap now, expensive later.
 
-This is also the cleanest home for the runner's radius exception — it becomes a token rather than a magic number scattered through components.
+This is also the cleanest home for the runner's radius exception — it becomes a token rather than a magic number scattered through components. The builder's canvas cards use `rounded-survey` too: that canvas is a preview of the runner, so it takes the runner's radius, not the owner app's.
 
 ---
 
@@ -316,8 +342,12 @@ Use `Intl.NumberFormat('et-EE')` and `Intl.DateTimeFormat('et-EE')` rather than 
 
 Points where this spec overrode an earlier decision. Recorded so nobody "fixes" them back.
 
-1. **`--chart-6/7/8` are frozen.** The token file's comment describes them as available for rare cases; this spec is stricter — not for new work. They stay defined so nothing breaks. Do not reach for them to dodge the five-colour cap; change the encoding instead (§7).
+1. **`--chart-6/7/8` are gone.** They were frozen and unused; the redesign deleted them. `lib/results/chart-data.test.ts` asserts that nothing reaches for them. Do not re-add one to dodge the five-colour cap; change the encoding instead (§7).
 2. **Two panels are deliberately not Recharts.** The funnel and the device-mix bar are hand-built CSS. This is an exception to the otherwise absolute "charts are Recharts" rule, made because 15 directly-labelled rows with a flag column fight the library. Do not migrate them.
 3. **The provisional type scale is gone.** §2 replaces the placeholder that existed before the design sessions. The arbitrary pixel values are intentional.
-4. **The runner's 6px radius is a token, not an override.** Implemented as `--survey-radius` (§8) rather than a one-off class.
+
+6. **Mono is no longer the "data" face, and nothing is uppercased.** The previous direction set every count, label and badge in uppercase mono, which is what made the app read as a terminal. Numbers take tabular figures in the sans or the serif; mono is reserved for identifiers (§2). Sentence-case copy is already in the catalogues — no message needed changing.
+7. **The bare `rounded` utility is banned.** It is a hardcoded 4px that silently ignores `--radius`; the redesign replaced 263 uses of it. Use `rounded-lg`, `rounded-xl`, `rounded-survey` or `rounded-full`.
+8. **The old screenshots in `docs/design/` are a record, not a reference.** They show the pre-redesign direction. Nothing should be matched to them.
+4. **The runner's radius is a token, not an override.** Implemented as `--survey-radius` (§8) rather than a one-off class.
 5. **Disabled uses colour, not opacity.** Standard shadcn dims with opacity; that stacks and breaks audited contrast, so it's overridden here.

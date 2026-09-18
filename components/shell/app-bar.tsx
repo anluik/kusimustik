@@ -3,10 +3,13 @@ import type { ReactNode } from "react";
 import { PAGE_WIDTH } from "@/components/shell/page-width";
 import { SidebarToggle } from "@/components/shell/sidebar-toggle";
 import { cn } from "@/lib/utils";
+import { META, TITLE } from "@/components/type";
 
 /**
- * DESIGN.md §4: 44px tall, 16px page padding. §5: the title and its count are
- * a plain heading plus a Mono span — no primitive.
+ * DESIGN.md §4: 48px tall, 16px page padding. §5: the title and its count are
+ * a plain heading plus a span — no primitive. The title is the display serif
+ * (§2): it is the name of the thing the page is about, and on every owner
+ * surface it is the one piece of content in the chrome.
  */
 export function AppBar({
     title,
@@ -33,13 +36,12 @@ export function AppBar({
             actions={actions}
             {...(constrained !== undefined && { constrained })}
         >
-            <h1 className="min-w-0 truncate text-[13px] leading-[1.2] font-semibold">
-                {title}
-            </h1>
+            <h1 className={cn(TITLE, "min-w-0 truncate")}>{title}</h1>
             {meta !== undefined && (
                 <span
                     className={cn(
-                        "truncate font-mono text-[11px] leading-none text-muted-foreground",
+                        META,
+                        "truncate text-muted-foreground",
                         metaOnNarrow ? "flex" : "hidden sm:flex"
                     )}
                 >
@@ -71,7 +73,7 @@ export function AppBarFrame({
     readonly constrained?: boolean;
 }) {
     return (
-        <header className="sticky top-0 z-10 flex h-11 shrink-0 items-center border-b bg-background px-4">
+        <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center border-b bg-background px-4">
             <div
                 className={cn(
                     "flex min-w-0 flex-1 items-center gap-3",

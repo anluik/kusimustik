@@ -27,10 +27,10 @@ export function AppBarSkeleton({
         <AppBarFrame
             constrained={constrained}
             actions={Array.from({ length: actions }, (_, index) => (
-                <Skeleton key={index} className="h-[30px] w-24 rounded" />
+                <Skeleton key={index} className="h-[30px] w-24 rounded-lg" />
             ))}
         >
-            <Skeleton className="h-3.5 w-40 rounded" />
+            <Skeleton className="h-4 w-48 rounded-lg" />
         </AppBarFrame>
     );
 }
@@ -83,9 +83,9 @@ export function SkeletonRows({
                         height
                     )}
                 >
-                    <Skeleton className="h-3 flex-1 rounded" />
-                    <Skeleton className="hidden h-3 w-20 rounded sm:block" />
-                    <Skeleton className="hidden h-3 w-14 rounded sm:block" />
+                    <Skeleton className="h-3 flex-1 rounded-lg" />
+                    <Skeleton className="hidden h-3 w-20 rounded-lg sm:block" />
+                    <Skeleton className="hidden h-3 w-14 rounded-lg sm:block" />
                 </div>
             ))}
         </div>
@@ -95,10 +95,10 @@ export function SkeletonRows({
 /** One card of the height a stat card settles at. */
 export function SkeletonStatCard() {
     return (
-        <div className="flex flex-col gap-2 rounded border bg-card px-3.5 py-3">
-            <Skeleton className="h-2.5 w-20 rounded" />
-            <Skeleton className="h-6 w-16 rounded" />
-            <Skeleton className="h-2.5 w-28 rounded" />
+        <div className="flex flex-col gap-2 rounded-lg border bg-card px-3.5 py-3">
+            <Skeleton className="h-2.5 w-20 rounded-lg" />
+            <Skeleton className="h-6 w-16 rounded-lg" />
+            <Skeleton className="h-2.5 w-28 rounded-lg" />
         </div>
     );
 }

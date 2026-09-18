@@ -19,13 +19,13 @@ export default async function ComparisonMatchesLoading() {
                 label={t("loading")}
                 className={cn("flex flex-col gap-3 p-4", PAGE_WIDTH)}
             >
-                <Skeleton className="h-[30px] w-72 rounded" />
-                <Skeleton className="h-4 rounded" />
+                <Skeleton className="h-[30px] w-72 rounded-lg" />
+                <Skeleton className="h-4 rounded-lg" />
                 <div className="flex flex-col gap-2">
                     {Array.from({ length: 4 }, (_, index) => (
                         <Skeleton
                             key={index}
-                            className="h-[51px] rounded border"
+                            className="h-[51px] rounded-lg border"
                         />
                     ))}
                 </div>

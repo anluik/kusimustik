@@ -31,6 +31,7 @@ import { DEFAULT_LOCALE, UI_LOCALES } from "@/lib/i18n/locales";
 import { ROUTES } from "@/lib/routes";
 import { createSurveyAction } from "@/lib/surveys/actions";
 import type { SurveyActionError } from "@/lib/surveys/errors";
+import { LABEL } from "@/components/type";
 
 /**
  * The schema is the domain's, not a copy of it: the same rule decides what the
@@ -112,7 +113,7 @@ export function CreateSurveyDialog({
                 else close();
             }}
         >
-            <DialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+            <DialogContent className="gap-3 rounded-lg p-3.5 sm:max-w-md">
                 <DialogHeader className="gap-1">
                     <DialogTitle className="text-[13px] leading-[1.2] font-semibold">
                         {t("title")}
@@ -128,10 +129,7 @@ export function CreateSurveyDialog({
                     className="grid gap-2.5"
                 >
                     <div className="grid gap-1.5">
-                        <Label
-                            htmlFor="create-survey-title"
-                            className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase"
-                        >
+                        <Label htmlFor="create-survey-title" className={LABEL}>
                             {t("titleLabel")}
                         </Label>
                         <Input
@@ -142,16 +140,13 @@ export function CreateSurveyDialog({
                             aria-invalid={
                                 form.formState.errors.title !== undefined
                             }
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                             {...form.register("title")}
                         />
                     </div>
 
                     <div className="grid gap-1.5">
-                        <Label
-                            htmlFor="create-survey-locale"
-                            className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase"
-                        >
+                        <Label htmlFor="create-survey-locale" className={LABEL}>
                             {t("localeLabel")}
                         </Label>
                         {/* `Controller` rather than `watch()`: the latter
@@ -172,16 +167,16 @@ export function CreateSurveyDialog({
                                     <SelectTrigger
                                         id="create-survey-locale"
                                         onBlur={field.onBlur}
-                                        className="h-[30px]! rounded text-xs"
+                                        className="h-[30px]! rounded-lg text-xs"
                                     >
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="rounded">
+                                    <SelectContent className="rounded-lg">
                                         {UI_LOCALES.map(option => (
                                             <SelectItem
                                                 key={option}
                                                 value={option}
-                                                className="rounded text-xs"
+                                                className="rounded-lg text-xs"
                                             >
                                                 {tLanguage(`name.${option}`)}
                                             </SelectItem>
@@ -190,7 +185,7 @@ export function CreateSurveyDialog({
                                 </Select>
                             )}
                         />
-                        <p className="text-[11px] leading-[1.35] text-muted-foreground">
+                        <p className="text-[12px] leading-[1.4] text-muted-foreground">
                             {t("localeHelp")}
                         </p>
                     </div>
@@ -204,7 +199,7 @@ export function CreateSurveyDialog({
                             size="sm"
                             disabled={pending}
                             onClick={close}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {tCommon("cancel")}
                         </Button>
@@ -212,7 +207,7 @@ export function CreateSurveyDialog({
                             type="submit"
                             size="sm"
                             disabled={pending}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("submit")}
                         </Button>

@@ -9,6 +9,7 @@ import {
     DropdownMenuRadioItem
 } from "@/components/ui/dropdown-menu";
 import { useMounted } from "@/hooks/use-mounted";
+import { LABEL } from "@/components/type";
 
 const THEMES = ["light", "dark", "system"] as const;
 type Theme = (typeof THEMES)[number];
@@ -29,7 +30,7 @@ export function ThemeMenuItems() {
 
     return (
         <>
-            <DropdownMenuLabel className="font-mono text-[10px] tracking-[0.07em] uppercase">
+            <DropdownMenuLabel className={LABEL}>
                 {t("label")}
             </DropdownMenuLabel>
             <DropdownMenuRadioGroup

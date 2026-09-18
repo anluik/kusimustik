@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 
-import { META } from "@/components/results/type";
+import { LABEL, META } from "@/components/type";
 import { barWidth } from "@/lib/results/chart-data";
 import type { MatrixRowSeries } from "@/lib/results/chart-data";
 import { rampFill, rampLabelColor } from "@/lib/results/ramp";
@@ -46,7 +46,7 @@ export function MatrixChart({
                         <span
                             aria-hidden
                             style={{ background: rampFill(segment.step) }}
-                            className="inline-block h-2.5 w-4 rounded-xs border"
+                            className="inline-block size-2.5 rounded-full"
                         />
                         {segment.label}
                     </li>
@@ -68,7 +68,7 @@ export function MatrixChart({
                         </div>
 
                         {variant === "stacked" ? (
-                            <div className="flex h-8 w-full overflow-hidden rounded border">
+                            <div className="flex h-7 w-full gap-0.5">
                                 {row.segments
                                     .filter(segment => segment.count > 0)
                                     .map(segment => (
@@ -85,7 +85,10 @@ export function MatrixChart({
                                                     segment.step
                                                 )
                                             }}
-                                            className="flex min-w-0 items-center justify-center border-r border-border/60 font-mono text-[10px] leading-none tabular-nums last:border-r-0"
+                                            className={cn(
+                                                LABEL,
+                                                "flex min-w-0 items-center justify-center rounded-sm tabular-nums first:rounded-l-lg last:rounded-r-lg"
+                                            )}
                                             title={`${segment.label}: ${segment.count}`}
                                         >
                                             <span className="truncate px-1">
@@ -112,9 +115,9 @@ export function MatrixChart({
                                         {/* The track makes an empty column
                                             visible as an empty column rather
                                             than as nothing at all. */}
-                                        <span className="h-4 min-w-0 flex-1 rounded-xs bg-ramp-track">
+                                        <span className="h-4 min-w-0 flex-1 rounded-sm bg-ramp-track">
                                             <span
-                                                className="block h-full rounded-xs border"
+                                                className="block h-full rounded-r-sm border"
                                                 style={{
                                                     width: barWidth(
                                                         segment.percentage

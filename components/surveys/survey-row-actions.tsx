@@ -23,6 +23,8 @@ import {
     publishSurveyAction
 } from "@/lib/surveys/actions";
 import type { SurveyListItem } from "@/lib/surveys/list";
+import { cn } from "@/lib/utils";
+import { LABEL } from "@/components/type";
 
 type RowDialog = "duplicate" | "publish" | "close" | "delete";
 
@@ -70,14 +72,14 @@ export function SurveyRowActions({
                         variant="ghost"
                         size="icon-sm"
                         aria-label={t("label")}
-                        className="rounded text-muted-foreground"
+                        className="rounded-lg text-muted-foreground"
                     >
                         <MoreHorizontal aria-hidden />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52 rounded">
+                <DropdownMenuContent align="end" className="w-52 rounded-lg">
                     <DropdownMenuItem
-                        className="rounded text-xs"
+                        className="rounded-lg text-xs"
                         onSelect={() => setDialog("duplicate")}
                     >
                         {isWave ? t("newWave") : t("duplicate")}
@@ -89,7 +91,7 @@ export function SurveyRowActions({
                     <DropdownMenuItem
                         asChild={wasPublishedBefore}
                         disabled={!wasPublishedBefore}
-                        className="rounded text-xs"
+                        className="rounded-lg text-xs"
                     >
                         {wasPublishedBefore ? (
                             <Link href={ROUTES.results(survey.id)}>
@@ -104,21 +106,23 @@ export function SurveyRowActions({
 
                     <DropdownMenuItem
                         disabled={!canPublish}
-                        className="rounded text-xs"
+                        className="rounded-lg text-xs"
                         onSelect={() => setDialog("publish")}
                     >
                         {t("publish")}
                         {survey.questionCount === 0 && (
                             // Says why it is disabled, in place: a menu item
                             // that is simply dead teaches the owner nothing.
-                            <DropdownMenuShortcut className="font-mono text-[10px] tracking-[0.04em]">
+                            <DropdownMenuShortcut
+                                className={cn(LABEL, "tracking-[0.04em]")}
+                            >
                                 {t("publishBlocked")}
                             </DropdownMenuShortcut>
                         )}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                         disabled={survey.status !== "published"}
-                        className="rounded text-xs"
+                        className="rounded-lg text-xs"
                         onSelect={() => setDialog("close")}
                     >
                         {t("close")}
@@ -128,7 +132,7 @@ export function SurveyRowActions({
 
                     <DropdownMenuItem
                         variant="destructive"
-                        className="rounded text-xs"
+                        className="rounded-lg text-xs"
                         onSelect={() => setDialog("delete")}
                     >
                         {t("delete")}

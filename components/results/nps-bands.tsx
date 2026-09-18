@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 
-import { LABEL, META, METRIC } from "@/components/results/type";
+import { LABEL, META, METRIC } from "@/components/type";
 import type { NpsSummary } from "@/domain/aggregate";
 import { barWidth } from "@/lib/results/chart-data";
 import { cn } from "@/lib/utils";
@@ -64,7 +64,10 @@ export function NpsBands({ summary }: { readonly summary: NpsSummary }) {
                 </div>
             </div>
 
-            <div className="flex h-8 w-full overflow-hidden rounded border">
+            {/* A 2px gap in the surface colour separates the segments, and
+                each segment keeps its own rounded ends — a hairline rule
+                between two fills reads as a third fill (§7). */}
+            <div className="flex h-7 w-full max-w-[720px] gap-0.5">
                 {bands
                     .filter(band => band.count > 0)
                     .map(band => (
@@ -74,7 +77,7 @@ export function NpsBands({ summary }: { readonly summary: NpsSummary }) {
                                 width: barWidth(share(band.count, total)),
                                 background: band.fill
                             }}
-                            className="border-r border-border/60 last:border-r-0"
+                            className="rounded-sm first:rounded-l-lg last:rounded-r-lg"
                         />
                     ))}
             </div>
@@ -88,7 +91,7 @@ export function NpsBands({ summary }: { readonly summary: NpsSummary }) {
                         <span
                             aria-hidden
                             style={{ background: band.fill }}
-                            className="inline-block h-2.5 w-4 rounded-xs border"
+                            className="inline-block size-2.5 rounded-full"
                         />
                         <span className="text-muted-foreground">
                             {band.label}

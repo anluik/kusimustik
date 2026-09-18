@@ -35,6 +35,7 @@ import {
 } from "@/lib/comparisons/actions";
 import type { ComparisonActionError } from "@/lib/comparisons/errors";
 import { ROUTES } from "@/lib/routes";
+import { LABEL } from "@/components/type";
 
 type RowDialog = "rename" | "delete";
 
@@ -63,24 +64,24 @@ export function ComparisonRowActions({
                         variant="ghost"
                         size="icon-sm"
                         aria-label={t("label")}
-                        className="rounded text-muted-foreground"
+                        className="rounded-lg text-muted-foreground"
                     >
                         <MoreHorizontal aria-hidden />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52 rounded">
-                    <DropdownMenuItem asChild className="rounded text-xs">
+                <DropdownMenuContent align="end" className="w-52 rounded-lg">
+                    <DropdownMenuItem asChild className="rounded-lg text-xs">
                         <Link href={ROUTES.comparison(comparisonId)}>
                             {t("open")}
                         </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="rounded text-xs">
+                    <DropdownMenuItem asChild className="rounded-lg text-xs">
                         <Link href={ROUTES.comparisonMatches(comparisonId)}>
                             {t("editMatches")}
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                        className="rounded text-xs"
+                        className="rounded-lg text-xs"
                         onSelect={() => setDialog("rename")}
                     >
                         {t("rename")}
@@ -88,7 +89,7 @@ export function ComparisonRowActions({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                         variant="destructive"
-                        className="rounded text-xs"
+                        className="rounded-lg text-xs"
                         onSelect={() => setDialog("delete")}
                     >
                         {t("delete")}
@@ -170,7 +171,7 @@ function RenameComparisonDialog({
                 else close();
             }}
         >
-            <DialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+            <DialogContent className="gap-3 rounded-lg p-3.5 sm:max-w-md">
                 <DialogHeader className="gap-1">
                     <DialogTitle className="text-[13px] leading-[1.2] font-semibold">
                         {t("title")}
@@ -182,10 +183,7 @@ function RenameComparisonDialog({
                     className="grid gap-2.5"
                 >
                     <div className="grid gap-1.5">
-                        <Label
-                            htmlFor={id}
-                            className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase"
-                        >
+                        <Label htmlFor={id} className={LABEL}>
                             {t("label")}
                         </Label>
                         <Input
@@ -195,7 +193,7 @@ function RenameComparisonDialog({
                             aria-invalid={
                                 form.formState.errors.name !== undefined
                             }
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                             {...form.register("name")}
                         />
                     </div>
@@ -209,7 +207,7 @@ function RenameComparisonDialog({
                             size="sm"
                             disabled={pending}
                             onClick={close}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {tCommon("cancel")}
                         </Button>
@@ -217,7 +215,7 @@ function RenameComparisonDialog({
                             type="submit"
                             size="sm"
                             disabled={pending}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("submit")}
                         </Button>

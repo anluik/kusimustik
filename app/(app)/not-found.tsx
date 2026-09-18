@@ -32,18 +32,18 @@ export default async function AppNotFound() {
             <AppBar constrained title={t("title")} />
             {/* A `div`: `SidebarInset` is the page's `main` already. */}
             <div className={cn("p-4", PAGE_WIDTH)}>
-                <Card className="max-w-md gap-3 rounded px-3.5 py-3">
+                <Card className="max-w-md gap-3 rounded-xl px-4 py-3.5">
                     {/* The bar's heading already says what happened, so the
                         card carries the explanation and the way out, not a
                         second copy of the title. */}
-                    <p className="max-w-prose text-xs leading-[1.35] text-muted-foreground">
+                    <p className="max-w-[60ch] text-[13px] leading-[1.5] text-pretty text-muted-foreground">
                         {t("body")}
                     </p>
                     <Button
                         asChild
                         size="sm"
                         variant="outline"
-                        className="h-[30px] w-fit rounded text-xs"
+                        className="h-[30px] w-fit rounded-lg text-xs"
                     >
                         <Link href={ROUTES.surveys}>{t("action")}</Link>
                     </Button>

@@ -72,7 +72,7 @@ export function LanguagePicker({
                                 hrefLang={locale}
                                 {...(current && { "aria-current": "page" })}
                                 className={cn(
-                                    "flex min-h-11 items-center justify-center rounded-survey border px-3 text-center text-[14px] leading-[1.35] transition-colors",
+                                    "flex min-h-11 items-center justify-center rounded-survey border px-3 text-center text-[15px] leading-[1.4] transition-colors",
                                     "focus-visible:border-survey-primary focus-visible:ring-[3px] focus-visible:ring-ring/18 focus-visible:outline-none",
                                     current
                                         ? "border-[1.5px] border-survey-primary bg-survey-accent font-medium text-survey-accent-foreground"

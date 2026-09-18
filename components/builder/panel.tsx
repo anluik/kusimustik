@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { LABEL, META } from "@/components/type";
 
 /**
  * DESIGN.md §4: a panel header is 34px with the same 12px gutter as the rows
@@ -25,11 +26,9 @@ export function PanelHeader({
                 className
             )}
         >
-            <h2 className="truncate font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase">
-                {title}
-            </h2>
+            <h2 className={cn(LABEL, "truncate")}>{title}</h2>
             {meta !== undefined && (
-                <span className="truncate font-mono text-[11px] leading-none text-muted-foreground">
+                <span className={cn(META, "truncate text-muted-foreground")}>
                     {meta}
                 </span>
             )}

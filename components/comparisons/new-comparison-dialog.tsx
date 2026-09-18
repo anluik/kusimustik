@@ -33,12 +33,11 @@ import type { ComparisonActionError } from "@/lib/comparisons/errors";
 import type { GroupWave } from "@/lib/comparisons/group";
 import { newestWaves } from "@/lib/comparisons/group";
 import { ROUTES } from "@/lib/routes";
+import { cn } from "@/lib/utils";
+import { LABEL, META } from "@/components/type";
 
 /** What the fields hold: plain strings, branded only once parsed. */
 type FormInput = z.input<typeof NewComparisonSchema>;
-
-const FIELD_LABEL =
-    "font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase";
 
 /**
  * A new comparison: a name and the waves it covers (DESIGN §5).
@@ -142,7 +141,7 @@ export function NewComparisonDialog({
                 else close();
             }}
         >
-            <DialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+            <DialogContent className="gap-3 rounded-lg p-3.5 sm:max-w-md">
                 <DialogHeader className="gap-1">
                     <DialogTitle className="text-[13px] leading-[1.2] font-semibold">
                         {t("title")}
@@ -158,7 +157,7 @@ export function NewComparisonDialog({
                     className="grid gap-3"
                 >
                     <div className="grid gap-1.5">
-                        <Label htmlFor={nameId} className={FIELD_LABEL}>
+                        <Label htmlFor={nameId} className={LABEL}>
                             {t("name")}
                         </Label>
                         <Input
@@ -167,16 +166,16 @@ export function NewComparisonDialog({
                             aria-invalid={
                                 form.formState.errors.name !== undefined
                             }
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                             {...form.register("name")}
                         />
                     </div>
 
                     <fieldset className="grid gap-1.5">
-                        <legend className={`${FIELD_LABEL} mb-1.5`}>
+                        <legend className={`${LABEL} mb-1.5`}>
                             {t("waves")}
                         </legend>
-                        <ul className="flex flex-col divide-y rounded border">
+                        <ul className="flex flex-col divide-y rounded-lg border">
                             {[...group].reverse().map(wave => {
                                 const id = `${nameId}-${wave.surveyId}`;
                                 return (
@@ -200,7 +199,12 @@ export function NewComparisonDialog({
                                         >
                                             {waveName(wave)}
                                         </Label>
-                                        <span className="font-mono text-[11px] leading-none text-muted-foreground tabular-nums">
+                                        <span
+                                            className={cn(
+                                                META,
+                                                "text-muted-foreground tabular-nums"
+                                            )}
+                                        >
                                             {t("responses", {
                                                 count: wave.responseCount
                                             })}
@@ -227,7 +231,7 @@ export function NewComparisonDialog({
                             size="sm"
                             disabled={pending}
                             onClick={close}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {tCommon("cancel")}
                         </Button>
@@ -235,7 +239,7 @@ export function NewComparisonDialog({
                             type="submit"
                             size="sm"
                             disabled={pending || countProblem !== null}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("submit")}
                         </Button>

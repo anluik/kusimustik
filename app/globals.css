@@ -5,9 +5,19 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
     --font-sans: var(--font-sans);
     --font-mono: var(--font-mono);
+    /* The display serif: survey and page titles, and figures that are the
+       point of the panel they sit in. DESIGN.md §2. */
+    --font-display: var(--font-display);
+    --font-heading: var(--font-display);
+
+    /* Tinted, never black: a shadow is the surface in shade (§1). */
+    --shadow-2xs: 0 1px 1px hsl(var(--shadow-tint) / 0.04);
+    --shadow-xs: 0 1px 2px hsl(var(--shadow-tint) / 0.05);
+    --shadow-sm: 0 1px 2px hsl(var(--shadow-tint) / 0.06), 0 2px 6px -1px hsl(var(--shadow-tint) / 0.05);
+    --shadow-md: 0 2px 4px hsl(var(--shadow-tint) / 0.06), 0 6px 16px -2px hsl(var(--shadow-tint) / 0.07);
+    --shadow-lg: 0 4px 8px hsl(var(--shadow-tint) / 0.07), 0 16px 32px -4px hsl(var(--shadow-tint) / 0.09);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -50,138 +60,107 @@
 }
 
 :root {
-    --background: oklch(0.980 0.003 230);
-    --foreground: oklch(0.220 0.015 240);
+    --background: oklch(0.977 0.005 85);
+    --foreground: oklch(0.225 0.012 70);
+    --card: oklch(0.995 0.003 85);
+    --card-foreground: oklch(0.225 0.012 70);
+    --popover: oklch(1.000 0.000 0);
+    --popover-foreground: oklch(0.225 0.012 70);
+    --primary: oklch(0.470 0.081 192);
+    --primary-foreground: oklch(0.988 0.006 190);
+    --secondary: oklch(0.945 0.008 85);
+    --secondary-foreground: oklch(0.300 0.014 70);
+    --muted: oklch(0.948 0.008 85);
+    --muted-foreground: oklch(0.492 0.015 75);
+    --accent: oklch(0.930 0.030 190);
+    --accent-foreground: oklch(0.330 0.059 192);
+    --destructive: oklch(0.530 0.170 30);
+    --destructive-foreground: oklch(0.988 0.005 30);
+    --border: oklch(0.900 0.009 82);
+    --input: oklch(0.615 0.016 82);
+    --ring: oklch(0.470 0.081 192);
+    --sidebar: oklch(0.958 0.008 85);
+    --sidebar-foreground: oklch(0.300 0.014 70);
+    --sidebar-accent: oklch(0.912 0.026 190);
+    --sidebar-accent-foreground: oklch(0.300 0.054 192);
+    --sidebar-border: oklch(0.895 0.009 82);
+    --chart-1: oklch(0.620 0.107 192);
+    --chart-2: oklch(0.580 0.120 40);
+    --chart-3: oklch(0.500 0.120 300);
+    --chart-4: oklch(0.590 0.120 110);
+    --chart-5: oklch(0.600 0.120 230);
+    --ramp-1: oklch(0.755 0.055 192);
+    --ramp-2: oklch(0.692 0.059 192);
+    --ramp-3: oklch(0.628 0.063 192);
+    --ramp-4: oklch(0.565 0.068 192);
+    --ramp-5: oklch(0.502 0.072 192);
+    --ramp-6: oklch(0.438 0.076 192);
+    --ramp-7: oklch(0.375 0.066 192);
+    --ramp-track: oklch(0.945 0.008 85);
+    --ramp-label-flip: 4;
 
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.220 0.015 240);
-
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.220 0.015 240);
-
-    --primary: oklch(0.450 0.090 235);
-    --primary-foreground: oklch(0.990 0.005 235);
-
-    --secondary: oklch(0.955 0.006 230);
-    --secondary-foreground: oklch(0.280 0.015 240);
-
-    --muted: oklch(0.955 0.006 230);
-    --muted-foreground: oklch(0.490 0.015 235);
-
-    --accent: oklch(0.935 0.018 235);
-    --accent-foreground: oklch(0.320 0.055 235);
-
-    --destructive: oklch(0.550 0.170 27);
-    --destructive-foreground: oklch(0.985 0.004 27);
-
-    --border: oklch(0.900 0.008 230);
-    --input: oklch(0.770 0.012 230);
-    --ring: oklch(0.450 0.090 235);
-
-    --radius: 0.25rem;
-
-    --sidebar: oklch(0.965 0.005 230);
-    --sidebar-foreground: oklch(0.300 0.015 240);
-    --sidebar-primary: oklch(0.450 0.090 235);
-    --sidebar-primary-foreground: oklch(0.990 0.005 235);   
-    --sidebar-accent: oklch(0.925 0.015 235);
-    --sidebar-accent-foreground: oklch(0.280 0.045 235);    
-    --sidebar-border: oklch(0.900 0.008 230);
-    --sidebar-ring: oklch(0.450 0.090 235);                 
-
-    --chart-1: oklch(0.450 0.090 235);
-    --chart-2: oklch(0.460 0.080 57);
-    --chart-3: oklch(0.574 0.097 276);
-    --chart-4: oklch(0.395 0.105 316);
-    --chart-5: oklch(0.663 0.037 154);
-    --chart-6: oklch(0.320 0.044 212);
-    --chart-7: oklch(0.320 0.105 38);
-    --chart-8: oklch(0.596 0.105 33);
-
-    --ramp-1: oklch(0.945 0.020 235);
-    --ramp-2: oklch(0.880 0.038 235);
-    --ramp-3: oklch(0.800 0.055 235);
-    --ramp-4: oklch(0.710 0.072 235);
-    --ramp-5: oklch(0.610 0.085 235);
-    --ramp-6: oklch(0.505 0.092 235);
-    --ramp-7: oklch(0.395 0.085 235);
-    --ramp-track: oklch(0.955 0.006 230);
-    --ramp-label-flip: 5;
+    --radius: 0.5rem;
 
     /* DESIGN.md §8. The respondent runner reads its colours and its radius
        from this namespace only, so owner-customisable branding later overrides
-       this block rather than every runner component. They are
-       aliases of the app tokens, which `.dark` already redefines, so they are
-       correct in both themes without being restated there — the "add it to
-       both blocks" rule in §1 is about colour values, and there are none here.
-       §4's 6px runner radius is the one real value, and it does not vary. */
-    --survey-radius: 0.375rem;
+       this block rather than every runner component. They are aliases of the
+       app tokens, which `.dark` already redefines, so they are correct in both
+       themes without being restated there. §4's runner radius is the one real
+       value here, and it does not vary. */
+    --survey-radius: 0.625rem;
     --survey-primary: var(--primary);
     --survey-primary-foreground: var(--primary-foreground);
     --survey-background: var(--background);
     --survey-card: var(--card);
     --survey-accent: var(--accent);
     --survey-accent-foreground: var(--accent-foreground);
+
+    /* §1: shadows carry the surface's own warmth. Never plain black. */
+    --shadow-tint: 70 25% 18%;
 }
 
 .dark {
-    --background: oklch(0.160 0.010 240);
-    --foreground: oklch(0.940 0.005 230);
+    --background: oklch(0.172 0.006 70);
+    --foreground: oklch(0.935 0.008 85);
+    --card: oklch(0.208 0.007 70);
+    --card-foreground: oklch(0.935 0.008 85);
+    --popover: oklch(0.228 0.008 70);
+    --popover-foreground: oklch(0.935 0.008 85);
+    --primary: oklch(0.745 0.090 192);
+    --primary-foreground: oklch(0.190 0.030 192);
+    --secondary: oklch(0.252 0.008 70);
+    --secondary-foreground: oklch(0.935 0.008 85);
+    --muted: oklch(0.252 0.008 70);
+    --muted-foreground: oklch(0.672 0.014 80);
+    --accent: oklch(0.288 0.038 192);
+    --accent-foreground: oklch(0.895 0.045 190);
+    --destructive: oklch(0.680 0.155 30);
+    --destructive-foreground: oklch(0.180 0.030 30);
+    --border: oklch(0.292 0.009 70);
+    --input: oklch(0.520 0.013 75);
+    --ring: oklch(0.745 0.090 192);
+    --sidebar: oklch(0.155 0.006 70);
+    --sidebar-foreground: oklch(0.900 0.008 85);
+    --sidebar-accent: oklch(0.280 0.035 192);
+    --sidebar-accent-foreground: oklch(0.905 0.040 190);
+    --sidebar-border: oklch(0.278 0.009 70);
+    --chart-1: oklch(0.660 0.113 192);
+    --chart-2: oklch(0.620 0.120 40);
+    --chart-3: oklch(0.600 0.120 300);
+    --chart-4: oklch(0.650 0.120 110);
+    --chart-5: oklch(0.650 0.120 230);
+    --ramp-1: oklch(0.420 0.050 192);
+    --ramp-2: oklch(0.493 0.054 192);
+    --ramp-3: oklch(0.567 0.059 192);
+    --ramp-4: oklch(0.640 0.063 192);
+    --ramp-5: oklch(0.713 0.067 192);
+    --ramp-6: oklch(0.787 0.072 192);
+    --ramp-7: oklch(0.860 0.076 192);
+    --ramp-track: oklch(0.252 0.008 70);
+    --ramp-label-flip: 3;
 
-    --card: oklch(0.195 0.012 240);
-    --card-foreground: oklch(0.940 0.005 230);
-
-    --popover: oklch(0.215 0.012 240);
-    --popover-foreground: oklch(0.940 0.005 230);
-
-    --primary: oklch(0.700 0.090 235);
-    --primary-foreground: oklch(0.150 0.030 235);
-
-    --secondary: oklch(0.235 0.012 240);
-    --secondary-foreground: oklch(0.940 0.005 230);
-
-    --muted: oklch(0.235 0.012 240);
-    --muted-foreground: oklch(0.650 0.014 233);
-
-    --accent: oklch(0.260 0.035 235);
-    --accent-foreground: oklch(0.900 0.040 235);
-
-    --destructive: oklch(0.660 0.160 27);
-    --destructive-foreground: oklch(0.150 0.030 27);
-
-    --border: oklch(0.270 0.012 240);
-    --input: oklch(0.400 0.014 240);
-    --ring: oklch(0.700 0.090 235);
-
-    --radius: 0.25rem;
-
-    --sidebar: oklch(0.180 0.011 240);
-    --sidebar-foreground: oklch(0.900 0.006 230);
-    --sidebar-primary: oklch(0.700 0.090 235);
-    --sidebar-primary-foreground: oklch(0.150 0.030 235);   
-    --sidebar-accent: oklch(0.250 0.030 235);
-    --sidebar-accent-foreground: oklch(0.910 0.030 235);    
-    --sidebar-border: oklch(0.260 0.012 240);
-    --sidebar-ring: oklch(0.700 0.090 235);                 
-
-    --chart-1: oklch(0.700 0.090 235);
-    --chart-2: oklch(0.534 0.105 137);
-    --chart-3: oklch(0.510 0.105 45);
-    --chart-4: oklch(0.900 0.046 9);
-    --chart-5: oklch(0.537 0.105 240);
-    --chart-6: oklch(0.775 0.105 319);
-    --chart-7: oklch(0.780 0.105 73);
-    --chart-8: oklch(0.654 0.064 19);
-
-    --ramp-1: oklch(0.300 0.022 235);
-    --ramp-2: oklch(0.375 0.040 235);
-    --ramp-3: oklch(0.455 0.058 235);
-    --ramp-4: oklch(0.545 0.075 235);
-    --ramp-5: oklch(0.640 0.088 235);
-    --ramp-6: oklch(0.740 0.088 235);
-    --ramp-7: oklch(0.850 0.070 235);
-    --ramp-track: oklch(0.235 0.012 240);
-    --ramp-label-flip: 4;
+    --radius: 0.5rem;
+    --shadow-tint: 70 20% 4%;
 }
 
 @theme inline {
@@ -200,9 +179,6 @@
     --color-ramp-6: var(--ramp-6);
     --color-ramp-7: var(--ramp-7);
     --color-ramp-track: var(--ramp-track);
-    --color-chart-6: var(--chart-6);
-    --color-chart-7: var(--chart-7);
-    --color-chart-8: var(--chart-8);
 }
 @layer base {
   * {
@@ -213,5 +189,94 @@
     }
   html {
     @apply font-sans;
+    /* An in-page jump — the results surface links to its own question cards —
+       glides rather than teleports, unless the reader asked it not to. */
+    scroll-behavior: smooth;
     }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    }
+  /* Figures line up in columns whatever the face: the sans is used for metrics
+     and table numbers too, and proportional digits make a column ripple. */
+  th, td, output, time, [data-numeric] {
+    font-variant-numeric: tabular-nums;
+    }
+}
+
+/* The paper grain (DESIGN.md §1). A fixed, non-interactive overlay: it breaks
+   the flatness of a large plain surface without tinting it, and being fixed it
+   does not tile visibly or move while the page scrolls. Suppressed under
+   `forced-colors`, where the user has asked for exactly the colours they chose,
+   and under `prefers-contrast: more`. */
+@layer base {
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;
+    pointer-events: none;
+    opacity: 0.4;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E");
+    }
+  .dark body::after {
+    mix-blend-mode: screen;
+    opacity: 0.16;
+    }
+  @media (forced-colors: active), (prefers-contrast: more) {
+    body::after { display: none; }
+    }
+}
+
+/* DESIGN.md §6 and §10: disabled is a colour change, never an opacity one —
+   opacity stacks and breaks the audited contrast. The generated primitives in
+   components/ui/ dim with `disabled:opacity-50`, and they are not hand-edited
+   (§5), so the override lives here, once, rather than at every call site.
+
+   Deliberately unlayered: unlayered rules beat every `@layer`, which is what
+   lets this win over Tailwind's utilities — `bg-survey-primary`,
+   `hover:bg-primary/80`, `text-destructive` — without `!important`.
+   See docs/DECISIONS.md 036. */
+:is(
+    [data-slot="button"],
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    [data-slot="tabs-trigger"],
+    [data-sidebar="menu-button"],
+    [data-sidebar="menu-sub-button"]
+):is(:disabled, [aria-disabled="true"]),
+:is(
+    [data-slot="select-item"],
+    [data-slot="dropdown-menu-item"],
+    [data-slot="dropdown-menu-checkbox-item"],
+    [data-slot="dropdown-menu-radio-item"],
+    [data-slot="dropdown-menu-sub-trigger"]
+)[data-disabled],
+:is(:disabled, [data-disabled]) ~ [data-slot="label"],
+[data-disabled="true"] [data-slot="label"] {
+    opacity: 1;
+    color: var(--input);
+}
+
+/* A filled button keeps no fill: `--input` text on `--primary` is unreadable. */
+[data-slot="button"]:is([data-variant="default"], [data-variant="destructive"]):disabled {
+    background-color: var(--muted);
+    border-color: var(--border);
+}
+
+:is([data-slot="button"], [data-slot^="dropdown-menu"], [data-slot="select-item"]):is(:disabled, [data-disabled]) svg {
+    color: inherit;
+}
+
+/* The track goes quiet and the thumb takes the disabled colour, so an off
+   switch and an on one still differ by position, not by fill alone. */
+[data-slot="switch"][data-disabled] {
+    opacity: 1;
+    background-color: var(--muted);
+    border-color: var(--input);
+}
+
+[data-slot="switch"][data-disabled] [data-slot="switch-thumb"] {
+    background-color: var(--input);
 }

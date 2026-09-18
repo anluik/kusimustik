@@ -111,7 +111,7 @@ export function ResultsScreen({
                             asChild
                             variant="outline"
                             size="sm"
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             <Link href={ROUTES.builder(surveyId)}>
                                 <PencilLine aria-hidden />
@@ -133,13 +133,13 @@ export function ResultsScreen({
                 />
 
                 <Tabs defaultValue="questions" className="gap-3">
-                    <TabsList className="h-8 w-fit rounded bg-muted p-0.5">
+                    <TabsList className="h-8 w-fit rounded-lg bg-muted p-0.5">
                         {(["questions", "responses", "behaviour"] as const).map(
                             tab => (
                                 <TabsTrigger
                                     key={tab}
                                     value={tab}
-                                    className="h-7 rounded px-3 text-xs"
+                                    className="h-7 rounded-lg px-3 text-xs"
                                 >
                                     {t(`tabs.${tab}`)}
                                 </TabsTrigger>
@@ -203,7 +203,7 @@ function NoQuestions({ surveyId }: { readonly surveyId: SurveyId }) {
     const tResults = useTranslations("Results");
 
     return (
-        <Card className="gap-3 rounded px-3.5 py-3">
+        <Card className="gap-3 rounded-xl px-4 py-3.5">
             <EmptyState
                 title={t("noQuestions.title")}
                 body={t("noQuestions.body")}
@@ -219,7 +219,7 @@ function NoQuestions({ surveyId }: { readonly surveyId: SurveyId }) {
                         asChild
                         variant="outline"
                         size="sm"
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     >
                         <Link href={ROUTES.builder(surveyId)}>
                             {tResults("backToBuilder")}
@@ -252,7 +252,7 @@ function NoResponses({
     const key = status === "draft" ? "draft" : variant;
 
     return (
-        <Card className="gap-3 rounded px-3.5 py-3">
+        <Card className="gap-3 rounded-xl px-4 py-3.5">
             <EmptyState
                 title={t(`${key}.title`)}
                 body={t(`${key}.body`)}
@@ -268,7 +268,7 @@ function NoResponses({
                         asChild
                         variant="outline"
                         size="sm"
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     >
                         <Link href={ROUTES.builder(surveyId)}>
                             {tResults("backToBuilder")}

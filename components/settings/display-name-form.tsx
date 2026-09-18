@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { DisplayNameSchema } from "@/domain/profile";
 import { saveDisplayNameAction } from "@/lib/account/actions";
 import type { AccountActionError } from "@/lib/account/errors";
+import { LABEL } from "@/components/type";
 
 /**
  * The owner's display name.
@@ -67,10 +68,7 @@ export function DisplayNameForm({
             onSubmit={form.handleSubmit(onSubmit)}
             className="grid gap-1.5"
         >
-            <Label
-                htmlFor="account-display-name"
-                className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase"
-            >
+            <Label htmlFor="account-display-name" className={LABEL}>
                 {t("name")}
             </Label>
             <div className="flex items-center gap-2">
@@ -81,7 +79,7 @@ export function DisplayNameForm({
                     aria-invalid={
                         form.formState.errors.displayName !== undefined
                     }
-                    className="h-[30px] rounded text-xs"
+                    className="h-[30px] rounded-lg text-xs"
                     {...form.register("displayName", {
                         onChange: () => setSaved(false)
                     })}
@@ -90,7 +88,7 @@ export function DisplayNameForm({
                     type="submit"
                     size="sm"
                     disabled={pending}
-                    className="h-[30px] shrink-0 rounded text-xs"
+                    className="h-[30px] shrink-0 rounded-lg text-xs"
                 >
                     {t("save")}
                 </Button>
@@ -99,18 +97,18 @@ export function DisplayNameForm({
             {error !== null ? (
                 <p
                     role="alert"
-                    className="flex items-start gap-1.5 text-[11px] leading-[1.35] text-destructive"
+                    className="flex items-start gap-1.5 text-[12px] leading-[1.4] text-destructive"
                 >
                     <span
                         aria-hidden
-                        className="mt-1 size-1.5 shrink-0 rounded-4xl bg-destructive"
+                        className="mt-1 size-1.5 shrink-0 rounded-full bg-destructive"
                     />
                     {tErrors(error)}
                 </p>
             ) : (
                 <p
                     aria-live="polite"
-                    className="text-[11px] leading-[1.35] text-muted-foreground"
+                    className="text-[12px] leading-[1.4] text-muted-foreground"
                 >
                     {saved ? t("saved") : t("nameHelp")}
                 </p>

@@ -71,7 +71,7 @@ export function ConfirmDialog<TError extends string>({
                 else close();
             }}
         >
-            <AlertDialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+            <AlertDialogContent className="gap-3 rounded-lg p-3.5 sm:max-w-md">
                 <AlertDialogHeader className="gap-1">
                     <AlertDialogTitle className="text-[13px] leading-[1.2] font-semibold">
                         {title}
@@ -88,7 +88,7 @@ export function ConfirmDialog<TError extends string>({
                 <AlertDialogFooter className="gap-2">
                     <AlertDialogCancel
                         disabled={pending}
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     >
                         {tCommon("cancel")}
                     </AlertDialogCancel>
@@ -98,7 +98,7 @@ export function ConfirmDialog<TError extends string>({
                         variant={destructive ? "destructive" : "default"}
                         disabled={pending}
                         onClick={confirm}
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     >
                         {confirmLabel}
                     </Button>

@@ -4,7 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { DwellChart } from "@/components/results/dwell-chart";
-import { LABEL, META, PANEL_HEAD } from "@/components/results/type";
+import { LABEL, META, PANEL_HEAD } from "@/components/type";
 import { EmptyState, EmptyStateRow } from "@/components/shell/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ export function FunnelPanel({
 
     if (funnel.isEmpty) {
         return (
-            <Card className="gap-3 rounded px-3.5 py-3">
+            <Card className="gap-3 rounded-xl px-4 py-3.5">
                 <EmptyState
                     title={t("empty.title")}
                     body={t("empty.body")}
@@ -63,7 +63,7 @@ export function FunnelPanel({
                 <ProblemCallout stage={funnel.worstStage} surveyId={surveyId} />
             )}
 
-            <Card className="gap-3 rounded px-3.5 py-3">
+            <Card className="gap-3 rounded-xl px-4 py-3.5">
                 <h3 className={PANEL_HEAD}>{t("title")}</h3>
                 {/* One grid for the whole funnel, with the rows as subgrids:
                     the label, bar, count and flag columns are then sized once
@@ -140,9 +140,9 @@ function StageRow({ stage }: { readonly stage: FunnelStage }) {
             </div>
 
             <div className="flex min-w-0 items-center gap-2">
-                <span className="h-5 min-w-0 flex-1 rounded-xs bg-ramp-track">
+                <span className="h-5 min-w-0 flex-1 rounded-sm bg-ramp-track">
                     <span
-                        className="block h-full rounded-xs border"
+                        className="block h-full rounded-r-sm border"
                         style={{
                             // DESIGN §7: a dot decimal. A locale-formatted
                             // number here is invalid CSS, dropped in silence.
@@ -184,7 +184,7 @@ function StageRow({ stage }: { readonly stage: FunnelStage }) {
                         variant="outline"
                         className={cn(
                             META,
-                            "h-4 rounded border-destructive px-1 text-destructive"
+                            "h-4 rounded-lg border-destructive px-1 text-destructive"
                         )}
                     >
                         {t("problem")}
@@ -214,7 +214,7 @@ function ProblemCallout({
     return (
         <div
             role="alert"
-            className="flex flex-col gap-2 rounded bg-muted px-3.5 py-3 shadow-[inset_3px_0_0_var(--destructive)]"
+            className="flex flex-col gap-2 rounded-lg bg-muted px-3.5 py-3 shadow-[inset_3px_0_0_var(--destructive)]"
         >
             <p className={cn(LABEL, "text-destructive")}>{t("problem")}</p>
             <p className="text-[14px] leading-[1.35] font-semibold">
@@ -243,7 +243,7 @@ function ProblemCallout({
                         asChild
                         variant="outline"
                         size="sm"
-                        className="h-[30px] rounded text-xs"
+                        className="h-[30px] rounded-lg text-xs"
                     >
                         <Link
                             href={`${ROUTES.builder(surveyId)}#${stage.questionId}`}

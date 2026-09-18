@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/shell/theme-provider";
-import { sans, mono } from "@/lib/fonts";
+import { display, sans, mono } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,7 +23,7 @@ export async function AppDocument({
     return (
         <html
             lang={locale}
-            className={cn(sans.variable, mono.variable)}
+            className={cn(sans.variable, display.variable, mono.variable)}
             suppressHydrationWarning
         >
             <body className="min-h-svh bg-background font-sans text-foreground antialiased">

@@ -59,13 +59,13 @@ export function QuestionCard({
         return (
             <article
                 ref={cardRef}
-                className="flex flex-col gap-2 rounded-survey border bg-survey-card px-3.5 py-4"
+                className="flex flex-col gap-2 rounded-survey border border-border/70 bg-survey-card px-4 py-4 shadow-xs"
             >
-                <h2 className="text-[15px] leading-[1.4] font-medium">
+                <h2 className="text-[17px] leading-[1.35] font-medium text-pretty">
                     {element.title}
                 </h2>
                 {element.description !== undefined && (
-                    <p className="text-[14px] leading-[1.35] text-muted-foreground">
+                    <p className="text-[14px] leading-[1.35] text-pretty text-muted-foreground">
                         {element.description}
                     </p>
                 )}
@@ -79,7 +79,7 @@ export function QuestionCard({
             id={cardId(element.id)}
             tabIndex={-1}
             className={cn(
-                "flex flex-col gap-3 rounded-survey border bg-survey-card px-3.5 py-4 outline-none",
+                "flex flex-col gap-3.5 rounded-survey border border-border/70 bg-survey-card px-4 py-4 shadow-xs outline-none",
                 "focus-visible:ring-[3px] focus-visible:ring-ring/18",
                 problem !== null && "border-destructive"
             )}
@@ -87,9 +87,9 @@ export function QuestionCard({
             <div className="flex flex-col gap-1">
                 <h2
                     id={titleId}
-                    className="text-[15px] leading-[1.4] font-medium"
+                    className="text-[17px] leading-[1.35] font-medium text-pretty"
                 >
-                    <span className="mr-1.5 font-mono text-muted-foreground">
+                    <span className="mr-1.5 text-muted-foreground tabular-nums">
                         {index}.
                     </span>
                     {element.title}
@@ -101,7 +101,7 @@ export function QuestionCard({
                             <span className="sr-only"> {t("required")}</span>
                         </>
                     ) : (
-                        <span className="ml-1.5 text-[14px] font-normal text-muted-foreground">
+                        <span className="ml-2 text-[14px] font-normal text-muted-foreground">
                             {t("optional")}
                         </span>
                     )}
@@ -109,7 +109,7 @@ export function QuestionCard({
                 {element.description !== undefined && (
                     <p
                         id={helpId}
-                        className="text-[14px] leading-[1.35] text-muted-foreground"
+                        className="text-[14px] leading-[1.35] text-pretty text-muted-foreground"
                     >
                         {element.description}
                     </p>
@@ -132,7 +132,7 @@ export function QuestionCard({
                 >
                     <span
                         aria-hidden
-                        className="mt-1.5 size-1.5 shrink-0 rounded-4xl bg-destructive"
+                        className="mt-1.5 size-1.5 shrink-0 rounded-full bg-destructive"
                     />
                     {/* The code carries whatever number its message needs;
                         `invalid` and `required` simply ignore the value. */}

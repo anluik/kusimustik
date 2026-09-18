@@ -34,6 +34,7 @@ import { SurveyLocalesSchema, WaveLabelSchema } from "@/domain/survey";
 import { UI_LOCALES } from "@/lib/i18n/locales";
 import { saveSurveySettingsAction } from "@/lib/surveys/actions";
 import type { SurveyActionError } from "@/lib/surveys/errors";
+import { LABEL } from "@/components/type";
 
 /**
  * The settings that belong to the survey rather than to anything it says: the
@@ -157,10 +158,7 @@ export function SurveySettingsDialog({
     }
 
     const label = (htmlFor: string, text: string) => (
-        <Label
-            htmlFor={htmlFor}
-            className="font-mono text-[10px] leading-none tracking-[0.07em] text-muted-foreground uppercase"
-        >
+        <Label htmlFor={htmlFor} className={LABEL}>
             {text}
         </Label>
     );
@@ -173,7 +171,7 @@ export function SurveySettingsDialog({
                 else close();
             }}
         >
-            <DialogContent className="gap-3 rounded p-3.5 sm:max-w-md">
+            <DialogContent className="gap-3 rounded-lg p-3.5 sm:max-w-md">
                 <DialogHeader className="gap-1">
                     <DialogTitle className="text-[13px] leading-[1.2] font-semibold">
                         {t("title")}
@@ -233,16 +231,16 @@ export function SurveySettingsDialog({
                                         <SelectTrigger
                                             id="survey-settings-locale"
                                             onBlur={source.onBlur}
-                                            className="h-[30px]! rounded text-xs"
+                                            className="h-[30px]! rounded-lg text-xs"
                                         >
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent className="rounded">
+                                        <SelectContent className="rounded-lg">
                                             {UI_LOCALES.map(option => (
                                                 <SelectItem
                                                     key={option}
                                                     value={option}
-                                                    className="rounded text-xs"
+                                                    className="rounded-lg text-xs"
                                                 >
                                                     {tLanguage(
                                                         `name.${option}`
@@ -251,7 +249,7 @@ export function SurveySettingsDialog({
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    <p className="text-[11px] leading-[1.35] text-muted-foreground">
+                                    <p className="text-[12px] leading-[1.4] text-muted-foreground">
                                         {t("localeHelp")}
                                     </p>
                                 </div>
@@ -322,7 +320,7 @@ export function SurveySettingsDialog({
                                             </div>
                                         )}
                                     />
-                                    <p className="text-[11px] leading-[1.35] text-muted-foreground">
+                                    <p className="text-[12px] leading-[1.4] text-muted-foreground">
                                         {t("localesHelp")}
                                     </p>
                                 </div>
@@ -339,10 +337,10 @@ export function SurveySettingsDialog({
                             aria-invalid={
                                 form.formState.errors.waveLabel !== undefined
                             }
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                             {...form.register("waveLabel")}
                         />
-                        <p className="text-[11px] leading-[1.35] text-muted-foreground">
+                        <p className="text-[12px] leading-[1.4] text-muted-foreground">
                             {t("waveHelp")}
                         </p>
                     </div>
@@ -356,7 +354,7 @@ export function SurveySettingsDialog({
                             size="sm"
                             disabled={pending}
                             onClick={close}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {tCommon("cancel")}
                         </Button>
@@ -364,7 +362,7 @@ export function SurveySettingsDialog({
                             type="submit"
                             size="sm"
                             disabled={pending}
-                            className="h-[30px] rounded text-xs"
+                            className="h-[30px] rounded-lg text-xs"
                         >
                             {t("submit")}
                         </Button>

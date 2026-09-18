@@ -8,8 +8,8 @@ Survey SaaS. Next.js App Router + TypeScript + Supabase.
 
 ```bash
 pnpm dev            # dev server
-pnpm check          # typegen + typecheck + lint + unit tests + format — MUST be
-                    # green before you say you're done. Also what CI runs.
+pnpm check          # typegen + typecheck + lint + unit tests + token audit + format
+                    # — MUST be green before you say you're done. Also what CI runs.
 pnpm test           # vitest
 pnpm test:db        # integration tests against local Supabase — RLS, triggers, repositories.
                     # Needs `supabase start`; not part of `pnpm check`. Run it after
@@ -17,6 +17,7 @@ pnpm test:db        # integration tests against local Supabase — RLS, triggers
 pnpm test:e2e       # playwright
 pnpm format         # prettier --write .
 pnpm db:types       # regenerate lib/db/database.types.ts from local Supabase
+pnpm audit:tokens   # the design token contrast audit, over app/globals.css
 pnpm db:reset       # reset local DB and replay migrations + seed
 ```
 
@@ -65,7 +66,9 @@ app/                 App Router — routes only. NO app/layout.tsx: each group
   auth/callback/     magic-link landing (route handler)
   api/               route handlers (analytics beacons, CSV download)
   global-not-found.tsx  the 404; needed because there are several root layouts
-  globals.css        canonical design tokens — see docs/DESIGN.md §1
+  globals.css        canonical design tokens, the disabled-state override and
+                     the page grain — see docs/DESIGN.md §1 and DECISIONS 036/037
+  icon.svg           the favicon: the brand mark with its tokens resolved
 domain/              pure schemas + logic (question union, answer validation, aggregation).
                      content.ts is LocalizedText and its fallback; localize.ts maps
                      between the stored document and one language of it
@@ -83,9 +86,13 @@ lib/comparisons/     saved wave comparisons — actions, error codes, the save c
                      (docs/DECISIONS.md 035)
 lib/builder/         the builder's pure parts — document reducer, element factory,
                      key policy, optional-field patches
+components/type.ts   THE type scale (docs/DESIGN.md §2). Every level is a named
+                     constant and is imported — never a local copy of the classes
 components/ui/       shadcn — do not hand-edit, re-run the CLI (one documented
-                     exception: docs/DECISIONS.md 012)
-components/shell/    app shell — sidebar, app bar, empty state, providers
+                     exception: docs/DECISIONS.md 012). Where a primitive fights
+                     the spec, the override is one rule in globals.css (DECISIONS 036)
+components/shell/    app shell — sidebar, app bar, empty state, providers, and
+                     brand-mark.tsx, the one drawn asset in the app
 components/surveys/  the survey list, its row actions and its dialogs
 components/comparisons/ a wave group's comparison list, the new-comparison dialog
                      and the matching editor
@@ -107,6 +114,7 @@ supabase/seed.sql    one owner, two waves, 30 responses each — `pnpm db:reset`
 docs/PLAN.md         the phased build plan — read the current phase before starting
 docs/DECISIONS.md    settled architecture decisions — read before proposing a schema change
 docs/DESIGN.md       the visual spec — read before writing any UI
+tools/token-audit.mjs the audit the spec's §1 contrast floors are enforced by
 docs/DEPLOY.md       the one-time production setup, as a checklist for a human
 .github/workflows/   CI: `pnpm check` and `pnpm test:db` on every PR and push
 ```

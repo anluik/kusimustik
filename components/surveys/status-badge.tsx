@@ -2,6 +2,8 @@ import { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import type { SurveyStatus } from "@/domain/survey";
+import { cn } from "@/lib/utils";
+import { TAG } from "@/components/type";
 
 /**
  * DESIGN.md §5: draft `secondary`, published `default` restyled to the accent
@@ -25,14 +27,17 @@ export function SurveyStatusBadge({
             variant={variant}
             className={
                 status === "published"
-                    ? "h-5 gap-1.5 rounded border-transparent bg-accent px-1.5 font-mono text-[9px] leading-none tracking-[0.04em] text-accent-foreground uppercase"
-                    : "h-5 rounded px-1.5 font-mono text-[9px] leading-none tracking-[0.04em] uppercase"
+                    ? cn(
+                          TAG,
+                          "h-[22px] gap-1.5 rounded-full border-transparent bg-accent px-2 text-accent-foreground"
+                      )
+                    : cn(TAG, "h-[22px] rounded-full px-2")
             }
         >
             {status === "published" && (
                 <span
                     aria-hidden
-                    className="size-1.5 shrink-0 rounded-4xl bg-primary"
+                    className="size-1.5 shrink-0 rounded-full bg-primary"
                 />
             )}
             {t(status)}
